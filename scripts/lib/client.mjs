@@ -23,7 +23,9 @@ export function readEnv(relPath) {
     readFileSync(join(ROOT, relPath), 'utf8')
       .split('\n')
       .filter((l) => l.includes('=') && !l.startsWith('#'))
-      .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]),
+      // .trim() so this also parses xcconfig files, which pad the '=' with
+      // spaces; dotenv-style .env files are unaffected.
+      .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]),
   );
 }
 

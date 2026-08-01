@@ -1,0 +1,92 @@
+name: Crease
+options:
+  bundleIdPrefix: com.divinedavis
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+configs:
+  Debug: debug
+  Release: release
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.20.0"
+
+targets:
+  Crease:
+    type: application
+    platform: iOS
+    sources:
+      - path: Crease
+    resources:
+      - path: Crease/Resources
+        optional: true
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
+    info:
+      path: Crease/Info.plist
+      properties:
+        CFBundleDisplayName: Crease
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiredDeviceCapabilities:
+          - arm64
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleIconName: AppIcon
+        SUPABASE_HOST: $(SUPABASE_HOST)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.crease
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        # simctl refuses to launch builds carrying the debug dylib.
+        ENABLE_DEBUG_DYLIB: NO
+    dependencies:
+      - package: Supabase
+        product: Supabase
+
+  CreaseTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: CreaseTests
+    dependencies:
+      - target: Crease
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.crease.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+  CreaseUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: CreaseUITests
+    dependencies:
+      - target: Crease
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.crease.uitests
+        TEST_TARGET_NAME: Crease
+        # The app target ships a hand-written Info.plist; the test bundle has
+        # nothing to declare, so let Xcode synthesise one rather than carrying
+        # a second file that only exists to satisfy codesign.
+        GENERATE_INFOPLIST_FILE: YES

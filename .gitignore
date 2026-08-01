@@ -10,3 +10,5 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 .supabase/
+apps/ios/Secrets.xcconfig
+apps/ios/build/

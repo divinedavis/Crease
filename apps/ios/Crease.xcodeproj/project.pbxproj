@@ -1,0 +1,599 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */; };
+		372A54856F0A7E0DBE6A2B4A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A9740EB7DC2492BCDC52958 /* Models.swift */; };
+		399A1017798918FCBD1E6D12 /* SchedulePickupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EAF8116DD5A9A463B9C7C8E /* SchedulePickupView.swift */; };
+		4C646A4E0FC83962FCD5E70E /* CreaseUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */; };
+		62CAA121325D196E5626A169 /* OrderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB696D3EE6A52919F9E72D81 /* OrderStore.swift */; };
+		65248D63B9B13189C67F76B9 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC7A8FDD347AF1823F8CCFA9 /* Session.swift */; };
+		7194E0429F1BF472F7621082 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878103286229AF62E1C35715 /* Theme.swift */; };
+		79FDF034AD2673CC8BE119B0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 02DD1050D2C1AF4B5A7AE22E /* Supabase */; };
+		8720FC51070189C85F80B303 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08676723DF8AA03131E96937 /* SignInView.swift */; };
+		92B390FAF0CED6D747E33C1B /* CreaseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046C115A5D80AFC2989AC77A /* CreaseApp.swift */; };
+		AD8DF9D9B8AC121FA1F1D0EE /* OrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */; };
+		B3A8D805084A810FF6881096 /* OrderDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104032AB1B2E2F303B93931F /* OrderDetailView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7E884AD7122A5C42F74A69C7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E39EA8B04074742B98020921 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2C0C700B3B7FC451D92062A2;
+			remoteInfo = Crease;
+		};
+		ECA722E6EC852743772CFF8F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E39EA8B04074742B98020921 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2C0C700B3B7FC451D92062A2;
+			remoteInfo = Crease;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		046C115A5D80AFC2989AC77A /* CreaseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreaseApp.swift; sourceTree = "<group>"; };
+		08676723DF8AA03131E96937 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		0C345CE341227812BDDAB8B9 /* Crease.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Crease.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		104032AB1B2E2F303B93931F /* OrderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderDetailView.swift; sourceTree = "<group>"; };
+		2A9740EB7DC2492BCDC52958 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		39B2121EE8C6FDE0D63F2C17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4D8D339EC7C4BB27F9FCC546 /* CreaseTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4EAF8116DD5A9A463B9C7C8E /* SchedulePickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulePickupView.swift; sourceTree = "<group>"; };
+		878103286229AF62E1C35715 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersView.swift; sourceTree = "<group>"; };
+		AB696D3EE6A52919F9E72D81 /* OrderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderStore.swift; sourceTree = "<group>"; };
+		C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyTrackTests.swift; sourceTree = "<group>"; };
+		CC7A8FDD347AF1823F8CCFA9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreaseUITests.swift; sourceTree = "<group>"; };
+		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		"TEMP_A8000E0A-1A7A-4280-A1A6-C8BAF7667A6C" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EEEC22F95A8A0D5F9DB2B889 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				79FDF034AD2673CC8BE119B0 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1B3A74420E5C72636E18255A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0C345CE341227812BDDAB8B9 /* Crease.app */,
+				4D8D339EC7C4BB27F9FCC546 /* CreaseTests.xctest */,
+				F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		59EE427430B159628B39B453 /* CreaseUITests */ = {
+			isa = PBXGroup;
+			children = (
+				CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */,
+			);
+			path = CreaseUITests;
+			sourceTree = "<group>";
+		};
+		754A824F81BAAEB2D7EC385C /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				104032AB1B2E2F303B93931F /* OrderDetailView.swift */,
+				9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */,
+				4EAF8116DD5A9A463B9C7C8E /* SchedulePickupView.swift */,
+				08676723DF8AA03131E96937 /* SignInView.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		7C2C2715CBB6CAF0D1802516 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				2A9740EB7DC2492BCDC52958 /* Models.swift */,
+				AB696D3EE6A52919F9E72D81 /* OrderStore.swift */,
+				CC7A8FDD347AF1823F8CCFA9 /* Session.swift */,
+				878103286229AF62E1C35715 /* Theme.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		85ECF107DF9C6CF35D48612D /* Crease */ = {
+			isa = PBXGroup;
+			children = (
+				046C115A5D80AFC2989AC77A /* CreaseApp.swift */,
+				39B2121EE8C6FDE0D63F2C17 /* Info.plist */,
+				7C2C2715CBB6CAF0D1802516 /* Core */,
+				754A824F81BAAEB2D7EC385C /* Features */,
+				A33220FE1D73CB23916EDEEA /* Resources */,
+			);
+			path = Crease;
+			sourceTree = "<group>";
+		};
+		95C016BAD151D00460D30E29 = {
+			isa = PBXGroup;
+			children = (
+				85ECF107DF9C6CF35D48612D /* Crease */,
+				D5FBE532EE59E1536AE720B3 /* CreaseTests */,
+				59EE427430B159628B39B453 /* CreaseUITests */,
+				1B3A74420E5C72636E18255A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A33220FE1D73CB23916EDEEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D5FBE532EE59E1536AE720B3 /* CreaseTests */ = {
+			isa = PBXGroup;
+			children = (
+				C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */,
+			);
+			path = CreaseTests;
+			sourceTree = "<group>";
+		};
+		"TEMP_707B25F6-1C90-4276-960B-B1D262F99D8C" /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_A8000E0A-1A7A-4280-A1A6-C8BAF7667A6C" /* Secrets.xcconfig */,
+			);
+			path = ios;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2C0C700B3B7FC451D92062A2 /* Crease */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C3EB0C20BD82519FBE1515D7 /* Build configuration list for PBXNativeTarget "Crease" */;
+			buildPhases = (
+				880343DBECDCA73AD2F219B9 /* Sources */,
+				EEEC22F95A8A0D5F9DB2B889 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Crease;
+			packageProductDependencies = (
+				02DD1050D2C1AF4B5A7AE22E /* Supabase */,
+			);
+			productName = Crease;
+			productReference = 0C345CE341227812BDDAB8B9 /* Crease.app */;
+			productType = "com.apple.product-type.application";
+		};
+		2CA1AC20162332DB67A4E358 /* CreaseUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0F727009E76B2956BB0AF4C9 /* Build configuration list for PBXNativeTarget "CreaseUITests" */;
+			buildPhases = (
+				24063AE4249DBEC5E46FF3F5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9B65C265B829867D00322F33 /* PBXTargetDependency */,
+			);
+			name = CreaseUITests;
+			packageProductDependencies = (
+			);
+			productName = CreaseUITests;
+			productReference = F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		4127557E46966CB48B33CBFF /* CreaseTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AD8C29FEE408651218791D6E /* Build configuration list for PBXNativeTarget "CreaseTests" */;
+			buildPhases = (
+				D5D8B7CA770ACBB50A7A223F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86A1C7941E7E9ECE8A2D1312 /* PBXTargetDependency */,
+			);
+			name = CreaseTests;
+			packageProductDependencies = (
+			);
+			productName = CreaseTests;
+			productReference = 4D8D339EC7C4BB27F9FCC546 /* CreaseTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E39EA8B04074742B98020921 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					2C0C700B3B7FC451D92062A2 = {
+						ProvisioningStyle = Automatic;
+					};
+					2CA1AC20162332DB67A4E358 = {
+						TestTargetID = 2C0C700B3B7FC451D92062A2;
+					};
+				};
+			};
+			buildConfigurationList = 7F4664E4914BDCB6CFA0F2C9 /* Build configuration list for PBXProject "Crease" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 95C016BAD151D00460D30E29;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1A405DE69C47537F58F7EB37 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1B3A74420E5C72636E18255A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2C0C700B3B7FC451D92062A2 /* Crease */,
+				4127557E46966CB48B33CBFF /* CreaseTests */,
+				2CA1AC20162332DB67A4E358 /* CreaseUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		24063AE4249DBEC5E46FF3F5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C646A4E0FC83962FCD5E70E /* CreaseUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		880343DBECDCA73AD2F219B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92B390FAF0CED6D747E33C1B /* CreaseApp.swift in Sources */,
+				372A54856F0A7E0DBE6A2B4A /* Models.swift in Sources */,
+				B3A8D805084A810FF6881096 /* OrderDetailView.swift in Sources */,
+				62CAA121325D196E5626A169 /* OrderStore.swift in Sources */,
+				AD8DF9D9B8AC121FA1F1D0EE /* OrdersView.swift in Sources */,
+				399A1017798918FCBD1E6D12 /* SchedulePickupView.swift in Sources */,
+				65248D63B9B13189C67F76B9 /* Session.swift in Sources */,
+				8720FC51070189C85F80B303 /* SignInView.swift in Sources */,
+				7194E0429F1BF472F7621082 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D5D8B7CA770ACBB50A7A223F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		86A1C7941E7E9ECE8A2D1312 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2C0C700B3B7FC451D92062A2 /* Crease */;
+			targetProxy = 7E884AD7122A5C42F74A69C7 /* PBXContainerItemProxy */;
+		};
+		9B65C265B829867D00322F33 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2C0C700B3B7FC451D92062A2 /* Crease */;
+			targetProxy = ECA722E6EC852743772CFF8F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		18B4F8D78E8FB6CC9FC0EB84 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		2859B3B9433124CC0F7950A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_A8000E0A-1A7A-4280-A1A6-C8BAF7667A6C" /* Secrets.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Crease/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		5B27753090FDBDA1AC10DC61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Crease.app/Crease";
+			};
+			name = Debug;
+		};
+		6C2072D36AF08BE1D8C89E64 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		6CBDBD2CE361512E89F3E0CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Crease.app/Crease";
+			};
+			name = Release;
+		};
+		97F5F280966E82F935C241B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Crease;
+			};
+			name = Debug;
+		};
+		CA70242FFB4A6D8BC5E6D719 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Crease;
+			};
+			name = Release;
+		};
+		E0B41F7DB392C54D821103B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = "TEMP_A8000E0A-1A7A-4280-A1A6-C8BAF7667A6C" /* Secrets.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Crease/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.divinedavis.crease;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0F727009E76B2956BB0AF4C9 /* Build configuration list for PBXNativeTarget "CreaseUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				97F5F280966E82F935C241B5 /* Debug */,
+				CA70242FFB4A6D8BC5E6D719 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7F4664E4914BDCB6CFA0F2C9 /* Build configuration list for PBXProject "Crease" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18B4F8D78E8FB6CC9FC0EB84 /* Debug */,
+				6C2072D36AF08BE1D8C89E64 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AD8C29FEE408651218791D6E /* Build configuration list for PBXNativeTarget "CreaseTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5B27753090FDBDA1AC10DC61 /* Debug */,
+				6CBDBD2CE361512E89F3E0CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C3EB0C20BD82519FBE1515D7 /* Build configuration list for PBXNativeTarget "Crease" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E0B41F7DB392C54D821103B7 /* Debug */,
+				2859B3B9433124CC0F7950A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1A405DE69C47537F58F7EB37 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.20.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		02DD1050D2C1AF4B5A7AE22E /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A405DE69C47537F58F7EB37 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E39EA8B04074742B98020921 /* Project object */;
+}
