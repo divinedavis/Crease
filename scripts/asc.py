@@ -240,11 +240,13 @@ def cmd_builds(asc: ASC, cfg: dict):
         if not app:
             raise SystemExit("no app record yet — run: python3 scripts/asc.py setup")
         app_id = app["id"]
-    for b in asc.builds(app_id):
+    builds = asc.builds(app_id)
+    if not builds:
+        print("  no builds yet — Apple takes a few minutes to ingest an upload")
+        return
+    for b in builds:
         a = b["attributes"]
         print(f"  build {a.get('version')}  {a.get('processingState')}  uploaded {a.get('uploadedDate')}")
-    else:
-        pass
 
 
 def main():
