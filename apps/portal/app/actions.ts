@@ -86,18 +86,31 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   if (insertErr) return { error: insertErr.message };
 
   const subtotal = rows.reduce((n, r) => n + r.quantity * r.unit_price_cents, 0);
-  const overBy = subtotal - order.estimate_subtotal_cents;
-  const needsApproval = overBy > order.approval_threshold_cents;
 
   const { error } = await db
     .from('orders')
     .update({
       subtotal_cents: subtotal,
       cleaner_notes: String(formData.get('cleaner_notes') ?? '') || null,
-      status: needsApproval ? 'awaiting_approval' : 'cleaning',
+      status: 'cleaning',
     })
     .eq('id', orderId);
   if (error) return { error: error.message };
+
+  // Settling decides whether this can be charged silently or has to go back to
+  // the customer — the card network, not the portal, is the authority on how
+  // much we are allowed to take. The dispatcher moves the order to
+  // 'awaiting_approval' if the count came in above the hold.
+  let needsApproval = false;
+  try {
+    const res = await callDispatch(`/v1/orders/${orderId}/settle`);
+    needsApproval = Boolean(res.needsApproval);
+  } catch (err) {
+    // The garments are already counted and the intake is saved; a payment
+    // problem must not silently look like a successful intake.
+    revalidatePath(`/orders/${orderId}`);
+    return { error: `Intake saved, but payment failed: ${(err as Error).message}` };
+  }
 
   revalidatePath('/');
   revalidatePath(`/orders/${orderId}`);

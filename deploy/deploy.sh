@@ -14,7 +14,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 echo "==> building"
-npx tsc -p packages/delivery/tsconfig.json
+# Build every package, so adding one cannot be silently forgotten here.
+for pkg in packages/*/; do
+  [ -f "$pkg/tsconfig.json" ] && npx tsc -p "$pkg/tsconfig.json"
+done
 npx tsc -p services/dispatch/tsconfig.json
 npm run build -w @crease/portal >/dev/null
 
@@ -22,11 +25,19 @@ echo "==> staging"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-mkdir -p "$STAGE/services/dispatch" "$STAGE/packages/delivery" "$STAGE/apps/portal"
+mkdir -p "$STAGE/services/dispatch" "$STAGE/packages" "$STAGE/apps/portal"
 cp -R services/dispatch/dist "$STAGE/services/dispatch/"
 cp services/dispatch/package.json "$STAGE/services/dispatch/"
-cp -R packages/delivery/dist "$STAGE/packages/delivery/"
-cp packages/delivery/package.json "$STAGE/packages/delivery/"
+
+# Every built package, not an enumerated list — the last deploy shipped a
+# dispatch binary that imported a package the staging step never copied.
+for pkg in packages/*/; do
+  name="$(basename "$pkg")"
+  [ -d "$pkg/dist" ] || continue
+  mkdir -p "$STAGE/packages/$name"
+  cp -R "$pkg/dist" "$STAGE/packages/$name/"
+  cp "$pkg/package.json" "$STAGE/packages/$name/"
+done
 
 # Next standalone already contains its traced node_modules and a server.js.
 cp -R apps/portal/.next/standalone/. "$STAGE/apps/portal/"

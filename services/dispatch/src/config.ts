@@ -30,6 +30,11 @@ export const config = {
   declaredValueDefaultCents: Number(process.env.DECLARED_VALUE_DEFAULT_CENTS ?? 20_000),
   declaredValueMaxCents: Number(process.env.DECLARED_VALUE_MAX_CENTS ?? 50_000),
 
+  payments: {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    ENABLE_MOCK_PAYMENTS: process.env.ENABLE_MOCK_PAYMENTS,
+  },
+
   providers: {
     UBER_CLIENT_ID: process.env.UBER_CLIENT_ID,
     UBER_CLIENT_SECRET: process.env.UBER_CLIENT_SECRET,

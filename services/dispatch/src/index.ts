@@ -4,6 +4,8 @@ import WebSocketTransport from 'ws';
 import { config } from './config.js';
 import { buildChain } from './deps.js';
 import { OrderService, type LegType } from './orders.js';
+import { PaymentService } from './payments.js';
+import { buildPaymentProvider } from '@crease/payments';
 
 const app = Fastify({
   logger: { level: config.logLevel },
@@ -27,6 +29,8 @@ const db = createClient(config.supabaseUrl, config.supabaseServiceKey, {
 
 const chain = buildChain({ ...config.providers, PUBLIC_URL: config.publicUrl } as any);
 const orders = new OrderService(db, chain, app.log);
+const paymentProvider = buildPaymentProvider(config.payments);
+const payments = new PaymentService(db, paymentProvider, app.log);
 
 // Capture the raw body for every request so signature verification never has
 // to re-serialize a parsed object (key order changes break the HMAC).
@@ -50,7 +54,53 @@ async function requireInternalKey(req: any, reply: any) {
 app.get('/healthz', async () => ({
   ok: true,
   providers: chain.active().map((p) => p.name),
+  payments: paymentProvider.name,
 }));
+
+/** Hold funds at checkout, against the estimate plus capped headroom. */
+app.post<{ Params: { id: string } }>(
+  '/v1/orders/:id/authorize',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      return { ok: true, payment: await payments.authorizeOrder(req.params.id) };
+    } catch (err) {
+      req.log.warn({ err, orderId: req.params.id }, 'authorize failed');
+      return reply.code(402).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
+/**
+ * Settle against the counted total. An intake above the hold is not an
+ * error — it returns needsApproval so the caller can ask the customer.
+ */
+app.post<{ Params: { id: string } }>(
+  '/v1/orders/:id/settle',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      return { ok: true, ...(await payments.settleOrder(req.params.id)) };
+    } catch (err) {
+      req.log.error({ err, orderId: req.params.id }, 'settle failed');
+      return reply.code(402).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
+/** Customer accepted a total above the hold: capture it and charge the rest. */
+app.post<{ Params: { id: string } }>(
+  '/v1/orders/:id/approve',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      return { ok: true, ...(await payments.approveAndCharge(req.params.id)) };
+    } catch (err) {
+      req.log.error({ err, orderId: req.params.id }, 'approve failed');
+      return reply.code(402).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
 
 /**
  * Leg 1 — customer to cleaner. Called when the pickup window opens
@@ -126,6 +176,9 @@ app.post<{ Params: { id: string } }>(
     }
     if (errors.length) return reply.code(409).send({ ok: false, errors });
 
+    // Release the hold too. Cancelling the couriers but leaving a customer's
+    // money on a dead order is the complaint that ends a young marketplace.
+    await payments.voidOrder(req.params.id, 'order cancelled');
     await db
       .from('orders')
       .update({ status: 'cancelled', cancelled_reason: 'cancelled by request' })
