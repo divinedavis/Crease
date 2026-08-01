@@ -8,7 +8,9 @@
 # left alone by every subsequent deploy.
 set -euo pipefail
 
-HOST="${CREASE_HOST:-root@104.236.120.144}"
+# Set CREASE_HOST=root@<ip>. Not defaulted in a public repo: the box is
+# shared with several unrelated production sites.
+HOST="${CREASE_HOST:?set CREASE_HOST=root@your.server.ip}"
 REMOTE=/root/crease
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"

@@ -9,7 +9,16 @@
  */
 import { adminClient } from './lib/client.mjs';
 
-const [slug, email, password = 'crease-dev-password', role = 'owner'] = process.argv.slice(2);
+// Test-account password comes from the environment. This repo is public,
+// and the Supabase project it points at is live — a known password in a
+// public file is a working login, not a fixture.
+const TEST_PASSWORD = process.env.CREASE_TEST_PASSWORD;
+if (!TEST_PASSWORD) {
+  console.error('set CREASE_TEST_PASSWORD (see README) before running this');
+  process.exit(1);
+}
+
+const [slug, email, password = TEST_PASSWORD, role = 'owner'] = process.argv.slice(2);
 if (!slug || !email) {
   console.error('usage: node scripts/seed-staff.mjs <cleaner-slug> <email> [password] [role]');
   process.exit(1);

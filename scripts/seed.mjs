@@ -7,6 +7,15 @@
  */
 import { adminClient } from './lib/client.mjs';
 
+// Test-account password comes from the environment. This repo is public,
+// and the Supabase project it points at is live — a known password in a
+// public file is a working login, not a fixture.
+const TEST_PASSWORD = process.env.CREASE_TEST_PASSWORD;
+if (!TEST_PASSWORD) {
+  console.error('set CREASE_TEST_PASSWORD (see README) before running this');
+  process.exit(1);
+}
+
 const { db } = await adminClient();
 
 const TEST_EMAIL = 'testcustomer@crease.local';
@@ -17,7 +26,7 @@ let user = existing.users.find((u) => u.email === TEST_EMAIL);
 if (!user) {
   const { data, error } = await db.auth.admin.createUser({
     email: TEST_EMAIL,
-    password: 'crease-dev-password',
+    password: TEST_PASSWORD,
     email_confirm: true, // no verification step, per product rule
     user_metadata: { full_name: 'Test Customer' },
   });

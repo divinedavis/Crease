@@ -12,6 +12,15 @@
  */
 import { makeClient, readEnv } from './lib/client.mjs';
 
+// Test-account password comes from the environment. This repo is public,
+// and the Supabase project it points at is live — a known password in a
+// public file is a working login, not a fixture.
+const TEST_PASSWORD = process.env.CREASE_TEST_PASSWORD;
+if (!TEST_PASSWORD) {
+  console.error('set CREASE_TEST_PASSWORD (see README) before running this');
+  process.exit(1);
+}
+
 const svcEnv = readEnv('services/dispatch/.env');
 const webEnv = readEnv('apps/portal/.env.local');
 const URL = svcEnv.SUPABASE_URL;
@@ -69,7 +78,7 @@ const { data: rivalOrder } = await admin
 const web = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);
 const { error: authErr } = await web.auth.signInWithPassword({
   email: 'shop@bedfordcleaners.local',
-  password: 'crease-dev-password',
+  password: TEST_PASSWORD,
 });
 check('staff can sign in', !authErr, authErr?.message);
 
