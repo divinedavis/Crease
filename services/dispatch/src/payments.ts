@@ -89,6 +89,23 @@ export class PaymentService {
         .select()
         .single();
 
+      // A customer with no saved payment method yields an intent that is
+      // created but unconfirmed — no funds are held. That is a legitimate
+      // state (the app finishes it with the client secret), but it is NOT an
+      // authorization, and treating it as one would let an order proceed to
+      // dispatch with nothing secured. Say so explicitly rather than letting
+      // a truthy row imply money is held.
+      if (state.status !== 'authorized') {
+        this.log.warn(
+          { orderId, status: state.status, requiresAction: state.requiresAction },
+          'payment intent created but funds are not held',
+        );
+        throw new PaymentProviderError(
+          `payment not authorized (status '${state.status}') — customer must complete payment`,
+          { retryable: false, code: 'not_authorized' },
+        );
+      }
+
       this.log.info({ orderId, amount }, 'payment authorized');
       return updated;
     } catch (err) {

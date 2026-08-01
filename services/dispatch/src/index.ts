@@ -110,6 +110,23 @@ app.post<{ Params: { id: string } }>(
   '/v1/orders/:id/dispatch-pickup',
   { preHandler: requireInternalKey },
   async (req, reply) => {
+    // Never send a courier for an order with no money held. An intent that
+    // was created but never confirmed looks like a payment row and is not one,
+    // so check the status rather than the existence of the row.
+    const { data: payment } = await db
+      .from('payments')
+      .select('status')
+      .eq('order_id', req.params.id)
+      .eq('kind', 'primary')
+      .maybeSingle();
+
+    if (!payment || !['authorized', 'captured'].includes(payment.status)) {
+      return reply.code(402).send({
+        ok: false,
+        error: `order has no held funds (payment status '${payment?.status ?? 'none'}')`,
+      });
+    }
+
     try {
       const leg = await orders.dispatchLeg(req.params.id, 'pickup');
       return { ok: true, leg };

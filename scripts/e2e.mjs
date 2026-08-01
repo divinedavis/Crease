@@ -61,8 +61,15 @@ const { data: order } = await db
 
 console.log(`\norder ${order.short_code} (${order.id})\n`);
 
+// --- checkout: hold the funds --------------------------------------------
+// Dispatch now refuses an order with no money held, which is the real order
+// of operations: nobody sends a courier before the card is authorized.
+console.log('CHECKOUT  hold funds');
+const auth = await post(`/v1/orders/${order.id}/authorize`);
+check('funds held', auth.payment.status, 'authorized');
+
 // --- leg 1: customer -> cleaner ------------------------------------------
-console.log('LEG 1  customer -> cleaner');
+console.log('\nLEG 1  customer -> cleaner');
 const pickup = await post(`/v1/orders/${order.id}/dispatch-pickup`);
 check('provider', pickup.leg.provider, 'mock');
 check('leg type', pickup.leg.leg, 'pickup');
@@ -104,6 +111,33 @@ check('direction flipped', ret.leg.pickup_address, pickup.leg.dropoff_address);
 check('return dispatched', await waitForOrder(order.id, ['return_dispatched']), 'return_dispatched');
 check('out for delivery', await waitForOrder(order.id, ['in_transit_to_customer']), 'in_transit_to_customer');
 check('delivered', await waitForOrder(order.id, ['delivered']), 'delivered');
+
+// --- guard: an unfunded order must not get a courier ----------------------
+console.log('\nGUARD  unfunded order');
+const { data: unfunded } = await db
+  .from('orders')
+  .insert({
+    customer_id: order.customer_id ?? (await db.from('addresses').select('user_id').limit(1).single()).data.user_id,
+    cleaner_id: order.cleaner_id,
+    address_id: (await db.from('addresses').select('id').limit(1).single()).data.id,
+    status: 'scheduled',
+    estimate_subtotal_cents: 2400,
+  })
+  .select('id')
+  .single();
+
+const res = await fetch(`${BASE}/v1/orders/${unfunded.id}/dispatch-pickup`, {
+  method: 'POST',
+  headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
+  body: '{}',
+});
+check('courier refused without held funds', res.status, 402);
+const { count: strayLegs } = await db
+  .from('delivery_legs')
+  .select('*', { count: 'exact', head: true })
+  .eq('order_id', unfunded.id);
+check('no leg created', strayLegs, 0);
+await db.from('orders').delete().eq('id', unfunded.id);
 
 // --- audit trail ----------------------------------------------------------
 console.log('\nAUDIT');

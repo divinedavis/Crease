@@ -81,9 +81,10 @@ export class StripeProvider implements PaymentProvider {
       throw new OverAuthorizationError(authorized, req.amountCents);
     }
 
-    const res = await this.call(`/payment_intents/${req.paymentIntentRef}/capture`, {
-      amount_to_capture: String(req.amountCents),
-    });
+    const res = await this.call(
+      `/payment_intents/${req.paymentIntentRef}/capture?expand[]=latest_charge`,
+      { amount_to_capture: String(req.amountCents) },
+    );
     return this.toState(res);
   }
 
@@ -125,12 +126,27 @@ export class StripeProvider implements PaymentProvider {
   }
 
   async get(ref: string): Promise<PaymentState> {
-    return this.toState(await this.call(`/payment_intents/${ref}`, undefined, undefined, 'GET'));
+    // latest_charge must be expanded to see refunds — see toState.
+    return this.toState(
+      await this.call(`/payment_intents/${ref}?expand[]=latest_charge`, undefined, undefined, 'GET'),
+    );
   }
 
   private toState(pi: any): PaymentState {
+    // Refunds live on the charge, not the intent.
+    //
+    // Older API versions exposed `charges.data[]` inline on the PaymentIntent;
+    // current ones (verified against 2026-07-29.dahlia) removed it in favour of
+    // `latest_charge`, which is a bare id unless expanded. Reading the old
+    // shape does not error — it silently yields 0, so a refunded payment would
+    // keep reporting itself as fully captured and our records would disagree
+    // with Stripe's about real money. Both shapes are handled so the adapter
+    // survives an account on either version.
+    const expandedCharge = typeof pi.latest_charge === 'object' ? pi.latest_charge : null;
     const refunded =
-      pi.charges?.data?.reduce((n: number, c: any) => n + (c.amount_refunded ?? 0), 0) ?? 0;
+      expandedCharge?.amount_refunded ??
+      pi.charges?.data?.reduce((n: number, c: any) => n + (c.amount_refunded ?? 0), 0) ??
+      0;
     const captured = pi.amount_received ?? 0;
 
     let status = STATUS_MAP[pi.status] ?? 'failed';
