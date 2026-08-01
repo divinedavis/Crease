@@ -48,6 +48,9 @@ async function waitForOrder(orderId, wanted, timeoutMs = 30_000) {
   return last;
 }
 
+// Anchor for run-scoped assertions below.
+const runStartedAt = new Date().toISOString();
+
 // Most recent seeded order.
 const { data: order } = await db
   .from('orders')
@@ -118,11 +121,15 @@ const { count } = await db
   .not('processed_at', 'is', null);
 console.log(`  ${count} webhook events processed`);
 
+// Scoped to this run, not all time. A rejected forgery is a *success* for
+// the system and the row is kept on purpose, so an all-time count means any
+// legitimate security probe fails this check forever afterwards.
 const { count: bad } = await db
   .from('delivery_events')
   .select('*', { count: 'exact', head: true })
-  .eq('signature_valid', false);
-check('no bad signatures', bad, 0);
+  .eq('signature_valid', false)
+  .gte('received_at', runStartedAt);
+check('no bad signatures during this run', bad, 0);
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED\n' : `\n${failures} CHECK(S) FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);
