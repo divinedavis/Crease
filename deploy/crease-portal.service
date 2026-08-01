@@ -1,0 +1,28 @@
+[Unit]
+Description=Crease cleaner portal (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/crease/apps/portal
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3010
+Environment=NODE_ENV=production
+
+Environment=NODE_OPTIONS=--max-old-space-size=256
+MemoryMax=420M
+
+StandardOutput=append:/var/log/crease/portal.log
+StandardError=append:/var/log/crease/portal.log
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

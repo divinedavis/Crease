@@ -7,18 +7,7 @@
  * Shops do not self-register — we onboard them — so this is the intended
  * path to a portal account, not just a test fixture.
  */
-import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const env = Object.fromEntries(
-  readFileSync(join(root, 'services/dispatch/.env'), 'utf8')
-    .split('\n')
-    .filter((l) => l.includes('=') && !l.startsWith('#'))
-    .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]),
-);
+import { adminClient } from './lib/client.mjs';
 
 const [slug, email, password = 'crease-dev-password', role = 'owner'] = process.argv.slice(2);
 if (!slug || !email) {
@@ -26,9 +15,7 @@ if (!slug || !email) {
   process.exit(1);
 }
 
-const db = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const { db } = await adminClient();
 
 const { data: cleaner, error: cErr } = await db
   .from('cleaners')

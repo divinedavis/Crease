@@ -1,0 +1,32 @@
+[Unit]
+Description=Crease dispatch service (courier orchestration + provider webhooks)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/crease/services/dispatch
+ExecStart=/usr/bin/node --enable-source-maps dist/index.js
+Restart=always
+RestartSec=3
+
+# Bound to loopback; nginx terminates TLS and proxies. Never expose this
+# port directly — it holds the Supabase service-role key in memory.
+Environment=HOST=127.0.0.1
+Environment=PORT=8011
+Environment=NODE_ENV=production
+
+# The box is shared with five other sites and has ~1GB free. Cap the heap so
+# a runaway here cannot OOM findacrib or NEMO alongside it.
+Environment=NODE_OPTIONS=--max-old-space-size=192
+MemoryMax=320M
+
+StandardOutput=append:/var/log/crease/dispatch.log
+StandardError=append:/var/log/crease/dispatch.log
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

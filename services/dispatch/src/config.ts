@@ -37,9 +37,13 @@ export const config = {
     UBER_WEBHOOK_SECRET: process.env.UBER_WEBHOOK_SECRET,
     UBER_API_BASE: process.env.UBER_API_BASE,
     ENABLE_MOCK_COURIER: process.env.ENABLE_MOCK_COURIER,
+    // The mock courier runs in this process, so its callbacks should loop
+    // straight back to this process. Deriving it from PUBLIC_URL sent them
+    // out to the public hostname and back, which silently swallowed every
+    // simulated event before DNS existed.
     MOCK_WEBHOOK_URL:
       process.env.MOCK_WEBHOOK_URL ??
-      `${process.env.PUBLIC_URL ?? 'http://localhost:8080'}/webhooks/mock`,
+      `http://127.0.0.1:${process.env.PORT ?? 8080}/webhooks/mock`,
     MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? 'dev-mock-secret',
     MOCK_SPEED_FACTOR: process.env.MOCK_SPEED_FACTOR,
     MOCK_FAILURE_RATE: process.env.MOCK_FAILURE_RATE,

@@ -10,26 +10,12 @@
  *
  *   node scripts/rls-check.mjs
  */
-import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const readEnv = (p) =>
-  Object.fromEntries(
-    readFileSync(join(root, p), 'utf8')
-      .split('\n')
-      .filter((l) => l.includes('=') && !l.startsWith('#'))
-      .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]),
-  );
+import { makeClient, readEnv } from './lib/client.mjs';
 
 const svcEnv = readEnv('services/dispatch/.env');
 const webEnv = readEnv('apps/portal/.env.local');
 const URL = svcEnv.SUPABASE_URL;
-const admin = createClient(URL, svcEnv.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const admin = await makeClient(svcEnv.SUPABASE_SERVICE_ROLE_KEY, URL);
 
 let failures = 0;
 const check = (label, ok, detail = '') => {
@@ -57,13 +43,20 @@ if (!rival) {
   rival = data;
 }
 
-const { data: customer } = await admin.from('profiles').select('id').limit(1).single();
-const { data: address } = await admin.from('addresses').select('id').eq('user_id', customer.id).limit(1).single();
+// Start from an address, not from a profile: staff accounts have profiles too
+// (the auth trigger makes one for every user) and no address, so picking an
+// arbitrary profile lands on a shop employee about half the time.
+const { data: address } = await admin
+  .from('addresses')
+  .select('id, user_id')
+  .limit(1)
+  .single();
+if (!address) throw new Error('no seeded address — run scripts/seed.mjs first');
 
 const { data: rivalOrder } = await admin
   .from('orders')
   .insert({
-    customer_id: customer.id,
+    customer_id: address.user_id,
     cleaner_id: rival.id,
     address_id: address.id,
     status: 'at_cleaner',
@@ -73,9 +66,7 @@ const { data: rivalOrder } = await admin
   .single();
 
 // --- sign in as Bedford staff, with the anon key, like a browser ---------
-const web = createClient(URL, webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-  auth: { persistSession: false },
-});
+const web = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);
 const { error: authErr } = await web.auth.signInWithPassword({
   email: 'shop@bedfordcleaners.local',
   password: 'crease-dev-password',
@@ -130,9 +121,7 @@ check(
 
 // --- anon, no session at all ---------------------------------------------
 console.log('\nANONYMOUS (no session)');
-const anon = createClient(URL, webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-  auth: { persistSession: false },
-});
+const anon = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);
 const { data: anonOrders } = await anon.from('orders').select('id').limit(5);
 check('anon sees no orders', (anonOrders ?? []).length === 0);
 const { data: anonProfiles } = await anon.from('profiles').select('id').limit(5);

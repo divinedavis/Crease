@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { createClient } from '@supabase/supabase-js';
+import WebSocketTransport from 'ws';
 import { config } from './config.js';
 import { buildChain } from './deps.js';
 import { OrderService, type LegType } from './orders.js';
@@ -12,6 +13,16 @@ const app = Fastify({
 
 const db = createClient(config.supabaseUrl, config.supabaseServiceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
+  // supabase-js constructs a RealtimeClient eagerly even though the
+  // dispatcher only ever makes REST calls. Node 20 has no global WebSocket,
+  // so without an explicit transport createClient throws at import time. The
+  // droplet is shared with five other sites — supplying `ws` is the safe fix;
+  // upgrading Node globally there is not.
+  // Cast: supabase-js types the transport against the DOM WebSocket, whose
+  // event types are narrower than `ws`'s. They are structurally compatible at
+  // runtime, and nothing here ever subscribes to a channel — this exists only
+  // so the eager RealtimeClient construction does not throw on Node 20.
+  realtime: { transport: WebSocketTransport as any },
 });
 
 const chain = buildChain({ ...config.providers, PUBLIC_URL: config.publicUrl } as any);
