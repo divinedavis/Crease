@@ -20,6 +20,10 @@ echo "==> generating project"
 (cd "$IOS" && xcodegen generate >/dev/null)
 xattr -cr "$IOS" 2>/dev/null || true
 
+# xcodebuild refuses to overwrite an existing result bundle, so a second run
+# fails for a reason that has nothing to do with the tests.
+rm -rf "$DD/TestResults.xcresult"
+
 echo "==> testing on $SIM"
 # xcodebuild forwards only variables prefixed TEST_RUNNER_ into the test
 # runner's environment; a bare NAME=value sets a build setting instead, which

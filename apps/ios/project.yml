@@ -59,6 +59,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         # simctl refuses to launch builds carrying the debug dylib.
         ENABLE_DEBUG_DYLIB: NO
+        CODE_SIGN_ENTITLEMENTS: Crease/Crease.entitlements
     dependencies:
       - package: Supabase
         product: Supabase

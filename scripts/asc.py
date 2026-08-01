@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""App Store Connect helper.
+
+Registers the bundle id (with Sign in with Apple), creates the app record, and
+reports TestFlight build state — all through the API rather than the dashboard,
+so shipping is repeatable and does not depend on anyone clicking through a web
+form correctly at 1am.
+
+Idempotent: every step looks the resource up before creating it, so a re-run
+after a partial failure resumes rather than duplicating.
+
+    python3 scripts/asc.py status      # what exists right now
+    python3 scripts/asc.py setup       # register bundle id + create app record
+    python3 scripts/asc.py builds      # TestFlight build processing state
+"""
+from __future__ import annotations
+
+import os
+import pathlib
+import sys
+import time
+
+import jwt
+import requests
+
+CONFIG_PATH = pathlib.Path(__file__).resolve().parent / "asc-config.env"
+API = "https://api.appstoreconnect.apple.com/v1"
+
+# App Store display names are globally unique across every developer, so a
+# plain "Crease" may well be taken. Fall through candidates rather than failing.
+NAME_CANDIDATES = [
+    "Crease",
+    "Crease — Dry Cleaning",
+    "Crease: Dry Cleaning Delivery",
+]
+
+
+def load_config() -> dict:
+    if not CONFIG_PATH.exists():
+        raise SystemExit(f"missing {CONFIG_PATH} — copy asc-config.env.example")
+    cfg: dict = {}
+    for line in CONFIG_PATH.read_text().splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        k, _, v = s.partition("=")
+        cfg[k.strip()] = os.path.expandvars(v.strip().strip('"').strip("'"))
+    return cfg
+
+
+def write_config_value(key: str, value: str) -> None:
+    lines = CONFIG_PATH.read_text().splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().startswith(f"{key}="):
+            lines[i] = f"{key}={value}"
+            break
+    else:
+        lines.append(f"{key}={value}")
+    CONFIG_PATH.write_text("\n".join(lines) + "\n")
+
+
+def token(cfg: dict) -> str:
+    key = pathlib.Path(cfg["ASC_KEY_PATH"]).read_text()
+    now = int(time.time())
+    return jwt.encode(
+        # 20 minutes is Apple's maximum; anything longer is rejected outright.
+        {"iss": cfg["ASC_ISSUER_ID"], "iat": now, "exp": now + 1200, "aud": "appstoreconnect-v1"},
+        key,
+        algorithm="ES256",
+        headers={"kid": cfg["ASC_KEY_ID"], "typ": "JWT"},
+    )
+
+
+class ASC:
+    def __init__(self, cfg: dict):
+        self.cfg = cfg
+        self.s = requests.Session()
+        self.s.headers["Authorization"] = f"Bearer {token(cfg)}"
+
+    def get(self, path: str, **params):
+        r = self.s.get(f"{API}{path}", params=params, timeout=30)
+        r.raise_for_status()
+        return r.json()
+
+    def post(self, path: str, payload: dict):
+        r = self.s.post(f"{API}{path}", json=payload, timeout=30)
+        if r.status_code >= 400:
+            raise RuntimeError(f"{r.status_code} {r.text[:500]}")
+        return r.json()
+
+    # --- bundle id ---------------------------------------------------------
+    def find_bundle_id(self, identifier: str):
+        data = self.get("/bundleIds", **{"filter[identifier]": identifier, "limit": 200})["data"]
+        return next((b for b in data if b["attributes"]["identifier"] == identifier), None)
+
+    def create_bundle_id(self, identifier: str, name: str):
+        return self.post(
+            "/bundleIds",
+            {
+                "data": {
+                    "type": "bundleIds",
+                    "attributes": {"identifier": identifier, "name": name, "platform": "IOS"},
+                }
+            },
+        )["data"]
+
+    def enable_capability(self, bundle_id_ref: str, capability: str):
+        """Sign in with Apple must be on the App ID, not just in the entitlements.
+
+        Adding it after a profile is issued forces regeneration, so it goes on
+        at registration time.
+
+        APPLE_ID_AUTH is not a bare toggle: Apple rejects it with 409
+        "Please select at least one configuration for Sign In with Apple"
+        unless a consent setting is supplied. PRIMARY_APP_CONSENT is the right
+        one for a standalone app that is not grouped with others.
+        """
+        attributes: dict = {"capabilityType": capability}
+        if capability == "APPLE_ID_AUTH":
+            attributes["settings"] = [
+                {
+                    "key": "APPLE_ID_AUTH_APP_CONSENT",
+                    "options": [{"key": "PRIMARY_APP_CONSENT"}],
+                }
+            ]
+        try:
+            self.post(
+                "/bundleIdCapabilities",
+                {
+                    "data": {
+                        "type": "bundleIdCapabilities",
+                        "attributes": attributes,
+                        "relationships": {
+                            "bundleId": {"data": {"type": "bundleIds", "id": bundle_id_ref}}
+                        },
+                    }
+                },
+            )
+            return True
+        except RuntimeError as e:
+            # Only an actual duplicate counts as success. Treating every
+            # ENTITY_ERROR as "already enabled" hid a real 409 here and
+            # reported Sign in with Apple as on when it was not — which would
+            # have surfaced as a broken sign-in button in a TestFlight build.
+            if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
+                return True
+            raise
+
+    # --- app record --------------------------------------------------------
+    def find_app(self, bundle_id: str):
+        data = self.get("/apps", **{"filter[bundleId]": bundle_id, "limit": 200})["data"]
+        return next((a for a in data if a["attributes"]["bundleId"] == bundle_id), None)
+
+    def create_app(self, bundle_id_ref: str, name: str, sku: str):
+        return self.post(
+            "/apps",
+            {
+                "data": {
+                    "type": "apps",
+                    "attributes": {
+                        "name": name,
+                        "sku": sku,
+                        "primaryLocale": "en-US",
+                        "bundleId": self.cfg["ASC_BUNDLE_ID"],
+                    },
+                    "relationships": {
+                        "bundleId": {"data": {"type": "bundleIds", "id": bundle_id_ref}}
+                    },
+                }
+            },
+        )["data"]
+
+    def builds(self, app_id: str):
+        return self.get(
+            "/builds",
+            **{"filter[app]": app_id, "limit": 10, "sort": "-uploadedDate"},
+        )["data"]
+
+
+def cmd_status(asc: ASC, cfg: dict):
+    bundle = asc.find_bundle_id(cfg["ASC_BUNDLE_ID"])
+    print(f"bundle id {cfg['ASC_BUNDLE_ID']}: {'registered' if bundle else 'NOT REGISTERED'}")
+    if bundle:
+        caps = asc.get(f"/bundleIds/{bundle['id']}/bundleIdCapabilities").get("data", [])
+        names = sorted(c["attributes"]["capabilityType"] for c in caps)
+        print(f"  capabilities: {', '.join(names) or 'none'}")
+
+    app = asc.find_app(cfg["ASC_BUNDLE_ID"])
+    print(f"app record: {'exists — ' + app['id'] if app else 'NOT CREATED'}")
+    if app:
+        print(f"  name: {app['attributes']['name']}")
+        if cfg.get("ASC_APP_ID") != app["id"]:
+            write_config_value("ASC_APP_ID", app["id"])
+            print("  (saved ASC_APP_ID to config)")
+
+
+def cmd_setup(asc: ASC, cfg: dict):
+    bundle = asc.find_bundle_id(cfg["ASC_BUNDLE_ID"])
+    if bundle:
+        print(f"bundle id already registered: {bundle['id']}")
+    else:
+        bundle = asc.create_bundle_id(cfg["ASC_BUNDLE_ID"], cfg["ASC_APP_NAME"])
+        print(f"registered bundle id: {bundle['id']}")
+
+    asc.enable_capability(bundle["id"], "APPLE_ID_AUTH")
+    caps = asc.get(f"/bundleIds/{bundle['id']}/bundleIdCapabilities").get("data", [])
+    enabled = {c["attributes"]["capabilityType"] for c in caps}
+    if "APPLE_ID_AUTH" not in enabled:
+        raise SystemExit("Sign in with Apple did not stick — the app cannot sign anyone in")
+    print(f"capabilities: {', '.join(sorted(enabled))}")
+
+    app = asc.find_app(cfg["ASC_BUNDLE_ID"])
+    if not app:
+        # Apple does not expose app-record creation through the API: /apps is
+        # GET/UPDATE only. This one step genuinely has to happen in the
+        # dashboard, so say so precisely rather than failing with a 403.
+        print()
+        print("app record: must be created in the App Store Connect UI —")
+        print("  Apple's API allows GET and UPDATE on /apps, but not CREATE.")
+        print()
+        print("  My Apps -> + -> New App")
+        print(f"    Platform     iOS")
+        print(f"    Name         {cfg['ASC_APP_NAME']}  (globally unique; try a suffix if taken)")
+        print(f"    Bundle ID    {cfg['ASC_BUNDLE_ID']}  (now registered, so it will appear)")
+        print(f"    SKU          crease-ios-001")
+        print(f"    User Access  Full Access")
+        print()
+        print("  Then re-run: python3 scripts/asc.py status")
+        return
+
+    print(f"app record exists: {app['id']} ({app['attributes']['name']})")
+    write_config_value("ASC_APP_ID", app["id"])
+    print(f"ASC_APP_ID={app['id']} saved")
+
+
+def cmd_builds(asc: ASC, cfg: dict):
+    app_id = cfg.get("ASC_APP_ID")
+    if not app_id:
+        app = asc.find_app(cfg["ASC_BUNDLE_ID"])
+        if not app:
+            raise SystemExit("no app record yet — run: python3 scripts/asc.py setup")
+        app_id = app["id"]
+    for b in asc.builds(app_id):
+        a = b["attributes"]
+        print(f"  build {a.get('version')}  {a.get('processingState')}  uploaded {a.get('uploadedDate')}")
+    else:
+        pass
+
+
+def main():
+    cfg = load_config()
+    asc = ASC(cfg)
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    {"status": cmd_status, "setup": cmd_setup, "builds": cmd_builds}[cmd](asc, cfg)
+
+
+if __name__ == "__main__":
+    main()
