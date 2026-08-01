@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Crease app icon — a garment hanger.
+
+    First attempt was an abstracted shirt collar with a horizontal accent
+    across it. At full size it read as a fold; at 60pt it read as a letter Y
+    with a line struck through it, which is the universal shape for "no" or
+    "cancelled" — precisely the wrong feeling for an app people open to check
+    their clothes are safe. Abandoned it.
+
+    A hanger has no such ambiguity. It is the one object that means "dry
+    cleaning" to everyone, at any size, in any culture, with no text.
+
+    Built for 60pt on a home screen: one continuous heavy stroke, generous
+    round joins, no detail smaller than the stroke width, no second colour
+    competing for attention. iOS supplies the rounded-rect mask, so this is a
+    full-bleed square with the mark inside the safe area.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#2E876F"/>
+      <stop offset="1" stop-color="#15503C"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hook: stem up from the apex, then a half turn over the top and a
+         short tail back down — an upside-down J.
+
+         The large-arc flag matters here. Set to 1 the arc takes the long way
+         round and draws a near-closed loop, which reads as a wrench rather
+         than a hook. 0 keeps it a clean semicircle. The sweep flag decides
+         which side: in SVG's y-down space, sweep 1 arcs *under* the chord and
+         the hook becomes a cup sitting on the apex. Sweep 0 arcs over the top,
+         which is the shape of an actual hook.
+         Radius and stroke are related: a 56px radius under a 58px stroke
+         leaves a ~54px hole, which closes up visually and turns the hook into
+         a nub. Widening the arc and thinning the stroke keeps the counter
+         open, which is what makes it read as a hook at any size. -->
+    <path d="M 512 452 L 512 348 A 70 70 0 0 0 372 348 L 372 396"
+          stroke-width="50"/>
+
+    <!-- Shoulders and bar as one closed path, so the joins stay clean. -->
+    <path d="M 512 452 L 258 694 L 766 694 Z"
+          stroke-width="72"/>
+  </g>
+</svg>

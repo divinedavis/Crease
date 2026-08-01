@@ -1,6 +1,7 @@
 export * from './types.js';
 export { MockPaymentProvider } from './mock.js';
 export { StripeProvider } from './stripe.js';
+export * from './connect.js';
 
 import { MockPaymentProvider } from './mock.js';
 import { StripeProvider } from './stripe.js';

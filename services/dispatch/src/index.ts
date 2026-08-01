@@ -5,7 +5,8 @@ import { config } from './config.js';
 import { buildChain } from './deps.js';
 import { OrderService, type LegType } from './orders.js';
 import { PaymentService } from './payments.js';
-import { buildPaymentProvider } from '@crease/payments';
+import { PayoutService } from './payouts.js';
+import { buildPaymentProvider, buildConnectProvider } from '@crease/payments';
 
 const app = Fastify({
   logger: { level: config.logLevel },
@@ -31,6 +32,8 @@ const chain = buildChain({ ...config.providers, PUBLIC_URL: config.publicUrl } a
 const orders = new OrderService(db, chain, app.log);
 const paymentProvider = buildPaymentProvider(config.payments);
 const payments = new PaymentService(db, paymentProvider, app.log);
+const connectProvider = buildConnectProvider(config.payments);
+const payouts = new PayoutService(db, connectProvider, app.log);
 
 // Capture the raw body for every request so signature verification never has
 // to re-serialize a parsed object (key order changes break the HMAC).
@@ -55,6 +58,7 @@ app.get('/healthz', async () => ({
   ok: true,
   providers: chain.active().map((p) => p.name),
   payments: paymentProvider.name,
+  connect: connectProvider.name,
 }));
 
 /** Hold funds at checkout, against the estimate plus capped headroom. */
@@ -80,7 +84,21 @@ app.post<{ Params: { id: string } }>(
   { preHandler: requireInternalKey },
   async (req, reply) => {
     try {
-      return { ok: true, ...(await payments.settleOrder(req.params.id)) };
+      const result = await payments.settleOrder(req.params.id);
+
+      // Pay the shop out of money we now actually hold. A payout failure must
+      // not fail the settle call — the customer has been charged correctly and
+      // the row is retried by the sweep; conflating the two would make the
+      // portal show a payment error for a bookkeeping problem.
+      if (!result.needsApproval && result.captured > 0) {
+        try {
+          await payouts.payoutOrder(req.params.id);
+        } catch (err) {
+          req.log.error({ err, orderId: req.params.id }, 'payout deferred');
+        }
+      }
+
+      return { ok: true, ...result };
     } catch (err) {
       req.log.error({ err, orderId: req.params.id }, 'settle failed');
       return reply.code(402).send({ ok: false, error: (err as Error).message });
@@ -94,13 +112,95 @@ app.post<{ Params: { id: string } }>(
   { preHandler: requireInternalKey },
   async (req, reply) => {
     try {
-      return { ok: true, ...(await payments.approveAndCharge(req.params.id)) };
+      const result = await payments.approveAndCharge(req.params.id);
+      try {
+        await payouts.payoutOrder(req.params.id);
+      } catch (err) {
+        req.log.error({ err, orderId: req.params.id }, 'payout deferred');
+      }
+      return { ok: true, ...result };
     } catch (err) {
       req.log.error({ err, orderId: req.params.id }, 'approve failed');
       return reply.code(402).send({ ok: false, error: (err as Error).message });
     }
   },
 );
+
+/** Start (or resume) a shop's payout onboarding. */
+app.post<{ Params: { id: string }; Body: { returnUrl?: string; refreshUrl?: string } }>(
+  '/v1/cleaners/:id/connect-onboarding',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      const base = config.publicUrl;
+      return {
+        ok: true,
+        ...(await payouts.startOnboarding(
+          req.params.id,
+          req.body?.returnUrl ?? `${base}/settings/payouts?done=1`,
+          req.body?.refreshUrl ?? `${base}/settings/payouts?retry=1`,
+        )),
+      };
+    } catch (err) {
+      req.log.error({ err, cleanerId: req.params.id }, 'connect onboarding failed');
+      return reply.code(502).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
+/** Re-read Stripe's view of a shop's account. */
+app.post<{ Params: { id: string } }>(
+  '/v1/cleaners/:id/connect-refresh',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      const account = await payouts.refreshAccount(req.params.id);
+      if (!account) return reply.code(404).send({ ok: false, error: 'no connect account' });
+      return { ok: true, account };
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
+/**
+ * Development only: pretend a shop finished Stripe's hosted onboarding.
+ *
+ * Refuses outright unless the mock Connect provider is active, so it can never
+ * mark a real Stripe account payable. Exists because the alternative — setting
+ * `payouts_enabled` directly in the database — produces a shop the database
+ * thinks is payable and Stripe does not, which is precisely the disagreement
+ * that makes payout bugs hard to see.
+ */
+app.post<{ Params: { id: string } }>(
+  '/v1/cleaners/:id/connect-complete-mock',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    if (connectProvider.name !== 'mock') {
+      return reply.code(403).send({ ok: false, error: 'only available with the mock provider' });
+    }
+    const { data: cleaner } = await db
+      .from('cleaners')
+      .select('stripe_account_id')
+      .eq('id', req.params.id)
+      .single();
+    if (!cleaner?.stripe_account_id) {
+      return reply.code(409).send({ ok: false, error: 'no connect account yet' });
+    }
+    (connectProvider as any).completeOnboarding(cleaner.stripe_account_id);
+    const account = await payouts.refreshAccount(req.params.id);
+    return { ok: true, account };
+  },
+);
+
+/** Retry payouts still owed — onboarding finished, or a transient failure. */
+app.post('/v1/payouts/sweep', { preHandler: requireInternalKey }, async (req, reply) => {
+  try {
+    return { ok: true, ...(await payouts.sweepPending()) };
+  } catch (err) {
+    return reply.code(502).send({ ok: false, error: (err as Error).message });
+  }
+});
 
 /**
  * Leg 1 — customer to cleaner. Called when the pickup window opens

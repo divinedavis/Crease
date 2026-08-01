@@ -37,6 +37,9 @@ export interface CaptureRequest {
 
 export interface PaymentState {
   paymentIntentRef: string;
+  /** The underlying charge. Transfers are funded from it directly, so a
+   *  payout does not have to wait on the platform's available balance. */
+  chargeRef?: string;
   status: PaymentStatus;
   authorizedCents?: number;
   capturedCents?: number;

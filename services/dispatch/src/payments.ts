@@ -157,7 +157,11 @@ export class PaymentService {
       });
       await this.db
         .from('payments')
-        .update({ status: state.status, captured_cents: state.capturedCents })
+        .update({
+          status: state.status,
+          captured_cents: state.capturedCents,
+          charge_ref: state.chargeRef,
+        })
         .eq('id', primary.id);
       await this.db.from('orders').update({ total_cents: total }).eq('id', orderId);
 
@@ -213,7 +217,11 @@ export class PaymentService {
       });
       await this.db
         .from('payments')
-        .update({ status: state.status, captured_cents: state.capturedCents })
+        .update({
+          status: state.status,
+          captured_cents: state.capturedCents,
+          charge_ref: state.chargeRef,
+        })
         .eq('id', primary.id);
     }
 
@@ -247,6 +255,7 @@ export class PaymentService {
           status: state.status,
           provider_intent_ref: state.paymentIntentRef,
           captured_cents: state.capturedCents,
+          charge_ref: state.chargeRef,
         })
         .eq('id', row.id);
     }

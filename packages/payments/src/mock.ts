@@ -84,6 +84,7 @@ export class MockPaymentProvider implements PaymentProvider {
     rec.captured = true;
     rec.capturedCents = req.amountCents;
     rec.status = 'captured';
+    rec.chargeRef = `mock_ch_${randomUUID()}`;
     return strip(rec);
   }
 
@@ -95,6 +96,7 @@ export class MockPaymentProvider implements PaymentProvider {
     const rec: Record_ = {
       paymentIntentRef: id,
       status: 'captured',
+      chargeRef: `mock_ch_${randomUUID()}`,
       authorizedCents: req.amountCents,
       capturedCents: req.amountCents,
       refundedCents: 0,

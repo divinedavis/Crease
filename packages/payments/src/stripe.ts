@@ -156,6 +156,7 @@ export class StripeProvider implements PaymentProvider {
 
     return {
       paymentIntentRef: pi.id,
+      chargeRef: expandedCharge?.id ?? (typeof pi.latest_charge === 'string' ? pi.latest_charge : undefined),
       status,
       // amount_capturable is what remains holdable; on a captured intent it
       // drops to zero, so fall back to the intent amount for the audit trail.
