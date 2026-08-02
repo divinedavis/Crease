@@ -48,6 +48,9 @@ targets:
         UIRequiredDeviceCapabilities:
           - arm64
         ITSAppUsesNonExemptEncryption: false
+        # Required. Calling requestWhenInUseAuthorization without this string
+        # does not fail gracefully — it terminates the app.
+        NSLocationWhenInUseUsageDescription: Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.
         # Return address for the Google OAuth sheet. Must match the
         # redirectTo passed to signInWithOAuth exactly.
         CFBundleURLTypes:

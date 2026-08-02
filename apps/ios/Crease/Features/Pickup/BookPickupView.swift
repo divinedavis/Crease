@@ -22,6 +22,7 @@ struct BookPickupView: View {
     @State private var submitting = false
     @State private var error: String?
     @State private var pickupDay = Date()
+    @State private var choosingCleaner = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -29,9 +30,25 @@ struct BookPickupView: View {
             header
         }
         .safeAreaInset(edge: .bottom) { optionsSheet }
+        .sheet(isPresented: $choosingCleaner) {
+            CleanerPickerView(
+                cleaners: store.cleaners,
+                pickup: pickup.coordinate,
+                selected: cleaner
+            ) { picked in
+                withAnimation(.easeInOut(duration: 0.4)) { cleaner = picked }
+                frameRoute()
+            }
+            .presentationDetents([.medium, .large])
+        }
         .task {
             if store.cleaners.isEmpty { await store.loadCleaners() }
-            cleaner = store.cleaners.first
+            // Nearest, not first alphabetically — but the customer can change
+            // it, which is the point.
+            cleaner = store.cleaners.min {
+                ($0.milesFrom(pickup.coordinate) ?? .greatestFiniteMagnitude)
+                    < ($1.milesFrom(pickup.coordinate) ?? .greatestFiniteMagnitude)
+            }
             frameRoute()
         }
     }
@@ -51,12 +68,7 @@ struct BookPickupView: View {
         .ignoresSafeArea()
     }
 
-    /// The seed data carries coordinates; a real deployment would pick the
-    /// nearest partner rather than the first one.
-    private var cleanerCoordinate: CLLocationCoordinate2D? {
-        guard cleaner != nil else { return nil }
-        return CLLocationCoordinate2D(latitude: 40.7141, longitude: -73.9613)
-    }
+    private var cleanerCoordinate: CLLocationCoordinate2D? { cleaner?.coordinate }
 
     private func frameRoute() {
         guard let c = cleanerCoordinate else { return }
@@ -113,6 +125,10 @@ struct BookPickupView: View {
                     .padding(.bottom, 8)
             }
 
+            cleanerRow
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
+
             VStack(spacing: 8) {
                 ForEach(ServiceOption.all) { option in
                     optionRow(option)
@@ -144,6 +160,41 @@ struct BookPickupView: View {
         .background(.regularMaterial)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    private var cleanerRow: some View {
+        Button { choosingCleaner = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "building.2.fill")
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.accentSoft, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(cleaner?.name ?? "Choose a cleaner")
+                        .font(.subheadline.weight(.semibold))
+                    if let cleaner, let miles = cleaner.milesFrom(pickup.coordinate) {
+                        Text(String(format: "%.1f mi away · %dh turnaround", miles, cleaner.turnaroundHours))
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text("Tap to pick a partner shop")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Text("Change")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cleaner: \(cleaner?.name ?? "none chosen"). Tap to change.")
     }
 
     private func optionRow(_ option: ServiceOption) -> some View {
@@ -205,19 +256,33 @@ struct BookPickupView: View {
         error = nil
         defer { submitting = false }
 
-        // Save the address first — an order references one, and a courier
-        // cannot be sent to a coordinate with no street on it.
-        guard let saved = await store.addAddress(.init(
-            user_id: userId,
-            label: "Pickup",
-            line1: pickup.line1,
-            city: pickup.city,
-            state: pickup.state,
-            postal_code: pickup.postalCode,
-            access_notes: accessNotes.isEmpty ? nil : accessNotes
-        )) else {
-            error = store.errorMessage ?? "Couldn't save that address."
-            return
+        // Reuse a saved address when it is the same place. Inserting on every
+        // booking piled up near-identical rows and made the saved list useless
+        // after a handful of orders.
+        let existing = store.addresses.first { $0.isSamePlace(as: pickup) }
+        let saved: Address
+        if let existing {
+            saved = existing
+        } else {
+            // First address someone saves is almost always where they live, so
+            // label it Home rather than "Pickup" — that label is what the
+            // pinned row on the search screen shows.
+            let label = store.addresses.isEmpty ? "Home" : nil
+            guard let created = await store.addAddress(.init(
+                user_id: userId,
+                label: label,
+                line1: pickup.line1,
+                city: pickup.city,
+                state: pickup.state,
+                postal_code: pickup.postalCode,
+                access_notes: accessNotes.isEmpty ? nil : accessNotes,
+                lat: pickup.coordinate.latitude,
+                lng: pickup.coordinate.longitude
+            )) else {
+                error = store.errorMessage ?? "Couldn't save that address."
+                return
+            }
+            saved = created
         }
 
         let now = Date()

@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 /// Mirrors the `order_status` enum in the database.
@@ -84,13 +85,33 @@ enum OrderStatus: String, Codable, CaseIterable {
 struct Cleaner: Codable, Identifiable, Hashable {
     let id: UUID
     let name: String
+    let line1: String?
     let city: String
     let state: String
     let turnaroundHours: Int
+    // Needed to draw the route and to rank shops by distance. Previously the
+    // map hardcoded one shop's coordinates, so every order looked like it was
+    // going to the same place regardless of which shop it was going to.
+    let lat: Double?
+    let lng: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, city, state
+        case id, name, line1, city, state, lat, lng
         case turnaroundHours = "turnaround_hours"
+    }
+
+    var coordinate: CLLocationCoordinate2D? {
+        guard let lat, let lng else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    }
+
+    /// Straight-line miles from a pickup point. Good enough to rank a handful
+    /// of shops; the courier fee comes from the carrier, not from this.
+    func milesFrom(_ point: CLLocationCoordinate2D) -> Double? {
+        guard let coordinate else { return nil }
+        let a = CLLocation(latitude: point.latitude, longitude: point.longitude)
+        let b = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return a.distance(from: b) / 1609.34
     }
 }
 
@@ -103,9 +124,14 @@ struct Address: Codable, Identifiable, Hashable {
     var state: String
     var postalCode: String
     var accessNotes: String?
+    // Carried through deliberately. Dropping these meant a saved address had
+    // to be re-geocoded from its text every time, which is both slower and
+    // less accurate than the point the customer already confirmed on a map.
+    var lat: Double?
+    var lng: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, label, line1, line2, city, state
+        case id, label, line1, line2, city, state, lat, lng
         case postalCode = "postal_code"
         case accessNotes = "access_notes"
     }
@@ -114,6 +140,22 @@ struct Address: Codable, Identifiable, Hashable {
         [line1, line2, city, "\(state) \(postalCode)"]
             .compactMap { $0?.isEmpty == false ? $0 : nil }
             .joined(separator: ", ")
+    }
+
+    /// Home and Work get their own glyphs; anything else is a generic pin.
+    var symbol: String {
+        switch (label ?? "").lowercased() {
+        case "home": "house.fill"
+        case "work", "office": "briefcase.fill"
+        default: "mappin.circle.fill"
+        }
+    }
+
+    /// True when two addresses are the same place, so a repeat booking reuses
+    /// the saved row instead of adding a near-duplicate every time.
+    func isSamePlace(as other: ResolvedAddress) -> Bool {
+        line1.caseInsensitiveCompare(other.line1) == .orderedSame
+            && postalCode == other.postalCode
     }
 }
 
@@ -233,7 +275,12 @@ extension Address {
             city: city,
             state: state,
             postalCode: postalCode,
-            coordinate: .brooklyn
+            // The stored point, not a placeholder — this is what a courier is
+            // actually sent to.
+            coordinate: CLLocationCoordinate2D(
+                latitude: lat ?? CLLocationCoordinate2D.brooklyn.latitude,
+                longitude: lng ?? CLLocationCoordinate2D.brooklyn.longitude
+            )
         )
     }
 }

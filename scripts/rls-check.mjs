@@ -46,6 +46,9 @@ if (!rival) {
       postal_code: '11222',
       lat: 40.73,
       lng: -73.95,
+      // Inactive: this is a test fixture, and an active row shows up in the
+      // customer app's cleaner picker as if it were a real partner.
+      active: false,
     })
     .select('id')
     .single();

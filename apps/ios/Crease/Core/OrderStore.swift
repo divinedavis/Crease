@@ -28,8 +28,8 @@ final class OrderStore: ObservableObject {
     id, short_code, status, estimate_subtotal_cents, subtotal_cents, total_cents,
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
     customer_notes, cleaner_notes, created_at,
-    cleaner:cleaners(id, name, city, state, turnaround_hours),
-    address:addresses(id, label, line1, line2, city, state, postal_code, access_notes),
+    cleaner:cleaners(id, name, line1, city, state, turnaround_hours, lat, lng),
+    address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
     order_items(id, label, quantity, unit_price_cents),
     delivery_legs(id, leg, status, courier_name, courier_vehicle, tracking_url, dropoff_pincode)
     """
@@ -59,7 +59,7 @@ final class OrderStore: ObservableObject {
     func loadCleaners() async {
         cleaners = (try? await client
             .from("cleaners")
-            .select("id, name, city, state, turnaround_hours")
+            .select("id, name, line1, city, state, turnaround_hours, lat, lng")
             .eq("active", value: true)
             .order("name")
             .execute()
@@ -69,7 +69,7 @@ final class OrderStore: ObservableObject {
     func loadAddresses() async {
         addresses = (try? await client
             .from("addresses")
-            .select("id, label, line1, line2, city, state, postal_code, access_notes")
+            .select("id, label, line1, line2, city, state, postal_code, access_notes, lat, lng")
             .order("created_at")
             .execute()
             .value) ?? []
@@ -94,6 +94,10 @@ final class OrderStore: ObservableObject {
         let state: String
         let postal_code: String
         let access_notes: String?
+        // Stored so a saved address never has to be re-geocoded, and so the
+        // point the customer confirmed on the map is the point a courier gets.
+        var lat: Double? = nil
+        var lng: Double? = nil
     }
 
     func addAddress(_ draft: NewAddress) async -> Address? {
@@ -101,7 +105,7 @@ final class OrderStore: ObservableObject {
             let saved: Address = try await client
                 .from("addresses")
                 .insert(draft)
-                .select("id, label, line1, line2, city, state, postal_code, access_notes")
+                .select("id, label, line1, line2, city, state, postal_code, access_notes, lat, lng")
                 .single()
                 .execute()
                 .value
