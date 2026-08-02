@@ -15,6 +15,7 @@ struct OrderDetailView: View {
     @State private var confirmingCancel = false
     @State private var cancelling = false
     @State private var cancelError: String?
+    @State private var schedulingReturn = false
 
     /// Prefer the freshly-loaded copy so realtime updates land on this screen
     /// while it is open, rather than showing whatever was passed in.
@@ -26,6 +27,7 @@ struct OrderDetailView: View {
         ScrollView {
             VStack(spacing: 14) {
                 statusCard
+                if live.needsReturnScheduling { readyCard }
                 if live.status == .awaitingApproval { approvalCard }
                 if let items = live.orderItems, !items.isEmpty { itemsCard(items) }
                 detailsCard
@@ -37,6 +39,9 @@ struct OrderDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(live.shortCode)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $schedulingReturn) {
+            ScheduleReturnView(order: live)
+        }
     }
 
     private var statusCard: some View {
@@ -53,6 +58,31 @@ struct OrderDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .creaseCard()
+    }
+
+    /// The only screen state that asks the customer for something rather than
+    /// telling them something.
+    private var readyCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Your clothes are ready", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+            Text("\(live.cleaner?.name ?? "The shop") has finished. Choose when you'd like them delivered.")
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                schedulingReturn = true
+            } label: {
+                Text("Choose a delivery time").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
+            .controlSize(.large)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Theme.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 
     private var approvalCard: some View {
@@ -134,6 +164,15 @@ struct OrderDetailView: View {
             }
             if let address = live.address {
                 labelled("Pickup & delivery", address.oneLine)
+            }
+            if let ready = live.estimatedReadyAt, live.readyAt == nil, live.status == .cleaning {
+                labelled("Estimated ready", ready.formatted(date: .abbreviated, time: .shortened))
+            }
+            if let start = live.returnWindowStart, let end = live.returnWindowEnd {
+                labelled(
+                    "Delivery window",
+                    "\(start.formatted(date: .abbreviated, time: .shortened)) – \(end.formatted(date: .omitted, time: .shortened))"
+                )
             }
             if let start = live.pickupWindowStart, let end = live.pickupWindowEnd {
                 labelled(

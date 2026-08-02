@@ -124,6 +124,9 @@ const { data: order, error: orderErr } = await db
     pickup_window_start: new Date(now).toISOString(),
     pickup_window_end: new Date(now + 2 * 3600_000).toISOString(),
     estimate_subtotal_cents: 2400,
+    // Crease charges for transport; the cleaning is settled with the shop.
+    delivery_fee_cents: 2995,
+    service_tier: 'round_trip',
     customer_notes: '3 shirts, 1 pair of slacks. Light starch.',
   })
   .select()

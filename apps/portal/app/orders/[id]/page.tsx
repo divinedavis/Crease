@@ -129,7 +129,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         )
       )}
 
-      <ActionsPanel orderId={order.id} status={order.status} />
+      <ActionsPanel
+        orderId={order.id}
+        status={order.status}
+        hasReturnWindow={Boolean(order.return_window_start)}
+      />
 
       <section className="group" style={{ marginTop: 32 }}>
         <h2>Courier legs</h2>

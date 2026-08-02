@@ -76,6 +76,24 @@ export function IntakeForm({
       </div>
 
       <div className="field" style={{ marginTop: 20 }}>
+        <label htmlFor="ready_hours">When will it be ready?</label>
+        <select id="ready_hours" name="ready_hours" defaultValue="48"
+                style={{ font: 'inherit', width: '100%', padding: '11px 12px', minHeight: 46,
+                         borderRadius: 8, border: '1px solid var(--border)',
+                         background: 'var(--surface)', color: 'var(--text)' }}>
+          <option value="4">Later today (~4 hours)</option>
+          <option value="24">Tomorrow (~24 hours)</option>
+          <option value="48">In 2 days (~48 hours)</option>
+          <option value="72">In 3 days (~72 hours)</option>
+          <option value="120">In 5 days (~120 hours)</option>
+        </select>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+          The customer sees this as an estimate. They only get asked to pick a
+          delivery time once you mark the order ready.
+        </p>
+      </div>
+
+      <div className="field">
         <label htmlFor="cleaner_notes">Notes for the customer</label>
         <textarea
           id="cleaner_notes"

@@ -27,6 +27,7 @@ final class OrderStore: ObservableObject {
     private static let orderSelect = """
     id, short_code, status, estimate_subtotal_cents, subtotal_cents, total_cents,
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
+    return_window_start, return_window_end, estimated_ready_at, ready_at,
     customer_notes, cleaner_notes, created_at,
     cleaner:cleaners(id, name, line1, city, state, turnaround_hours, lat, lng),
     address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
@@ -157,6 +158,27 @@ final class OrderStore: ObservableObject {
         } catch {
             errorMessage = "Couldn't schedule that pickup."
             return nil
+        }
+    }
+
+    /// Record the delivery window the customer chose, then ask the dispatcher
+    /// to book the return courier for it.
+    func scheduleReturn(order: Order, start: Date, end: Date) async -> String? {
+        do {
+            try await client
+                .from("orders")
+                .update(["return_window_start": start, "return_window_end": end])
+                .eq("id", value: order.id)
+                .execute()
+            _ = try await DispatchAPI().post(
+                "/v1/orders/\(order.id.uuidString.lowercased())/dispatch-return",
+                as: DispatchAPI.Ack.self
+            )
+            await loadOrders()
+            return nil
+        } catch {
+            await loadOrders()
+            return error.localizedDescription
         }
     }
 

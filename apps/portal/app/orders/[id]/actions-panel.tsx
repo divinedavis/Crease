@@ -11,7 +11,15 @@ import { markReady, requestReturnCourier, retryPickupCourier } from '@/app/actio
  * refusal verbatim instead of a generic failure. A shop that does not know
  * *why* dispatch failed will just press it again.
  */
-export function ActionsPanel({ orderId, status }: { orderId: string; status: string }) {
+export function ActionsPanel({
+  orderId,
+  status,
+  hasReturnWindow,
+}: {
+  orderId: string;
+  status: string;
+  hasReturnWindow: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +32,9 @@ export function ActionsPanel({ orderId, status }: { orderId: string; status: str
   }
 
   const canMarkReady = ['cleaning', 'awaiting_approval'].includes(status);
-  const canSendBack = status === 'ready';
+  // Only once the customer has chosen a window. Before that the shop pressing
+  // this would summon a courier at a time nobody agreed to.
+  const canSendBack = status === 'ready' && hasReturnWindow;
   const canRetryPickup = status === 'failed';
 
   if (!canMarkReady && !canSendBack && !canRetryPickup) return null;
@@ -32,6 +42,21 @@ export function ActionsPanel({ orderId, status }: { orderId: string; status: str
   return (
     <div className="card" style={{ marginTop: 20 }}>
       {error && <div className="notice danger">{error}</div>}
+
+      {canMarkReady && (
+        <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 14 }}>
+          Marking this ready tells the customer their clothes are done and lets them choose a
+          delivery time. Only press it when the order is actually finished — this is the message
+          they act on.
+        </p>
+      )}
+
+      {status === 'ready' && !hasReturnWindow && (
+        <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 14 }}>
+          Waiting on the customer to choose a delivery time. You'll be able to book a courier
+          once they have.
+        </p>
+      )}
 
       {canSendBack && (
         <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 14 }}>
@@ -43,10 +68,17 @@ export function ActionsPanel({ orderId, status }: { orderId: string; status: str
       <div className="row-actions" style={{ marginTop: 0 }}>
         {canMarkReady && (
           <button type="button" disabled={pending} onClick={() => run(() => markReady(orderId))}>
-            {pending ? 'Working…' : 'Mark ready'}
+            {pending ? 'Working…' : 'Mark ready — tell the customer'}
           </button>
         )}
-        {canSendBack && (
+        {status === 'ready' && !hasReturnWindow && (
+        <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 14 }}>
+          Waiting on the customer to choose a delivery time. You'll be able to book a courier
+          once they have.
+        </p>
+      )}
+
+      {canSendBack && (
           <button
             type="button"
             className="primary"

@@ -15,7 +15,15 @@ struct ServiceOption: Identifiable, Hashable {
     let name: String
     let blurb: String
     let priceCents: Int
-    let etaMinutes: Int
+    /// Minutes until a driver reaches the customer — the ONLY duration anyone
+    /// can honestly quote at booking.
+    ///
+    /// It is deliberately not a promise about the whole order. How long the
+    /// cleaning takes is the shop's to say, and they say it at intake; when
+    /// the clothes are ready the customer picks a return time themselves.
+    /// Quoting "~30 min" against a round trip implied the entire cycle fitted
+    /// in half an hour, which is not true of any dry cleaning anywhere.
+    let pickupEtaMinutes: Int?
     let symbol: String
     /// How many courier trips we pay for. Drives the margin, and it is the
     /// only lever that meaningfully moves it.
@@ -26,9 +34,9 @@ struct ServiceOption: Identifiable, Hashable {
         ServiceOption(
             id: "round_trip",
             name: "Round trip",
-            blurb: "We collect it and bring it back",
+            blurb: "We collect it now and deliver it back when it's ready",
             priceCents: 2995,
-            etaMinutes: 30,
+            pickupEtaMinutes: 30,
             symbol: "arrow.triangle.2.circlepath",
             legs: 2,
             isRecommended: false
@@ -36,9 +44,11 @@ struct ServiceOption: Identifiable, Hashable {
         ServiceOption(
             id: "return_only",
             name: "Return only",
-            blurb: "You drop it off, we deliver it back",
+            blurb: "You drop it off, we deliver it back when it's ready",
             priceCents: 1995,
-            etaMinutes: 30,
+            // Nothing is collected from the customer, so there is no arrival
+            // to estimate. Showing one would be inventing a number.
+            pickupEtaMinutes: nil,
             symbol: "arrow.down.circle",
             legs: 1,
             isRecommended: true
@@ -48,7 +58,7 @@ struct ServiceOption: Identifiable, Hashable {
             name: "Pickup only",
             blurb: "We collect it, you fetch it from the shop",
             priceCents: 1995,
-            etaMinutes: 20,
+            pickupEtaMinutes: 20,
             symbol: "arrow.up.circle",
             legs: 1,
             isRecommended: false

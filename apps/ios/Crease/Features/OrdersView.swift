@@ -30,8 +30,10 @@ struct OrdersView: View {
 
     private var active: [Order] { store.orders.filter { $0.status.isActive } }
     private var past: [Order] { store.orders.filter { !$0.status.isActive } }
+    /// Anything waiting on the customer: an intake above their hold, or clean
+    /// clothes with no delivery time chosen.
     private var needsAttention: [Order] {
-        store.orders.filter { $0.status == .awaitingApproval }
+        store.orders.filter { $0.status == .awaitingApproval || $0.needsReturnScheduling }
     }
 
     var body: some View {
@@ -53,7 +55,7 @@ struct OrdersView: View {
                             .padding(.top, 40)
                     }
 
-                    ForEach(active.filter { $0.status != .awaitingApproval }) { order in
+                    ForEach(active.filter { !needsAttention.contains($0) }) { order in
                         NavigationLink(value: order) {
                             ActiveOrderCard(order: order)
                         }
@@ -187,11 +189,14 @@ private struct ApprovalBanner: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Needs your approval", systemImage: "exclamationmark.circle.fill")
+            Label(order.needsReturnScheduling ? "Ready — pick a delivery time" : "Needs your approval",
+                  systemImage: order.needsReturnScheduling ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.warn)
+                .foregroundStyle(order.needsReturnScheduling ? Theme.accent : Theme.warn)
 
-            Text("\(order.cleaner?.name ?? "The cleaner") counted \(order.itemCount) items — \(order.displayCents.asMoney), above your \(order.estimateSubtotalCents.asMoney) estimate.")
+            Text(order.needsReturnScheduling
+                 ? "\(order.cleaner?.name ?? "The shop") has finished your order. Choose when you'd like it delivered."
+                 : "\(order.cleaner?.name ?? "The cleaner") counted \(order.itemCount) items — \(order.displayCents.asMoney), above your \(order.estimateSubtotalCents.asMoney) estimate.")
                 .font(.subheadline)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -202,7 +207,7 @@ private struct ApprovalBanner: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Theme.warnSoft)
+        .background(order.needsReturnScheduling ? Theme.accentSoft : Theme.warnSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 }

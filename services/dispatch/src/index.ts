@@ -267,7 +267,7 @@ app.post<{ Params: { id: string } }>(
   async (req, reply) => {
     const { data: order } = await db
       .from('orders')
-      .select('status')
+      .select('status, return_window_start')
       .eq('id', req.params.id)
       .single();
 
@@ -276,6 +276,15 @@ app.post<{ Params: { id: string } }>(
       return reply
         .code(409)
         .send({ error: `order must be 'ready' to dispatch return, is '${order.status}'` });
+    }
+    // The customer picks the delivery window once the shop says the clothes
+    // are done. Dispatching without one would send a courier at whatever
+    // moment the shop happened to press a button, which is not a time anybody
+    // agreed to.
+    if (!order.return_window_start) {
+      return reply
+        .code(409)
+        .send({ error: 'no delivery window chosen yet — the customer schedules this' });
     }
 
     try {

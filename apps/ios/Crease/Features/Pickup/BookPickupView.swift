@@ -154,7 +154,7 @@ struct BookPickupView: View {
             }
             .padding(.horizontal, 16)
 
-            Text("Covers pickup and delivery only. You pay \(cleaner?.name ?? "the shop") for the cleaning.")
+            Text("Covers pickup and delivery only. You pay \(cleaner?.name ?? "the shop") for the cleaning. They'll tell you when it's ready and you choose a delivery time.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -248,8 +248,10 @@ struct BookPickupView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(option.priceCents.asMoney)
                         .font(.body.weight(.semibold).monospacedDigit())
-                    Text("~\(option.etaMinutes) min")
-                        .font(.caption).foregroundStyle(.secondary)
+                    if let eta = option.pickupEtaMinutes {
+                        Text("driver ~\(eta) min")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(12)

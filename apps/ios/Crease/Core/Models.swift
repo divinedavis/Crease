@@ -27,7 +27,7 @@ enum OrderStatus: String, Codable, CaseIterable {
         case .atCleaner: "At the cleaner"
         case .awaitingApproval: "Needs your approval"
         case .cleaning: "Being cleaned"
-        case .ready: "Ready — coming back soon"
+        case .ready: "Ready for delivery"
         case .returnDispatched: "Driver collecting your order"
         case .inTransitToCustomer: "Out for delivery"
         case .delivered: "Delivered"
@@ -43,8 +43,8 @@ enum OrderStatus: String, Codable, CaseIterable {
         case .inTransitToCleaner: "Your bag is on its way to the shop."
         case .atCleaner: "They're counting your items now."
         case .awaitingApproval: "The final count came in above your estimate."
-        case .cleaning: "Usually ready within 48 hours."
-        case .ready: "We'll bring it back in your delivery window."
+        case .cleaning: "The shop will tell you when it's done."
+        case .ready: "Pick a time and we'll bring it back."
         case .returnDispatched: "A driver is picking it up from the shop."
         case .inTransitToCustomer: "Almost there."
         case .delivered: "Thanks for using Crease."
@@ -233,6 +233,13 @@ struct Order: Codable, Identifiable, Hashable {
     let serviceFeeCents: Int
     let pickupWindowStart: Date?
     let pickupWindowEnd: Date?
+    let returnWindowStart: Date?
+    let returnWindowEnd: Date?
+    /// The shop's estimate, set at intake. A promise.
+    let estimatedReadyAt: Date?
+    /// When the shop actually finished. A fact — and what lets the customer
+    /// schedule a return.
+    let readyAt: Date?
     let customerNotes: String?
     let cleanerNotes: String?
     let createdAt: Date
@@ -251,6 +258,10 @@ struct Order: Codable, Identifiable, Hashable {
         case serviceFeeCents = "service_fee_cents"
         case pickupWindowStart = "pickup_window_start"
         case pickupWindowEnd = "pickup_window_end"
+        case returnWindowStart = "return_window_start"
+        case returnWindowEnd = "return_window_end"
+        case estimatedReadyAt = "estimated_ready_at"
+        case readyAt = "ready_at"
         case customerNotes = "customer_notes"
         case cleanerNotes = "cleaner_notes"
         case createdAt = "created_at"
@@ -267,6 +278,13 @@ struct Order: Codable, Identifiable, Hashable {
     var liveLeg: DeliveryLeg? { deliveryLegs?.first(where: \.isLive) }
 
     var itemCount: Int { orderItems?.reduce(0) { $0 + $1.quantity } ?? 0 }
+
+    /// The clothes are done and no delivery has been booked, so the customer
+    /// owes us a choice. This is the one moment the app should be asking for
+    /// something rather than reporting.
+    var needsReturnScheduling: Bool {
+        readyAt != nil && returnWindowStart == nil && status == .ready
+    }
 }
 
 extension Int {

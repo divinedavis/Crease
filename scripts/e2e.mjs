@@ -61,12 +61,17 @@ const { data: order } = await db
 
 console.log(`\norder ${order.short_code} (${order.id})\n`);
 
-// --- checkout: hold the funds --------------------------------------------
-// Dispatch now refuses an order with no money held, which is the real order
-// of operations: nobody sends a courier before the card is authorized.
-console.log('CHECKOUT  hold funds');
-const auth = await post(`/v1/orders/${order.id}/authorize`);
-check('funds held', auth.payment.status, 'authorized');
+// --- checkout ------------------------------------------------------------
+// Crease charges the delivery fee up front — it is known the moment a tier is
+// chosen — so by dispatch time the payment is captured, not held. This stands
+// in for a completed PaymentSheet on the device.
+console.log('CHECKOUT  pay the delivery fee');
+const intent = await post(`/v1/orders/${order.id}/payment-intent`);
+check('intent created for the delivery fee', intent.amountCents, 2995);
+check('client secret returned', Boolean(intent.clientSecret), true);
+
+await db.from('payments').update({ status: 'captured', captured_cents: 2995 })
+  .eq('order_id', order.id).eq('kind', 'primary');
 
 // --- leg 1: customer -> cleaner ------------------------------------------
 console.log('\nLEG 1  customer -> cleaner');
@@ -100,7 +105,26 @@ const subtotal = shirt.unit_price_cents * 3 + pants.unit_price_cents;
 await db.from('orders').update({ subtotal_cents: subtotal, status: 'cleaning' }).eq('id', order.id);
 console.log(`  counted 4 garments, subtotal $${(subtotal / 100).toFixed(2)}`);
 
-await db.from('orders').update({ status: 'ready' }).eq('id', order.id);
+// The shop marks it ready, which is a fact, not a promise.
+await db.from('orders')
+  .update({ status: 'ready', ready_at: new Date().toISOString() })
+  .eq('id', order.id);
+
+// A return must NOT be dispatchable until the customer has chosen a window —
+// otherwise a courier turns up at whatever moment the shop pressed a button.
+const premature = await fetch(`${BASE}/v1/orders/${order.id}/dispatch-return`, {
+  method: 'POST',
+  headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
+  body: '{}',
+});
+check('return refused before the customer picks a time', premature.status, 409);
+
+// Customer picks a delivery window.
+const windowStart = new Date(Date.now() + 3600_000);
+await db.from('orders').update({
+  return_window_start: windowStart.toISOString(),
+  return_window_end: new Date(windowStart.getTime() + 3 * 3600_000).toISOString(),
+}).eq('id', order.id);
 
 // --- leg 2: cleaner -> customer ------------------------------------------
 console.log('\nLEG 2  cleaner -> customer');

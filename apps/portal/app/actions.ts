@@ -87,11 +87,19 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
 
   const subtotal = rows.reduce((n, r) => n + r.quantity * r.unit_price_cents, 0);
 
+  // The shop is the only party that knows how long the work takes, so this is
+  // where a real estimate enters the system. Until it does, the customer is
+  // told nothing rather than told a guess.
+  const readyHours = Number(formData.get('ready_hours') ?? 0);
+  const estimatedReadyAt =
+    readyHours > 0 ? new Date(Date.now() + readyHours * 3600_000).toISOString() : null;
+
   const { error } = await db
     .from('orders')
     .update({
       subtotal_cents: subtotal,
       cleaner_notes: String(formData.get('cleaner_notes') ?? '') || null,
+      estimated_ready_at: estimatedReadyAt,
       status: 'cleaning',
     })
     .eq('id', orderId);
@@ -128,7 +136,13 @@ export async function markReady(orderId: string) {
     return { error: `Cannot mark ready from status '${order?.status ?? 'unknown'}'.` };
   }
 
-  const { error } = await db.from('orders').update({ status: 'ready' }).eq('id', orderId);
+  // ready_at is a fact, not a promise. It is what unlocks the customer
+  // choosing a delivery time, so it must only be set when the clothes are
+  // genuinely finished — not when they were estimated to be.
+  const { error } = await db
+    .from('orders')
+    .update({ status: 'ready', ready_at: new Date().toISOString() })
+    .eq('id', orderId);
   if (error) return { error: error.message };
 
   revalidatePath('/');
