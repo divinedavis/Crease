@@ -65,7 +65,7 @@
 		D432DFD06B6B7CA0BAE6AD67 /* AddressEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressEntryView.swift; sourceTree = "<group>"; };
 		EAA2545435CF9E12FDF457B0 /* ServiceOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceOption.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		"TEMP_7C2565F9-1D65-443B-B824-9071462A0BAA" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_0B031167-05CE-4EAA-863C-EB9818A4FED1" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -171,10 +171,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_31B9A957-786A-451D-BAEA-0F650952EC4F" /* ios */ = {
+		"TEMP_47229821-2CA1-4B4A-8E2C-95F205F0001C" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_7C2565F9-1D65-443B-B824-9071462A0BAA" /* Secrets.xcconfig */,
+				"TEMP_0B031167-05CE-4EAA-863C-EB9818A4FED1" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -377,7 +377,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -411,7 +411,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C2565F9-1D65-443B-B824-9071462A0BAA" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_0B031167-05CE-4EAA-863C-EB9818A4FED1" /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Crease/Crease.entitlements;
@@ -481,7 +481,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -559,7 +559,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C2565F9-1D65-443B-B824-9071462A0BAA" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_0B031167-05CE-4EAA-863C-EB9818A4FED1" /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Crease/Crease.entitlements;
