@@ -24,3 +24,8 @@ apps/ios/*.ipa
 *[0-9].xcodeproj/
 * [0-9].xcodeproj/
 *.nosync
+
+# Raw simulator captures — regenerate with scripts/marketing-shots.sh.
+# The composed panels are committed; the inputs are not, since they carry
+# whatever test data happened to be seeded that day.
+apps/ios/marketing/raw/

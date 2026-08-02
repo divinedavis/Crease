@@ -11,19 +11,15 @@
     <string>Default</string>
   </array>
 
-  <!-- Apple Pay is deliberately absent for now.
-       The merchant id (merchant.com.divinedavis.crease) exists and the
-       APPLE_PAY capability is enabled on the App ID, but Apple does not expose
-       *attaching* a merchant to that capability through the App Store Connect
-       API — it is a checkbox in the developer portal only. Until that is
-       ticked, any profile issued omits the merchant and the build fails with
-       "profile doesn't match the entitlements file".
-
-       Re-add once attached:
-         <key>com.apple.developer.in-app-payments</key>
-         <array><string>merchant.com.divinedavis.crease</string></array>
-
-       PaymentSheet still takes cards in the meantime; it simply does not offer
-       the Apple Pay button. -->
+  <!-- Apple Pay needs three things, all of them, or the button never appears:
+       the merchant identifier below, the APPLE_PAY capability on the App ID,
+       and that merchant attached to the capability. The attachment is a
+       checkbox in the developer portal — App Store Connect's API does not
+       expose it, and a profile issued before it is ticked omits the merchant
+       and fails the build with "profile doesn't match the entitlements file". -->
+  <key>com.apple.developer.in-app-payments</key>
+  <array>
+    <string>merchant.com.divinedavis.crease</string>
+  </array>
 </dict>
 </plist>
