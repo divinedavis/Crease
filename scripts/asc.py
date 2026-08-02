@@ -170,6 +170,25 @@ class ASC:
             },
         )["data"]
 
+    def patch(self, path: str, payload: dict):
+        r = self.s.patch(f"{API}{path}", json=payload, timeout=30)
+        if r.status_code >= 400:
+            raise RuntimeError(f"{r.status_code} {r.text[:400]}")
+        return r
+
+    def attach_build(self, version_id: str, build_id: str):
+        """Point an App Store version at a build.
+
+        Until this is set the version has no artwork of its own, so App Store
+        Connect shows the placeholder grid next to the app name even though
+        the uploaded build carries a perfectly good icon. The icon in the
+        header comes from the version, not from TestFlight.
+        """
+        return self.patch(
+            f"/appStoreVersions/{version_id}/relationships/build",
+            {"data": {"type": "builds", "id": build_id}},
+        )
+
     def builds(self, app_id: str):
         return self.get(
             "/builds",
@@ -249,11 +268,34 @@ def cmd_builds(asc: ASC, cfg: dict):
         print(f"  build {a.get('version')}  {a.get('processingState')}  uploaded {a.get('uploadedDate')}")
 
 
+def cmd_attach(asc: ASC, cfg: dict):
+    """Attach the newest processed build to the editable App Store version."""
+    app_id = cfg["ASC_APP_ID"]
+    builds = [b for b in asc.builds(app_id) if b["attributes"].get("processingState") == "VALID"]
+    if not builds:
+        raise SystemExit("no VALID build yet — check: python3 scripts/asc.py builds")
+    build = builds[0]
+
+    versions = asc.get(f"/apps/{app_id}/appStoreVersions", **{"limit": 10})["data"]
+    editable = [v for v in versions
+                if v["attributes"]["appStoreState"] in
+                ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED")]
+    if not editable:
+        raise SystemExit("no editable App Store version to attach a build to")
+    version = editable[0]
+
+    asc.attach_build(version["id"], build["id"])
+    print(f"attached build {build['attributes']['version']} to version "
+          f"{version['attributes']['versionString']}")
+    print("the placeholder icon in App Store Connect should now be the real one")
+
+
 def main():
     cfg = load_config()
     asc = ASC(cfg)
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
-    {"status": cmd_status, "setup": cmd_setup, "builds": cmd_builds}[cmd](asc, cfg)
+    {"status": cmd_status, "setup": cmd_setup, "builds": cmd_builds,
+     "attach": cmd_attach}[cmd](asc, cfg)
 
 
 if __name__ == "__main__":
