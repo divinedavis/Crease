@@ -222,3 +222,18 @@ extension Int {
         return f.string(from: NSNumber(value: Double(self) / 100)) ?? "$0.00"
     }
 }
+
+extension Address {
+    /// A saved address already has everything the flow needs, so picking one
+    /// skips both the search and the pin step entirely — the fast path for a
+    /// returning customer, who is most of them.
+    var asResolved: ResolvedAddress {
+        ResolvedAddress(
+            line1: line1,
+            city: city,
+            state: state,
+            postalCode: postalCode,
+            coordinate: .brooklyn
+        )
+    }
+}

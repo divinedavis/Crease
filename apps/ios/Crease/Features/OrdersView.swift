@@ -9,7 +9,24 @@ struct OrdersView: View {
     @EnvironmentObject private var session: Session
     @EnvironmentObject private var store: OrderStore
 
-    @State private var showingSchedule = false
+    @State private var flow: BookingStep?
+
+    /// The booking flow, one step at a time. Modelled as an enum rather than a
+    /// pile of booleans so two sheets can never be presented at once — the
+    /// failure that produces a half-dismissed screen with no way back.
+    enum BookingStep: Identifiable {
+        case address
+        case pin(ResolvedAddress)
+        case book(ResolvedAddress, String)
+
+        var id: String {
+            switch self {
+            case .address: "address"
+            case .pin: "pin"
+            case .book: "book"
+            }
+        }
+    }
 
     private var active: [Order] { store.orders.filter { $0.status.isActive } }
     private var past: [Order] { store.orders.filter { !$0.status.isActive } }
@@ -21,6 +38,9 @@ struct OrdersView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 14) {
+                    greeting
+                    searchEntry
+
                     ForEach(needsAttention) { order in
                         NavigationLink(value: order) {
                             ApprovalBanner(order: order)
@@ -29,8 +49,8 @@ struct OrdersView: View {
                     }
 
                     if active.isEmpty && store.orders.isEmpty && !store.isLoading {
-                        EmptyState { showingSchedule = true }
-                            .padding(.top, 60)
+                        EmptyState()
+                            .padding(.top, 40)
                     }
 
                     ForEach(active.filter { $0.status != .awaitingApproval }) { order in
@@ -74,28 +94,91 @@ struct OrdersView: View {
                     .accessibilityLabel("Account")
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    showingSchedule = true
-                } label: {
-                    Label("Schedule a pickup", systemImage: "bag.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .controlSize(.large)
-                .padding(16)
-                .background(.bar)
-            }
             .refreshable { await store.loadAll() }
-            .sheet(isPresented: $showingSchedule) {
-                SchedulePickupView()
+            .fullScreenCover(item: $flow) { step in
+                switch step {
+                case .address:
+                    AddressEntryView(
+                        onPicked: { resolved in
+                            // Re-present as the next step rather than nesting,
+                            // so Back always means one step, never "out".
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                flow = .pin(resolved)
+                            }
+                        },
+                        onPickedSaved: { saved in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                flow = .book(saved.asResolved, saved.accessNotes ?? "")
+                            }
+                        }
+                    )
+                case let .pin(resolved):
+                    PinConfirmView(address: resolved) { confirmed, notes in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            flow = .book(confirmed, notes)
+                        }
+                        flow = nil
+                    }
+                case let .book(resolved, notes):
+                    BookPickupView(pickup: resolved, accessNotes: notes)
+                }
             }
         }
         .task {
             await store.loadAll()
             await store.startWatching()
         }
+    }
+
+    private var greeting: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(greetingText)
+                    .font(.title2.weight(.semibold))
+                Text("Where should we collect from?")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let part = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
+        return part
+    }
+
+    /// Looks like a text field, behaves like a button. Tapping opens a
+    /// dedicated screen with the keyboard already up, rather than trying to
+    /// type into a row inside a scrolling list.
+    private var searchEntry: some View {
+        Button {
+            flow = .address
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Text("Enter your address")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Theme.accent.opacity(0.35), lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Book a pickup")
+        .padding(.bottom, 4)
     }
 }
 
@@ -199,8 +282,6 @@ private struct PastOrderRow: View {
 }
 
 private struct EmptyState: View {
-    let onStart: () -> Void
-
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "bag")

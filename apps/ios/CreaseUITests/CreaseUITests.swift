@@ -11,6 +11,21 @@ final class CreaseUITests: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = false
+
+        // Dismiss system alerts that would otherwise swallow taps. A stale
+        // "Save Password?" left by another app's run on the same simulator is
+        // enough to fail an unrelated test, and the failure looks like the
+        // screen under test never appeared.
+        addUIInterruptionMonitor(withDescription: "system dialog") { alert in
+            for label in ["Not Now", "Cancel", "Don't Allow", "Allow", "OK", "Continue"] {
+                let button = alert.buttons[label]
+                if button.exists {
+                    button.tap()
+                    return true
+                }
+            }
+            return false
+        }
     }
 
     private func launch(signedIn: Bool) -> XCUIApplication {
@@ -67,7 +82,8 @@ final class CreaseUITests: XCTestCase {
             app.navigationBars["Crease"].waitForExistence(timeout: 20),
             "signed-in customer should land on the order list"
         )
-        XCTAssertTrue(app.buttons["Schedule a pickup"].exists)
+        XCTAssertTrue(app.buttons["Book a pickup"].exists,
+                      "the booking entry point moved to the top of the list")
         attach(app, "orders-list")
     }
 
@@ -92,23 +108,35 @@ final class CreaseUITests: XCTestCase {
         attach(app, "order-detail")
     }
 
-    func testSchedulePickupSheetOpensAndValidates() {
+    func testBookingFlowStartsFromTheAddressEntry() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
 
-        app.buttons["Schedule a pickup"].firstMatch.tap()
-        let sheet = app.navigationBars["Schedule a pickup"]
-        XCTAssertTrue(
-            sheet.waitForExistence(timeout: 15),
-            "scheduling sheet did not present"
-        )
+        // The entry point is a search-looking button at the top, not a bar at
+        // the bottom — the flow now starts where the eye lands.
+        let entry = app.buttons["Book a pickup"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 10), "home should offer a way to book")
+        // Do NOT app.tap() to prime the interruption monitor: that taps the
+        // centre of the screen, which lands on an order card and navigates
+        // away, and the resulting failure claims the button does not exist.
+        entry.tap()
 
-        // Nothing counted yet, so booking must be unavailable — a zero-item
-        // order would dispatch a courier to collect an empty bag.
-        XCTAssertFalse(app.buttons["Book"].isEnabled, "cannot book an empty order")
-        attach(app, "schedule-pickup")
+        // Screenshot before asserting, so a failure shows what actually
+        // appeared rather than only that something did not.
+        sleep(3)
+        attach(app, "after-tap")
+        if !app.navigationBars["Pickup address"].waitForExistence(timeout: 10) {
+            XCTFail("address entry did not present. On screen: "
+                    + app.navigationBars.allElementsBoundByIndex.map(\.identifier).joined(separator: ",")
+                    + " | buttons: "
+                    + app.buttons.allElementsBoundByIndex.prefix(8).map(\.identifier).joined(separator: ","))
+        }
+        XCTAssertTrue(app.textFields["Street address"].exists,
+                      "the keyboard target must be present and focused")
+        attach(app, "address-entry")
 
         app.buttons["Cancel"].tap()
-        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10),
+                      "cancelling returns home rather than stranding the flow")
     }
 }
