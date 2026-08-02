@@ -48,6 +48,12 @@ targets:
         UIRequiredDeviceCapabilities:
           - arm64
         ITSAppUsesNonExemptEncryption: false
+        # Return address for the Google OAuth sheet. Must match the
+        # redirectTo passed to signInWithOAuth exactly.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.divinedavis.crease
+            CFBundleURLSchemes:
+              - crease
         CFBundleIconName: AppIcon
         SUPABASE_HOST: $(SUPABASE_HOST)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)

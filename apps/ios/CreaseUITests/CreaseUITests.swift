@@ -40,19 +40,22 @@ final class CreaseUITests: XCTestCase {
         add(shot)
     }
 
-    func testSignInScreenOffersAppleAndEmail() {
+    func testSignInOffersBothProvidersAndNoEmailPath() {
         let app = launch(signedIn: false)
 
         XCTAssertTrue(app.staticTexts["Crease"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["Sign in with Apple"].exists)
-        XCTAssertTrue(app.textFields["Email address"].exists)
+        XCTAssertTrue(app.buttons["Continue with Apple"].exists
+                      || app.buttons["Sign in with Apple"].exists,
+                      "Apple is the primary sign-in and must be present")
+        XCTAssertTrue(app.buttons["Continue with Google"].exists,
+                      "Google is the only alternative, so it must be present")
 
-        // The code button stays disabled until the address is plausible, so a
-        // mistyped address cannot burn a send and a 60-second cooldown.
-        XCTAssertFalse(app.buttons["Email me a code"].isEnabled)
-        app.textFields["Email address"].tap()
-        app.typeText("someone@example.com")
-        XCTAssertTrue(app.buttons["Email me a code"].isEnabled)
+        // Deliberately asserting an absence. With no email path there is no
+        // fallback if a provider breaks, so a stray email field reappearing
+        // would quietly reintroduce the inbox round trip the product rejects.
+        XCTAssertFalse(app.textFields["Email address"].exists,
+                       "no email sign-in: nothing should send a customer to their inbox")
+        XCTAssertEqual(app.textFields.count, 0, "the sign-in screen takes no typed input")
 
         attach(app, "sign-in")
     }

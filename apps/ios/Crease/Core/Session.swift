@@ -4,9 +4,15 @@ import SwiftUI
 
 /// Supabase client + auth state.
 ///
-/// Sign-in is Apple, Google, or a one-time email code. There is deliberately no
-/// "check your inbox to confirm" step anywhere — a verification email between a
-/// customer and their first order is a step where people simply leave.
+/// Sign-in is Apple or Google. Nothing here sends the customer to their inbox:
+/// no confirmation link, and no emailed code either. Both put a mail app
+/// between someone and their first order, and a meaningful share of them do
+/// not come back — the emailed code is only marginally better than the
+/// confirmation link it replaced, because it is still a round trip through
+/// another app.
+///
+/// The consequence is that both providers must actually work. There is no
+/// email fallback to hide behind if one of them is misconfigured.
 @MainActor
 final class Session: ObservableObject {
     enum State: Equatable {
@@ -86,22 +92,19 @@ final class Session: ObservableObject {
     }
     #endif
 
-    /// Sends a 6-digit code. Not a magic link: a link bounces the customer out
-    /// to a mail app and often to a different browser, which loses the session
-    /// and the order they were mid-way through creating.
-    func sendEmailCode(to email: String) async -> Bool {
+    /// Google, via the system browser sheet.
+    ///
+    /// Uses the hosted OAuth flow rather than the native Google SDK: it needs
+    /// only a web client configured in Supabase, adds no third-party
+    /// dependency to the app, and the account picker is the one people already
+    /// recognise. The redirect scheme must match the one registered in
+    /// Info.plist or the sheet opens and never returns.
+    func signInWithGoogle() async {
         do {
-            try await client.auth.signInWithOTP(email: email, shouldCreateUser: true)
-            return true
-        } catch {
-            errorMessage = friendly(error)
-            return false
-        }
-    }
-
-    func verifyEmailCode(email: String, code: String) async {
-        do {
-            try await client.auth.verifyOTP(email: email, token: code, type: .email)
+            try await client.auth.signInWithOAuth(
+                provider: .google,
+                redirectTo: URL(string: "crease://auth-callback")
+            )
             await restore()
         } catch {
             errorMessage = friendly(error)
