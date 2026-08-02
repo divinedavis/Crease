@@ -17,3 +17,10 @@ scripts/asc-config.env
 apps/ios/build/
 apps/ios/*.xcarchive
 apps/ios/*.ipa
+
+# iCloud dedup duplicates. ~/Desktop is synced, so an edited project can
+# reappear as 'Crease 2.xcodeproj'. xcodebuild then fails with
+# "contains N projects" and picks the wrong one.
+*[0-9].xcodeproj/
+* [0-9].xcodeproj/
+*.nosync
