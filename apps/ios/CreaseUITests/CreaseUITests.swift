@@ -48,6 +48,20 @@ final class CreaseUITests: XCTestCase {
         return app
     }
 
+    /// Find a button whether it is in the app or inside a presented sheet.
+    ///
+    /// confirmationDialog puts its buttons under the sheet, and a cancel-role
+    /// button can land in either place depending on presentation. Checking
+    /// `.exists` on one and falling back without waiting races the animation
+    /// and reports a button that is simply not on screen *yet* as missing.
+    private func button(_ label: String, in app: XCUIApplication, timeout: TimeInterval = 6) -> XCUIElement? {
+        let candidates = [app.sheets.buttons[label], app.alerts.buttons[label], app.buttons[label]]
+        for candidate in candidates where candidate.waitForExistence(timeout: timeout / 3) {
+            return candidate
+        }
+        return nil
+    }
+
     private func attach(_ app: XCUIApplication, _ name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = name
@@ -138,5 +152,130 @@ final class CreaseUITests: XCTestCase {
         app.buttons["Cancel"].tap()
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10),
                       "cancelling returns home rather than stranding the flow")
+    }
+
+    // MARK: - Flows that shipped without coverage
+
+    func testCleanerCanBeChanged() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        // The saved home address is the fast path into booking.
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        // The whole point of this row: the app picks a default, the customer
+        // overrides it. Before this existed the nearest shop was silently
+        // imposed, which is fine with one partner and wrong with two.
+        let change = app.buttons.containing(.staticText, identifier: "Change").firstMatch
+        XCTAssertTrue(change.waitForExistence(timeout: 15), "cleaner must be changeable")
+        change.tap()
+
+        XCTAssertTrue(app.navigationBars["Choose a cleaner"].waitForExistence(timeout: 10))
+        XCTAssertGreaterThan(app.cells.count + app.buttons.count, 1, "partners should be listed")
+        attach(app, "cleaner-picker")
+        app.buttons["Cancel"].tap()
+    }
+
+    func testBookingQuotesOnlyTheDriverEta() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded")
+        }
+        home.tap()
+
+        XCTAssertTrue(app.staticTexts["Round trip"].waitForExistence(timeout: 15))
+
+        // Guards a claim the app used to make and cannot support: no estimate
+        // here may describe the whole cycle, because the cleaning duration is
+        // the shop's to state and it has not been asked yet.
+        let allText = app.staticTexts.allElementsBoundByIndex.map(\.label)
+        for label in allText where label.contains("min") {
+            XCTAssertTrue(
+                label.lowercased().contains("driver"),
+                "'\(label)' quotes a duration that is not the driver's arrival"
+            )
+        }
+        attach(app, "tiers")
+    }
+
+    func testCancelIsOfferedAndConfirmed() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        // Order cards live inside the scroll view alongside the booking entry,
+        // so find one by its status text rather than by position — an index
+        // silently shifts the moment anything is added to the list.
+        let card = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
+        ).firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no seeded order to open — run scripts/seed.mjs")
+        }
+        card.tap()
+        sleep(3)
+
+        // Confirm we actually reached a detail screen before asserting about
+        // its contents; otherwise a failed tap reads as a missing feature.
+        XCTAssertFalse(
+            app.navigationBars["Crease"].exists,
+            "tapping an order should push its detail screen"
+        )
+
+        // Cancellation is gated on physical custody. Before a courier holds
+        // the bag there must be a button; after, there must be an explanation.
+        // A screen offering neither is the bug this guards.
+        let cancelButton = app.buttons["Cancel this pickup"]
+        if cancelButton.waitForExistence(timeout: 8) {
+            cancelButton.tap()
+
+            // confirmationDialog presents as an action sheet, whose buttons are
+            // children of the sheet rather than of the app. Querying app.buttons
+            // alone finds nothing and reads as "no confirmation was shown".
+            sleep(2)
+            attach(app, "cancel-dialog")
+
+            // Presented as a popover on current iOS, which deliberately drops
+            // the cancel-role button — dismissal is a tap outside. So assert
+            // what is actually on screen: the destructive action, and the
+            // sentence telling the customer whether this will cost them.
+            XCTAssertNotNil(
+                button("Cancel pickup", in: app),
+                "cancelling is irreversible, so it must be confirmed"
+            )
+            let explained = app.staticTexts.allElementsBoundByIndex.contains {
+                $0.label.contains("won't be charged") || $0.label.contains("that trip is charged")
+            }
+            XCTAssertTrue(explained, "the confirmation must say whether cancelling costs anything")
+            attach(app, "cancel-confirm")
+
+            // Dismiss without cancelling: tap well away from the popover.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.92)).tap()
+        } else {
+            let labels = app.staticTexts.allElementsBoundByIndex.map(\.label)
+            let explained = labels.contains {
+                $0.contains("no longer be cancelled")
+                    || $0.contains("with a driver")
+                    || $0.contains("at the shop")
+                    || $0.contains("Cleaning has started")
+            }
+            XCTAssertTrue(
+                explained,
+                "no cancel button and no reason. On screen: \(labels.prefix(8).joined(separator: " | "))"
+            )
+        }
     }
 }

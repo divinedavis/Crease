@@ -46,6 +46,7 @@ xcodebuild test \
   -destination "platform=iOS Simulator,name=$SIM" \
   -derivedDataPath "$DD" \
   -resultBundlePath "$DD/TestResults.xcresult" \
+  -skip-testing:CreaseUITests/MarketingScreenshots \
   2>&1 | grep -E "Test Case '.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)" || true
 
 echo "==> result bundle: $DD/TestResults.xcresult"

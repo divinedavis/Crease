@@ -36,9 +36,71 @@ fi
 
 echo "==> generating project"
 xcodegen generate >/dev/null
-xattr -cr "$IOS" 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# Pre-flight: compile, then actually launch it.
+#
+# A clean archive proves the code compiles. It does not prove the app starts.
+# Missing usage strings, entitlements the profile does not carry, and force
+# unwraps in an initialiser all compile perfectly and then trap on launch —
+# and a build that traps reaches testers before anyone notices.
+# ---------------------------------------------------------------------------
 rm -rf "$WORK"
 mkdir -p "$WORK"
+
+SMOKE_SIM="${CREASE_SIM:-iPhone 17 Pro}"
+SMOKE_DD="$WORK/smoke"
+echo "==> pre-flight: building for the simulator"
+xcodebuild -project Crease.xcodeproj -scheme Crease \
+  -destination "platform=iOS Simulator,name=$SMOKE_SIM" \
+  -derivedDataPath "$SMOKE_DD" -quiet build CODE_SIGNING_ALLOWED=NO
+
+SIM_ID=$(xcrun simctl list devices available | grep "$SMOKE_SIM (" | grep -oE '[0-9A-F-]{36}' | head -1)
+[ -n "$SIM_ID" ] || { echo "no simulator named '$SMOKE_SIM'" >&2; exit 1; }
+xcrun simctl boot "$SIM_ID" 2>/dev/null || true
+xcrun simctl bootstatus "$SIM_ID" -b >/dev/null 2>&1 || true
+
+APP="$SMOKE_DD/Build/Products/Debug-iphonesimulator/Crease.app"
+BUNDLE=com.divinedavis.crease
+CRASH_DIR="$HOME/Library/Logs/DiagnosticReports"
+BEFORE=$(ls "$CRASH_DIR" 2>/dev/null | grep -ci crease || true)
+
+echo "==> pre-flight: launching"
+xcrun simctl terminate "$SIM_ID" "$BUNDLE" 2>/dev/null || true
+xcrun simctl install "$SIM_ID" "$APP"
+PID=$(xcrun simctl launch "$SIM_ID" "$BUNDLE" | awk -F': ' '{print $2}')
+sleep 8
+
+if ! xcrun simctl spawn "$SIM_ID" launchctl list 2>/dev/null | grep -q "$BUNDLE"; then
+  if ! ps -p "${PID:-0}" >/dev/null 2>&1; then
+    AFTER=$(ls "$CRASH_DIR" 2>/dev/null | grep -ci crease || true)
+    echo "PRE-FLIGHT FAILED: the app did not stay running." >&2
+    if [ "${AFTER:-0}" -gt "${BEFORE:-0}" ]; then
+      LATEST=$(ls -t "$CRASH_DIR"/Crease* 2>/dev/null | head -1)
+      echo "--- crash report: $LATEST ---" >&2
+      python3 -c "
+import json,sys,pathlib
+p=pathlib.Path('$LATEST')
+txt=p.read_text(errors='ignore').split(chr(10),1)
+try:
+    d=json.loads(txt[1])
+    ex=d.get('exception',{})
+    print('  type:', ex.get('type'), ex.get('signal'))
+    print('  reason:', (d.get('termination') or {}).get('reasons') or ex.get('message'))
+    for f in (d.get('threads') or [{}])[0].get('frames',[])[:8]:
+        print('   ', f.get('imageIndex'), f.get('symbol') or f.get('imageOffset'))
+except Exception as e:
+    print('  (could not parse:', e, ')')
+" >&2
+    fi
+    echo "Not shipping a build that traps on launch." >&2
+    exit 1
+  fi
+fi
+xcrun simctl terminate "$SIM_ID" "$BUNDLE" 2>/dev/null || true
+echo "==> pre-flight: app launched and stayed alive"
+
+xattr -cr "$IOS" 2>/dev/null || true
 
 echo "==> archiving"
 xcodebuild archive \
