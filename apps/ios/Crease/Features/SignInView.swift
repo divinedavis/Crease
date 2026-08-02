@@ -138,12 +138,48 @@ struct SignInView: View {
     }
 
     private func handleApple(_ result: Result<ASAuthorization, Error>) {
+        // Report what Apple actually said. The previous version collapsed every
+        // failure into one sentence, which made an on-device failure impossible
+        // to diagnose: Apple's own sheet says "Sign Up Not Completed" and the
+        // app said nothing more, so there was no way to tell a cancelled tap
+        // from a misconfigured App ID from a server-side rejection.
+        if case let .failure(error) = result {
+            let ns = error as NSError
+            if let authError = error as? ASAuthorizationError {
+                switch authError.code {
+                case .canceled:
+                    session.errorMessage = nil          // user tapped X; not an error
+                case .invalidResponse:
+                    session.errorMessage = "Apple returned an invalid response. (1000.\(ns.code))"
+                case .notHandled:
+                    session.errorMessage = "Apple couldn't handle the request. (1000.\(ns.code))"
+                case .notInteractive:
+                    session.errorMessage = "Apple sign-in needs an interactive session. (1000.\(ns.code))"
+                case .failed:
+                    session.errorMessage =
+                        "Apple rejected the sign-in. (\(ns.domain) \(ns.code)) \(ns.localizedDescription)"
+                case .unknown:
+                    session.errorMessage =
+                        "Apple sign-in failed. (\(ns.domain) \(ns.code)) \(ns.localizedDescription)"
+                @unknown default:
+                    session.errorMessage = "Apple sign-in failed. (\(ns.domain) \(ns.code))"
+                }
+            } else {
+                session.errorMessage = "Apple sign-in failed. (\(ns.domain) \(ns.code)) \(ns.localizedDescription)"
+            }
+            return
+        }
+
         guard case let .success(auth) = result,
-              let cred = auth.credential as? ASAuthorizationAppleIDCredential,
-              let tokenData = cred.identityToken,
+              let cred = auth.credential as? ASAuthorizationAppleIDCredential
+        else {
+            session.errorMessage = "Apple returned an unexpected credential type."
+            return
+        }
+        guard let tokenData = cred.identityToken,
               let token = String(data: tokenData, encoding: .utf8)
         else {
-            session.errorMessage = "Apple sign-in didn't complete."
+            session.errorMessage = "Apple returned no identity token."
             return
         }
         Task {

@@ -14,7 +14,15 @@ IOS="$ROOT/apps/ios"
 DD="${CREASE_DERIVED_DATA:-/tmp/crease-dd}"
 
 echo "==> minting a session for the test customer"
-eval "$(node "$ROOT/scripts/ios-session.mjs")"
+: "${CREASE_TEST_PASSWORD:?set CREASE_TEST_PASSWORD (keychain: crease-test-password)}"
+# ios-session.mjs prints exports; if it failed, eval silently produces nothing
+# and the script dies later on an unbound variable instead of saying why.
+SESSION_ENV="$(node "$ROOT/scripts/ios-session.mjs")" || {
+  echo "could not mint a session — is CREASE_TEST_PASSWORD correct?" >&2
+  exit 1
+}
+eval "$SESSION_ENV"
+: "${UITEST_ACCESS_TOKEN:?session minting returned no token}"
 
 echo "==> generating project"
 (cd "$IOS" && xcodegen generate >/dev/null)

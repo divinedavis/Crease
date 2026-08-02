@@ -132,6 +132,9 @@ final class Session: ObservableObject {
         if raw.contains("offline") || raw.contains("network") {
             return "You appear to be offline."
         }
+        // Anything else is shown verbatim rather than softened. A provider
+        // misconfiguration reads as an ordinary sign-in failure otherwise, and
+        // the one detail that identifies it is the part being thrown away.
         return raw
     }
 }
