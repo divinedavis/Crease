@@ -33,6 +33,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>DISPATCH_KEY</key>
+	<string>$(DISPATCH_KEY)</string>
+	<key>DISPATCH_URL</key>
+	<string>$(DISPATCH_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>

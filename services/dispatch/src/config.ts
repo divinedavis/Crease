@@ -26,6 +26,10 @@ export const config = {
   // Shared secret for calls from the portal / iOS app into the dispatcher.
   internalApiKey: required('INTERNAL_API_KEY'),
 
+  // Safe to hand to a client — it identifies the account and can do nothing
+  // on its own. The secret key never leaves this process.
+  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
+
   /** What we declare to the carrier per order, capped. See docs/insurance.md. */
   declaredValueDefaultCents: Number(process.env.DECLARED_VALUE_DEFAULT_CENTS ?? 20_000),
   declaredValueMaxCents: Number(process.env.DECLARED_VALUE_MAX_CENTS ?? 50_000),

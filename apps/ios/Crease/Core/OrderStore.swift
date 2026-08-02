@@ -123,9 +123,24 @@ final class OrderStore: ObservableObject {
         let address_id: UUID
         let status: String
         let estimate_subtotal_cents: Int
+        /// What Crease charges. This is the whole price of an order — the
+        /// cleaning is settled with the shop.
+        var delivery_fee_cents: Int = 0
+        var service_tier: String = "round_trip"
         let pickup_window_start: Date
         let pickup_window_end: Date
         let customer_notes: String?
+    }
+
+    /// Move a paid draft to scheduled. Called only after the payment sheet
+    /// reports success, so nothing is ever dispatched unpaid.
+    func markScheduled(_ orderId: UUID) async {
+        try? await client
+            .from("orders")
+            .update(["status": "scheduled"])
+            .eq("id", value: orderId)
+            .execute()
+        await loadOrders()
     }
 
     func createOrder(_ draft: NewOrder) async -> Order? {
@@ -142,6 +157,33 @@ final class OrderStore: ObservableObject {
         } catch {
             errorMessage = "Couldn't schedule that pickup."
             return nil
+        }
+    }
+
+    /// Call off an order.
+    ///
+    /// Routed through the dispatch service rather than written directly: the
+    /// couriers have to be cancelled with the carrier and the payment released
+    /// or refunded, and neither of those is something a phone should be
+    /// trusted to do. Flipping the status column here would leave a courier
+    /// still en route and the customer still charged.
+    /// Returns nil on a clean cancellation, or a message the customer must
+    /// read — including the case where the pickup stopped but the refund did
+    /// not go through.
+    func cancel(order: Order) async -> String? {
+        do {
+            let ack = try await DispatchAPI().post(
+                "/v1/orders/\(order.id.uuidString.lowercased())/cancel",
+                as: DispatchAPI.Ack.self
+            )
+            await loadOrders()
+            if ack.refundPending == true {
+                return ack.message
+                    ?? "Your pickup is cancelled, but the refund is still being processed."
+            }
+            return nil
+        } catch {
+            return error.localizedDescription
         }
     }
 

@@ -1,4 +1,5 @@
 import MapKit
+import StripePaymentSheet
 import SwiftUI
 
 /// The booking screen: route on a map, options in a sheet over it.
@@ -23,6 +24,8 @@ struct BookPickupView: View {
     @State private var error: String?
     @State private var pickupDay = Date()
     @State private var choosingCleaner = false
+    @StateObject private var checkout = Checkout()
+    @State private var pendingOrderId: UUID?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -30,6 +33,21 @@ struct BookPickupView: View {
             header
         }
         .safeAreaInset(edge: .bottom) { optionsSheet }
+        .background {
+            // Stripe's modifier takes a non-optional sheet, so it is attached
+            // only once one exists rather than guarded inside the call.
+            if let sheet = checkout.sheet {
+                Color.clear.paymentSheet(
+                    isPresented: $checkout.isPresenting,
+                    paymentSheet: sheet
+                ) { result in
+                    checkout.handle(result)
+                    if case .paid = checkout.state {
+                        Task { await confirmPaidOrder() }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $choosingCleaner) {
             CleanerPickerView(
                 cleaners: store.cleaners,
@@ -250,6 +268,15 @@ struct BookPickupView: View {
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
+    /// Payment succeeded: promote the draft so it can be dispatched, and get
+    /// out of the way.
+    private func confirmPaidOrder() async {
+        if let id = pendingOrderId {
+            await store.markScheduled(id)
+        }
+        dismiss()
+    }
+
     private func book() async {
         guard let cleaner, let userId = session.userId else { return }
         submitting = true
@@ -286,21 +313,29 @@ struct BookPickupView: View {
         }
 
         let now = Date()
-        let created = await store.createOrder(.init(
+        // Priced at the tier the customer actually chose. Previously this was
+        // always zero, so every booking was free — the screen promised a price
+        // the order did not carry.
+        guard let created = await store.createOrder(.init(
             customer_id: userId,
             cleaner_id: cleaner.id,
             address_id: saved.id,
-            status: "scheduled",
+            status: "draft",
             estimate_subtotal_cents: 0,
+            delivery_fee_cents: selected.priceCents,
+            service_tier: selected.id,
             pickup_window_start: now,
             pickup_window_end: now.addingTimeInterval(2 * 3600),
             customer_notes: nil
-        ))
-
-        if created != nil {
-            dismiss()
-        } else {
+        )) else {
             error = store.errorMessage ?? "Couldn't book that pickup."
+            return
         }
+
+        // The order exists as a draft and becomes scheduled only once it is
+        // paid for. An unpaid draft dispatches nobody.
+        pendingOrderId = created.id
+        await checkout.prepare(orderId: created.id, merchantName: cleaner.name)
+        if case let .failed(message) = checkout.state { error = message }
     }
 }

@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "7"
+    CURRENT_PROJECT_VERSION: "8"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 configs:
@@ -22,6 +22,9 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.20.0"
+  Stripe:
+    url: https://github.com/stripe/stripe-ios
+    from: "24.0.0"
 
 targets:
   Crease:
@@ -60,6 +63,8 @@ targets:
         CFBundleIconName: AppIcon
         SUPABASE_HOST: $(SUPABASE_HOST)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        DISPATCH_URL: $(DISPATCH_URL)
+        DISPATCH_KEY: $(DISPATCH_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.crease
@@ -72,6 +77,10 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      # PaymentSheet gives Apple Pay and card entry in one sheet, and handles
+      # 3-D Secure without us implementing a redirect flow.
+      - package: Stripe
+        product: StripePaymentSheet
 
   CreaseTests:
     type: bundle.unit-test

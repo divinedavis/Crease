@@ -27,6 +27,8 @@ export interface AuthorizeRequest {
   amountCents: number;
   currency: string;
   description: string;
+  /** 'immediate' when the final amount is already known at checkout. */
+  captureMethod?: 'manual' | 'immediate';
 }
 
 export interface CaptureRequest {

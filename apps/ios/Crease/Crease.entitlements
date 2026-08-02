@@ -10,5 +10,13 @@
   <array>
     <string>Default</string>
   </array>
+
+  <!-- Apple Pay. The merchant identifier must exist in the developer account
+       and be attached to the App ID's Apple Pay capability; the entitlement on
+       its own produces a sheet that never appears. -->
+  <key>com.apple.developer.in-app-payments</key>
+  <array>
+    <string>merchant.com.divinedavis.crease</string>
+  </array>
 </dict>
 </plist>

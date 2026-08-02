@@ -12,6 +12,9 @@ struct OrderDetailView: View {
 
     let order: Order
     @State private var approving = false
+    @State private var confirmingCancel = false
+    @State private var cancelling = false
+    @State private var cancelError: String?
 
     /// Prefer the freshly-loaded copy so realtime updates land on this screen
     /// while it is open, rather than showing whatever was passed in.
@@ -27,6 +30,7 @@ struct OrderDetailView: View {
                 if let items = live.orderItems, !items.isEmpty { itemsCard(items) }
                 detailsCard
                 if let leg = live.liveLeg { courierCard(leg) }
+                cancelSection
             }
             .padding(16)
         }
@@ -184,6 +188,93 @@ struct OrderDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .creaseCard()
+    }
+
+    /// Cancellation, and an honest explanation when it is no longer possible.
+    ///
+    /// Shown rather than hidden once the bag is collected: "you cannot cancel"
+    /// with a reason is a better answer than a screen with no cancel on it,
+    /// which reads as the option being missing rather than gone.
+    @ViewBuilder
+    private var cancelSection: some View {
+        if live.status.isCancellable {
+            VStack(alignment: .leading, spacing: 10) {
+                if let cancelError {
+                    Text(cancelError)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button(role: .destructive) {
+                    confirmingCancel = true
+                } label: {
+                    Text(cancelling ? "Cancelling…" : "Cancel this pickup")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(cancelling)
+
+                if live.status.cancellationMayCost {
+                    Text("A driver may already be on the way. If they have set off, the trip is still charged.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.top, 4)
+            .confirmationDialog(
+                "Cancel this pickup?",
+                isPresented: $confirmingCancel,
+                titleVisibility: .visible
+            ) {
+                Button("Cancel pickup", role: .destructive) {
+                    Task { await performCancel() }
+                }
+                Button("Keep it", role: .cancel) {}
+            } message: {
+                Text(live.status.cancellationMayCost
+                     ? "We'll stop the driver if we still can. If they've already set off, that trip is charged."
+                     : "Nothing has been collected yet, so you won't be charged.")
+            }
+        } else if live.status.isActive {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
+                Text(cannotCancelReason)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .creaseCard()
+        }
+    }
+
+    private var cannotCancelReason: String {
+        switch live.status {
+        case .inTransitToCleaner:
+            "Your bag is with a driver, so this can no longer be cancelled. Call \(live.cleaner?.name ?? "the shop") if something is wrong."
+        case .atCleaner, .awaitingApproval:
+            "Your bag is at the shop. Call \(live.cleaner?.name ?? "them") to sort anything out."
+        case .cleaning:
+            "Cleaning has started, so this can't be cancelled."
+        default:
+            "This order can no longer be cancelled."
+        }
+    }
+
+    private func performCancel() async {
+        cancelling = true
+        cancelError = nil
+        defer { cancelling = false }
+        if let message = await store.cancel(order: live) {
+            // Covers both a refused cancellation and a cancellation whose
+            // refund is still pending. Either way the customer stays on the
+            // screen and reads it rather than being returned to a list.
+            cancelError = message
+        } else {
+            dismiss()
+        }
     }
 
     private func labelled(_ label: String, _ value: String) -> some View {

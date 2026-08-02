@@ -29,6 +29,73 @@ export class PaymentService {
     private readonly log: { info: Function; warn: Function; error: Function },
   ) {}
 
+  /**
+   * A PaymentIntent the app can settle with Apple Pay or a card.
+   *
+   * Crease charges for transport only — the cleaning bill is the shop's, and
+   * the customer settles it directly. So this is a plain immediate charge for
+   * the delivery fee, not the authorize-then-capture dance the cleaning total
+   * needed: the fee is known the moment the tier is chosen, so there is
+   * nothing to hold and reprice.
+   *
+   * Returns the client secret, which is the only thing the app needs and the
+   * only thing it is allowed to have.
+   */
+  async createDeliveryPaymentIntent(orderId: string) {
+    const order = await this.loadOrder(orderId);
+    const amount = order.delivery_fee_cents;
+
+    if (!amount || amount <= 0) {
+      // A zero-price order is a bug, not a free ride. Refuse rather than
+      // silently handing back a payable-for-nothing intent.
+      throw new Error(`order ${orderId} has no delivery fee to charge`);
+    }
+
+    const { data: row, error } = await this.db
+      .from('payments')
+      .upsert(
+        {
+          order_id: orderId,
+          kind: 'primary',
+          provider: this.provider.name,
+          status: 'requires_payment_method',
+          authorized_cents: amount,
+        },
+        { onConflict: 'order_id,kind' },
+      )
+      .select()
+      .single();
+    if (error) throw new Error(`could not create payment row: ${error.message}`);
+
+    // Already paid — hand back the same intent rather than making a second.
+    if (row.status === 'captured' && row.provider_intent_ref) {
+      const existing = await this.provider.get(row.provider_intent_ref);
+      return { clientSecret: existing.clientSecret, amountCents: amount, alreadyPaid: true };
+    }
+
+    const state = await this.provider.authorize({
+      orderId,
+      externalId: row.id,
+      customerRef: order.customer?.payment_customer_ref ?? undefined,
+      amountCents: amount,
+      currency: 'usd',
+      description: `Crease ${order.service_tier ?? 'delivery'} — order ${order.short_code}`,
+      captureMethod: 'immediate',
+    });
+
+    await this.db
+      .from('payments')
+      .update({
+        status: state.status,
+        provider_intent_ref: state.paymentIntentRef,
+        authorized_cents: amount,
+      })
+      .eq('id', row.id);
+
+    this.log.info({ orderId, amount }, 'delivery payment intent created');
+    return { clientSecret: state.clientSecret, amountCents: amount, alreadyPaid: false };
+  }
+
   /** Place the hold. Idempotent on the order. */
   async authorizeOrder(orderId: string) {
     const order = await this.loadOrder(orderId);
@@ -276,12 +343,15 @@ export class PaymentService {
    * Getting this backwards leaves a customer's money sitting on a cancelled
    * order, which is the complaint that ends a young marketplace.
    */
-  async voidOrder(orderId: string, reason: string) {
+  async voidOrder(orderId: string, reason: string): Promise<{ voided: number; failed: string[] }> {
     const { data: payments } = await this.db
       .from('payments')
       .select('*')
       .eq('order_id', orderId)
       .not('provider_intent_ref', 'is', null);
+
+    const failed: string[] = [];
+    let voided = 0;
 
     for (const p of payments ?? []) {
       try {
@@ -297,17 +367,22 @@ export class PaymentService {
             last_error: null,
           })
           .eq('id', p.id);
+        voided++;
       } catch (err) {
         // Surface rather than swallow: money stuck on a dead order needs a
         // human, and a silent failure here is invisible until someone calls.
+        // The caller must be able to tell the customer their refund is
+        // pending rather than implying it already happened.
         this.log.error({ orderId, paymentId: p.id, err }, 'could not void payment');
+        failed.push((err as Error).message);
         await this.db
           .from('payments')
           .update({ last_error: (err as Error).message })
           .eq('id', p.id);
       }
     }
-    this.log.info({ orderId, reason }, 'order payments voided');
+    this.log.info({ orderId, reason, voided, failed: failed.length }, 'order payments voided');
+    return { voided, failed };
   }
 
   private async loadOrder(orderId: string) {

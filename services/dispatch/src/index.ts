@@ -61,6 +61,25 @@ app.get('/healthz', async () => ({
   connect: connectProvider.name,
 }));
 
+/**
+ * A PaymentIntent for the delivery fee, for the app to settle with Apple Pay
+ * or a card. Returns the client secret and the publishable key, which is all
+ * a client is allowed to hold.
+ */
+app.post<{ Params: { id: string } }>(
+  '/v1/orders/:id/payment-intent',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      const result = await payments.createDeliveryPaymentIntent(req.params.id);
+      return { ok: true, ...result, publishableKey: config.stripePublishableKey };
+    } catch (err) {
+      req.log.error({ err, orderId: req.params.id }, 'payment intent failed');
+      return reply.code(402).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
 /** Hold funds at checkout, against the estimate plus capped headroom. */
 app.post<{ Params: { id: string } }>(
   '/v1/orders/:id/authorize',
@@ -293,14 +312,29 @@ app.post<{ Params: { id: string } }>(
     }
     if (errors.length) return reply.code(409).send({ ok: false, errors });
 
-    // Release the hold too. Cancelling the couriers but leaving a customer's
-    // money on a dead order is the complaint that ends a young marketplace.
-    await payments.voidOrder(req.params.id, 'order cancelled');
+    // Release or refund the money too. Cancelling the couriers but leaving a
+    // customer's money on a dead order is the complaint that ends a young
+    // marketplace.
+    const money = await payments.voidOrder(req.params.id, 'order cancelled');
+
     await db
       .from('orders')
       .update({ status: 'cancelled', cancelled_reason: 'cancelled by request' })
       .eq('id', req.params.id);
-    return { ok: true };
+
+    // The couriers are stopped either way, so the cancellation itself stands.
+    // But a failed refund must not be reported as a clean cancellation — the
+    // customer is still out of pocket and needs to be told so.
+    if (money.failed.length > 0) {
+      req.log.error({ orderId: req.params.id, failed: money.failed }, 'cancelled but refund pending');
+      return {
+        ok: true,
+        refundPending: true,
+        message: 'Your pickup is cancelled. The refund could not be completed automatically and is being processed manually.',
+      };
+    }
+
+    return { ok: true, refundPending: false };
   },
 );
 

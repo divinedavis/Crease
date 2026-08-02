@@ -53,7 +53,10 @@ export class StripeProvider implements PaymentProvider {
     const body: Record<string, string> = {
       amount: String(req.amountCents),
       currency: req.currency,
-      capture_method: 'manual',
+      // Manual by default: the cleaning total is not known at checkout, so the
+      // hold is placed first and captured after intake. A caller that already
+      // knows the final amount — the delivery fee does — passes immediate.
+      capture_method: req.captureMethod === 'immediate' ? 'automatic' : 'manual',
       description: req.description,
       'metadata[order_id]': req.orderId,
     };

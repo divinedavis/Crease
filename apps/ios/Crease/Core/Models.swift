@@ -76,6 +76,21 @@ enum OrderStatus: String, Codable, CaseIterable {
         self != .delivered && self != .cancelled && self != .failed
     }
 
+    /// Whether the customer can still call it off.
+    ///
+    /// The line is physical custody, not convenience: once a courier has the
+    /// bag, cancelling would strand someone else's clothes in a stranger's
+    /// car, and once the shop has started cleaning there is work to pay for.
+    /// Before a courier is holding anything, cancelling is free and should be
+    /// one tap.
+    var isCancellable: Bool {
+        [.draft, .scheduled, .pickupDispatched].contains(self)
+    }
+
+    /// A courier may already be on their way, so the carrier can bill us for
+    /// the trip even though nothing was collected. Say so before charging it.
+    var cancellationMayCost: Bool { self == .pickupDispatched }
+
     /// True while a courier is physically holding the order.
     var hasCourierEnRoute: Bool {
         [.pickupDispatched, .inTransitToCleaner, .returnDispatched, .inTransitToCustomer].contains(self)
