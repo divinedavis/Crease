@@ -31,6 +31,18 @@ export async function middleware(request: NextRequest) {
   if (!user && !request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+
+    // Behind nginx the standalone server resolves nextUrl against its own
+    // listen address, so this redirect went out as localhost:3010 — a dead end
+    // in the visitor's browser, which is what every signed-out visitor to
+    // crease.divinedavis.com hit. Rebuild the origin from what the proxy
+    // forwarded. nginx also rewrites Location as a second line of defence.
+    const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+    if (host) {
+      url.protocol = `${request.headers.get('x-forwarded-proto') ?? 'https'}:`;
+      url.host = host;
+      url.port = '';
+    }
     return NextResponse.redirect(url);
   }
 
