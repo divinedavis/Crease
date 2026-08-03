@@ -2,10 +2,18 @@
   "name": "crease",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "services/*", "apps/portal"],
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/portal"
+  ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev:dispatch": "npm run dev -w @crease/dispatch"
+  },
+  "overrides": {
+    "postcss": "^8.5.25",
+    "sharp": "^0.35.3"
   }
 }
