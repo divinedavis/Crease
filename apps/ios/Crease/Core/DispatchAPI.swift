@@ -2,21 +2,23 @@ import Foundation
 
 /// The one place the app talks to the dispatch service.
 ///
-/// Everything that moves money or a courier lives behind this: the client can
-/// read its own orders through Supabase under RLS, but it can never dispatch,
-/// charge or refund directly. Centralised so the shared secret has exactly one
-/// home rather than being pasted into each caller.
+/// Authenticated with the customer's own Supabase access token, never a shared
+/// secret. An IPA is a zip file: anything in Info.plist or the binary belongs
+/// to whoever downloads the app, and a dispatch key in there would let a
+/// stranger book couriers and move money on any order.
+///
+/// The server re-checks ownership on every call, so this token grants exactly
+/// what the customer already has — their own orders.
 struct DispatchAPI {
     let baseURL: String
-    let key: String
+    let accessToken: String
 
-    init() {
-        let info = Bundle.main.infoDictionary
-        baseURL = info?["DISPATCH_URL"] as? String ?? ""
-        key = info?["DISPATCH_KEY"] as? String ?? ""
+    init(accessToken: String) {
+        baseURL = Bundle.main.infoDictionary?["DISPATCH_URL"] as? String ?? ""
+        self.accessToken = accessToken
     }
 
-    var isConfigured: Bool { !baseURL.isEmpty && !key.isEmpty }
+    var isConfigured: Bool { !baseURL.isEmpty && !accessToken.isEmpty }
 
     struct Failure: LocalizedError {
         let message: String
@@ -30,7 +32,7 @@ struct DispatchAPI {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(key, forHTTPHeaderField: "x-crease-key")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = Data("{}".utf8)
 
@@ -44,7 +46,15 @@ struct DispatchAPI {
             let reason = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.readable
             throw Failure(message: reason ?? "That didn't work (\(status)).")
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            // A proxy error page decodes as nothing and surfaces as "the data
+            // couldn't be read", which tells the customer nothing and sent me
+            // looking in the app rather than at the gateway. Say what arrived.
+            let body = String(data: data.prefix(200), encoding: .utf8) ?? ""
+            throw Failure(message: "Unexpected response from Crease (\(status)). \(body)")
+        }
     }
 
     private struct ErrorBody: Decodable {

@@ -36,39 +36,25 @@ final class Checkout: ObservableObject {
     @Published var sheet: PaymentSheet?
     @Published var isPresenting = false
 
-    private let dispatchURL: String
-    private let internalKey: String
-
-    init() {
-        let info = Bundle.main.infoDictionary
-        dispatchURL = info?["DISPATCH_URL"] as? String ?? ""
-        internalKey = info?["DISPATCH_KEY"] as? String ?? ""
-    }
-
     /// Ask the server for an intent and build the sheet around it.
-    func prepare(orderId: UUID, merchantName: String) async {
+    ///
+    /// The access token is the customer's own; the server checks the order
+    /// belongs to them. No shared secret ships in this app.
+    func prepare(orderId: UUID, accessToken: String) async {
         state = .preparing
-        guard !dispatchURL.isEmpty, !internalKey.isEmpty else {
-            state = .failed("Payments are not configured in this build.")
-            return
-        }
 
-        guard var request = URL(string: "\(dispatchURL)/v1/orders/\(orderId.uuidString.lowercased())/payment-intent")
-            .map({ URLRequest(url: $0) })
-        else {
+        let api = DispatchAPI(accessToken: accessToken)
+        guard api.isConfigured else {
             state = .failed("Payments are not configured in this build.")
             return
         }
-        request.httpMethod = "POST"
-        request.setValue(internalKey, forHTTPHeaderField: "x-crease-key")
-        request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.httpBody = Data("{}".utf8)
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let body = try JSONDecoder().decode(IntentResponse.self, from: data)
-            guard (response as? HTTPURLResponse)?.statusCode == 200,
-                  let secret = body.clientSecret,
+            let body: IntentResponse = try await api.post(
+                "/v1/me/orders/\(orderId.uuidString.lowercased())/payment-intent",
+                as: IntentResponse.self
+            )
+            guard let secret = body.clientSecret,
                   let publishable = body.publishableKey, !publishable.isEmpty
             else {
                 state = .failed(body.error ?? "Couldn't start payment.")
@@ -112,7 +98,7 @@ final class Checkout: ObservableObject {
         }
     }
 
-    private struct IntentResponse: Decodable {
+    struct IntentResponse: Decodable {
         let ok: Bool?
         let clientSecret: String?
         let publishableKey: String?

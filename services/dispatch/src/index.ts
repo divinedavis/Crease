@@ -6,6 +6,7 @@ import { buildChain } from './deps.js';
 import { OrderService, type LegType } from './orders.js';
 import { PaymentService } from './payments.js';
 import { PayoutService } from './payouts.js';
+import { registerCustomerRoutes } from './customer.js';
 import { buildPaymentProvider, buildConnectProvider } from '@crease/payments';
 
 const app = Fastify({
@@ -34,6 +35,11 @@ const paymentProvider = buildPaymentProvider(config.payments);
 const payments = new PaymentService(db, paymentProvider, app.log);
 const connectProvider = buildConnectProvider(config.payments);
 const payouts = new PayoutService(db, connectProvider, app.log);
+
+// Customer-facing routes, authenticated by the caller's own Supabase token.
+// Deliberately separate from /v1/, which stays loopback-only and shared-secret
+// guarded because it can dispatch and charge without an owner check.
+registerCustomerRoutes(app, db, orders, payments);
 
 // Capture the raw body for every request so signature verification never has
 // to re-serialize a parsed object (key order changes break the HMAC).

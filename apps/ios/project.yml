@@ -70,7 +70,6 @@ targets:
         SUPABASE_HOST: $(SUPABASE_HOST)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         DISPATCH_URL: $(DISPATCH_URL)
-        DISPATCH_KEY: $(DISPATCH_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.divinedavis.crease

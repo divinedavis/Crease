@@ -58,6 +58,11 @@ export class OrderService {
     private readonly log: { info: Function; warn: Function; error: Function },
   ) {}
 
+  /** Carrier by name, for callers that need to cancel a specific leg. */
+  providerFor(name: string) {
+    return this.chain.get(name);
+  }
+
   /**
    * Create and dispatch one courier leg.
    *

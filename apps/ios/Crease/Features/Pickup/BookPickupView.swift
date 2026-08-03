@@ -337,7 +337,11 @@ struct BookPickupView: View {
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.
         pendingOrderId = created.id
-        await checkout.prepare(orderId: created.id, merchantName: cleaner.name)
+        guard let token = try? await store.accessToken() else {
+            error = "Please sign in again."
+            return
+        }
+        await checkout.prepare(orderId: created.id, accessToken: token)
         if case let .failed(message) = checkout.state { error = message }
     }
 }

@@ -24,6 +24,11 @@ final class OrderStore: ObservableObject {
         self.client = client
     }
 
+    /// The signed-in customer's access token, refreshed if needed.
+    func accessToken() async throws -> String {
+        try await client.auth.session.accessToken
+    }
+
     private static let orderSelect = """
     id, short_code, status, estimate_subtotal_cents, subtotal_cents, total_cents,
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
@@ -170,8 +175,8 @@ final class OrderStore: ObservableObject {
                 .update(["return_window_start": start, "return_window_end": end])
                 .eq("id", value: order.id)
                 .execute()
-            _ = try await DispatchAPI().post(
-                "/v1/orders/\(order.id.uuidString.lowercased())/dispatch-return",
+            _ = try await DispatchAPI(accessToken: try await accessToken()).post(
+                "/v1/me/orders/\(order.id.uuidString.lowercased())/dispatch-return",
                 as: DispatchAPI.Ack.self
             )
             await loadOrders()
@@ -194,8 +199,8 @@ final class OrderStore: ObservableObject {
     /// not go through.
     func cancel(order: Order) async -> String? {
         do {
-            let ack = try await DispatchAPI().post(
-                "/v1/orders/\(order.id.uuidString.lowercased())/cancel",
+            let ack = try await DispatchAPI(accessToken: try await accessToken()).post(
+                "/v1/me/orders/\(order.id.uuidString.lowercased())/cancel",
                 as: DispatchAPI.Ack.self
             )
             await loadOrders()

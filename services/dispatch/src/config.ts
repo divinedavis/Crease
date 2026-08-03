@@ -23,6 +23,9 @@ export const config = {
   // delivery_legs and advances order status; clients read, they never drive.
   supabaseServiceKey: required('SUPABASE_SERVICE_ROLE_KEY'),
 
+  // Used only to introspect a customer's access token. Public by design.
+  supabaseAnonKey: required('SUPABASE_ANON_KEY'),
+
   // Shared secret for calls from the portal / iOS app into the dispatcher.
   internalApiKey: required('INTERNAL_API_KEY'),
 
