@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "11"
+    CURRENT_PROJECT_VERSION: "14"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 configs:
@@ -54,6 +54,12 @@ targets:
         # Required. Calling requestWhenInUseAuthorization without this string
         # does not fail gracefully — it terminates the app.
         NSLocationWhenInUseUsageDescription: Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.
+        # Required by Apple because Stripe's payment sheet references camera
+        # APIs for card scanning. The string is mandatory whether or not the
+        # feature is used — App Store processing rejects the binary with
+        # ITMS-90683 on static analysis, which passes local validation and
+        # passes a launch smoke test, and only surfaces as an email.
+        NSCameraUsageDescription: Crease can scan your payment card so you don't have to type it in.
         # Return address for the Google OAuth sheet. Must match the
         # redirectTo passed to signInWithOAuth exactly.
         CFBundleURLTypes:

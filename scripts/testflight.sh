@@ -100,6 +100,32 @@ fi
 xcrun simctl terminate "$SIM_ID" "$BUNDLE" 2>/dev/null || true
 echo "==> pre-flight: app launched and stayed alive"
 
+# ---------------------------------------------------------------------------
+# Purpose strings.
+#
+# App Store processing statically analyses the binary and rejects it with
+# ITMS-90683 if any privacy-gated API is referenced without a matching
+# NS*UsageDescription — including references that come from an SDK and are
+# never called. This passes `altool --validate-app`, passes a launch smoke
+# test, and is reported only by email hours later, so five builds were lost to
+# it before anyone knew. Checking here costs a second.
+# ---------------------------------------------------------------------------
+echo "==> pre-flight: purpose strings"
+MISSING=""
+for KEY in $(strings "$APP/Crease" 2>/dev/null | grep -oE '^NS[A-Za-z]+UsageDescription$' | sort -u); do
+  if ! /usr/libexec/PlistBuddy -c "Print :$KEY" "$APP/Info.plist" >/dev/null 2>&1; then
+    MISSING="$MISSING $KEY"
+  fi
+done
+if [ -n "$MISSING" ]; then
+  echo "PRE-FLIGHT FAILED: the binary references privacy APIs with no purpose string:" >&2
+  for K in $MISSING; do echo "    $K" >&2; done
+  echo "  Apple rejects this as ITMS-90683 after upload, not during validation." >&2
+  echo "  Add the key(s) to project.yml under info.properties and re-run." >&2
+  exit 1
+fi
+echo "==> pre-flight: purpose strings declared"
+
 xattr -cr "$IOS" 2>/dev/null || true
 
 echo "==> archiving"
