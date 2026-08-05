@@ -29,3 +29,4 @@ apps/ios/*.ipa
 # The composed panels are committed; the inputs are not, since they carry
 # whatever test data happened to be seeded that day.
 apps/ios/marketing/raw/
+*.tsbuildinfo

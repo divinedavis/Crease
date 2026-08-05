@@ -3,8 +3,15 @@
 import { useActionState, useMemo, useState } from 'react';
 import { saveIntake } from '@/app/actions';
 import { money } from '@/lib/status';
+import { billableUnits, lineTotalCents, subtotalCents } from '@/lib/pricing';
 
-type Service = { id: string; label: string; unit_price_cents: number };
+type Service = {
+  id: string;
+  label: string;
+  unit_price_cents: number;
+  unit: 'piece' | 'pound';
+  minimum_units: number;
+};
 
 /**
  * The counting screen.
@@ -21,6 +28,7 @@ export function IntakeForm({
   estimateCents,
   thresholdCents,
   notes,
+  defaultReadyHours,
 }: {
   orderId: string;
   services: Service[];
@@ -28,59 +36,75 @@ export function IntakeForm({
   estimateCents: number;
   thresholdCents: number;
   notes: string | null;
+  defaultReadyHours: number;
 }) {
   const [qty, setQty] = useState<Record<string, number>>(initial);
   const [state, action, pending] = useActionState(saveIntake.bind(null, orderId), null);
 
   const subtotal = useMemo(
-    () =>
-      services.reduce((sum, s) => sum + (qty[s.id] ?? 0) * s.unit_price_cents, 0),
+    () => subtotalCents(services.map((s) => ({ item: s, entered: qty[s.id] ?? 0 }))),
     [qty, services],
   );
 
   const overBy = subtotal - estimateCents;
   const willNeedApproval = overBy > thresholdCents;
-  const count = Object.values(qty).reduce((n, q) => n + q, 0);
+  const byWeight = services.some((s) => s.unit === 'pound');
+  const count = services.reduce((n, s) => n + (qty[s.id] ?? 0), 0);
 
   return (
     <form action={action} className="card">
       {state?.error && <div className="notice danger">{state.error}</div>}
 
       <div className="intake">
-        {services.map((s) => (
-          <div className="intake-row" key={s.id}>
-            <label htmlFor={`qty_${s.id}`} style={{ marginBottom: 0 }}>
-              {s.label}
-              <span style={{ fontWeight: 400, color: 'var(--muted)' }}>
-                {' '}
-                · {money(s.unit_price_cents)}
+        {services.map((s) => {
+          const entered = qty[s.id] ?? 0;
+          const charged = billableUnits(s, entered);
+          // Say so when the weight minimum is doing the work. A counter who
+          // types 12 and sees a 15 lb charge should know why before the
+          // customer asks.
+          const lifted = charged > entered;
+          return (
+            <div className="intake-row" key={s.id}>
+              <label htmlFor={`qty_${s.id}`} style={{ marginBottom: 0 }}>
+                {s.label}
+                <span style={{ fontWeight: 400, color: 'var(--muted)' }}>
+                  {' '}
+                  · {money(s.unit_price_cents)}
+                  {s.unit === 'pound' ? ' / lb' : ' each'}
+                  {lifted && ` · ${Number(s.minimum_units)} lb minimum`}
+                </span>
+              </label>
+              <input
+                id={`qty_${s.id}`}
+                name={`qty_${s.id}`}
+                type="number"
+                min={0}
+                max={s.unit === 'pound' ? 200 : 99}
+                // A scale reads 17.4. Stepping by whole numbers would make the
+                // counter round, and rounding down is money the shop loses.
+                step={s.unit === 'pound' ? 0.1 : 1}
+                inputMode="decimal"
+                value={entered || ''}
+                placeholder="0"
+                onChange={(e) =>
+                  setQty((q) => ({ ...q, [s.id]: Math.max(0, Number(e.target.value) || 0) }))
+                }
+              />
+              <span className="line-total">
+                {entered ? money(lineTotalCents(s, entered)) : ''}
               </span>
-            </label>
-            <input
-              id={`qty_${s.id}`}
-              name={`qty_${s.id}`}
-              type="number"
-              min={0}
-              max={99}
-              inputMode="numeric"
-              value={qty[s.id] ?? 0}
-              onChange={(e) =>
-                setQty((q) => ({ ...q, [s.id]: Math.max(0, Number(e.target.value) || 0) }))
-              }
-            />
-            <span className="line-total">
-              {qty[s.id] ? money(qty[s.id] * s.unit_price_cents) : ''}
-            </span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       <div className="field" style={{ marginTop: 20 }}>
         <label htmlFor="ready_hours">When will it be ready?</label>
-        <select id="ready_hours" name="ready_hours" defaultValue="48"
+        <select id="ready_hours" name="ready_hours" defaultValue={String(defaultReadyHours)}
                 style={{ font: 'inherit', width: '100%', padding: '11px 12px', minHeight: 46,
                          borderRadius: 8, border: '1px solid var(--border)',
                          background: 'var(--surface)', color: 'var(--text)' }}>
+          <option value="2">In about 2 hours</option>
           <option value="4">Later today (~4 hours)</option>
           <option value="24">Tomorrow (~24 hours)</option>
           <option value="48">In 2 days (~48 hours)</option>
@@ -111,7 +135,11 @@ export function IntakeForm({
         </div>
         <div>
           <span style={{ color: 'var(--muted)' }}>
-            Counted{count > 0 && ` · ${count} garment${count === 1 ? '' : 's'}`}
+            Counted
+            {count > 0 &&
+              (byWeight
+                ? ` · ${count.toFixed(1)} lb`
+                : ` · ${count} garment${count === 1 ? '' : 's'}`)}
           </span>
           <span>{money(subtotal)}</span>
         </div>

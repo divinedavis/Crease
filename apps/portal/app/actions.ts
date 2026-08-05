@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase';
+import { billableUnits, lineTotalCents } from '@/lib/pricing';
 
 /**
  * All mutations live here so the dispatch shared secret stays server-side.
@@ -56,28 +57,34 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
 
   const { data: order } = await db
     .from('orders')
-    .select('id, cleaner_id, estimate_subtotal_cents, approval_threshold_cents, status')
+    .select('id, cleaner_id, service_type, estimate_subtotal_cents, approval_threshold_cents, status')
     .eq('id', orderId)
     .single();
   if (!order) return { error: 'order not found' };
 
+  // Filtered here as well as in the form. The form decides what is shown; this
+  // decides what can be saved, and a posted quantity for another service's
+  // item would otherwise bill a laundry rate against a dry cleaning order.
   const { data: services } = await db
     .from('service_items')
-    .select('id, code, label, unit_price_cents')
-    .eq('cleaner_id', order.cleaner_id);
+    .select('id, code, label, unit_price_cents, unit, minimum_units')
+    .eq('cleaner_id', order.cleaner_id)
+    .eq('service_type', order.service_type);
 
   const rows = (services ?? [])
     .map((s) => ({ service: s, qty: Number(formData.get(`qty_${s.id}`) ?? 0) }))
-    .filter(({ qty }) => qty > 0)
+    .filter(({ qty }) => qty > 0 && Number.isFinite(qty))
     .map(({ service, qty }) => ({
       order_id: orderId,
       service_item_id: service.id,
       label: service.label,
-      quantity: qty,
+      // The weight minimum is applied here, not trusted from the form. Two
+      // decimals because that is what the column holds and what a scale reads.
+      quantity: Math.round(billableUnits(service, qty) * 100) / 100,
       unit_price_cents: service.unit_price_cents,
     }));
 
-  if (rows.length === 0) return { error: 'Add at least one garment.' };
+  if (rows.length === 0) return { error: 'Add at least one item.' };
 
   // Re-counting replaces the previous intake rather than appending to it, so
   // a corrected count does not double the bill.
@@ -85,7 +92,13 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   const { error: insertErr } = await db.from('order_items').insert(rows);
   if (insertErr) return { error: insertErr.message };
 
-  const subtotal = rows.reduce((n, r) => n + r.quantity * r.unit_price_cents, 0);
+  // Rounded per line, not once at the end: a fractional weight times a cent
+  // price gives fractional cents, and a non-integer subtotal fails the column.
+  // The minimum is already folded into r.quantity, so this must not reapply it.
+  const subtotal = rows.reduce(
+    (n, r) => n + lineTotalCents({ unit_price_cents: r.unit_price_cents }, r.quantity),
+    0,
+  );
 
   // The shop is the only party that knows how long the work takes, so this is
   // where a real estimate enters the system. Until it does, the customer is

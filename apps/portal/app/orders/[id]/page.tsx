@@ -31,12 +31,26 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   if (!order) notFound();
 
+  // Scoped to the service the customer actually booked. A shop's laundry and
+  // dry cleaning share one price list, and showing both here would put a
+  // per-pound rate in a per-garment quantity box — a 10x error that looks
+  // like a normal number.
   const { data: services } = await db
     .from('service_items')
-    .select('id, label, unit_price_cents')
+    .select('id, label, unit_price_cents, unit, minimum_units, turnaround_hours')
     .eq('cleaner_id', order.cleaner_id)
+    .eq('service_type', order.service_type)
     .eq('active', true)
     .order('sort_order');
+
+  // Pre-select the ready time this service actually takes. Wash & fold is two
+  // hours and dry cleaning is two days; a dropdown that always opens on 48
+  // means every laundry order is quoted five times too slow unless the
+  // counter remembers to change it, and they will not.
+  const turnarounds = (services ?? [])
+    .map((s) => s.turnaround_hours)
+    .filter((h): h is number => typeof h === 'number');
+  const defaultReadyHours = turnarounds.length ? Math.min(...turnarounds) : 48;
 
   const initial: Record<string, number> = {};
   for (const item of order.order_items ?? []) {
@@ -102,6 +116,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             estimateCents={order.estimate_subtotal_cents}
             thresholdCents={order.approval_threshold_cents}
             notes={order.cleaner_notes}
+            defaultReadyHours={defaultReadyHours}
           />
         </section>
       ) : (
