@@ -60,8 +60,12 @@ cp -R scripts "$STAGE/scripts"
 
 echo "==> uploading"
 ssh "$HOST" "mkdir -p $REMOTE /var/log/crease"
+# --delete removes anything on the box that is not in the stage, so every
+# credential that lives only on the droplet has to be named here or a deploy
+# quietly destroys it. secrets/ holds the APNs .p8, which Apple issues exactly
+# once and will not reissue.
 rsync -az --delete \
-  --exclude '.env' --exclude '.env.local' \
+  --exclude '.env' --exclude '.env.local' --exclude 'secrets/' \
   "$STAGE/" "$HOST:$REMOTE/"
 
 echo "==> installing dispatch runtime deps"
