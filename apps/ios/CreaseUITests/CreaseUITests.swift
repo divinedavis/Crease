@@ -261,6 +261,83 @@ final class CreaseUITests: XCTestCase {
         )
     }
 
+    /// What the screen says once the bag is at the shop.
+    ///
+    /// It used to lead with the pickup window, which by then is a time the
+    /// customer already watched happen, and told them to call the cleaner
+    /// without giving them the number. Both are the same failure: a screen
+    /// that is accurate and answers nothing.
+    func testAtTheCleanerItSaysWhenItIsReadyAndHowToCallTheShop() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        // Prefer an order that is actually at the shop, because that is where
+        // the two rows swap over. Any order still proves the rest: the seeded
+        // data does not always have one parked there, and a test that only
+        // skips guards nothing. Matched by status text rather than by position
+        // — the first button in the scroll view is "Book a pickup", and tapping
+        // that asserts against the address form instead.
+        let atCleaner = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] 'At the cleaner' OR label CONTAINS[c] 'counting your items'")
+        ).firstMatch
+        let anyOrder = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
+        ).firstMatch
+        let card = atCleaner.waitForExistence(timeout: 10) ? atCleaner : anyOrder
+        guard card.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no seeded order to open — run scripts/seed.mjs first")
+        }
+        card.tap()
+        sleep(3)
+
+        let labels = app.staticTexts.allElementsBoundByIndex.map(\.label)
+        let onScreen = labels.prefix(14).joined(separator: " | ")
+        // Read off the detail screen rather than off the card: a card's own
+        // label is an aggregate of its children and not reliably the status.
+        let isAtCleaner = labels.contains("At the cleaner")
+
+        if isAtCleaner {
+            XCTAssertFalse(
+                labels.contains("Pickup window"),
+                "the courier already delivered it; that window is in the past. On screen: \(onScreen)"
+            )
+        }
+
+        // The two rows answer the same question at different times, so exactly
+        // one of them can be right. Both at once is the bug in its earlier
+        // form, still on screen.
+        XCTAssertFalse(
+            labels.contains("Pickup window") && labels.contains("Ready by"),
+            "a pickup window and a ready estimate contradict each other: \(onScreen)"
+        )
+
+        // "Ready by" is legitimately absent when the server has no estimate —
+        // an older order, or one whose shop has not been reached. What is not
+        // allowed is a row that shows a single minute as though the shop had
+        // promised one.
+        if labels.contains("Ready by") {
+            XCTAssertTrue(
+                labels.contains { $0.contains("~") && $0.contains("–") },
+                "'Ready by' must read as a window: \(onScreen)"
+            )
+        }
+
+        // Rendered as a Link, which lands in either collection depending on how
+        // SwiftUI exposes it, so ask for anything carrying the label.
+        let call = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH 'Call '"))
+            .firstMatch
+        XCTAssertTrue(
+            call.waitForExistence(timeout: 8),
+            "the shop's number must be present and tappable, not just its name. Buttons: "
+                + app.buttons.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
+                + " · links: "
+                + app.links.allElementsBoundByIndex.prefix(6).map(\.label).joined(separator: " | ")
+                + " · texts: \(onScreen)"
+        )
+        attach(app, "at-cleaner-detail")
+    }
+
     func testCancelIsOfferedAndConfirmed() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))

@@ -79,6 +79,15 @@ targets:
         # simctl refuses to launch builds carrying the debug dylib.
         ENABLE_DEBUG_DYLIB: NO
         CODE_SIGN_ENTITLEMENTS: Crease/Crease.entitlements
+      configs:
+        # Substituted into aps-environment in the entitlements file. Which APNs
+        # a build belongs to is decided by how it was signed, not by whether it
+        # is a debug build — a TestFlight build is Release, signed for
+        # distribution, and its tokens are production tokens.
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
     dependencies:
       - package: Supabase
         product: Supabase

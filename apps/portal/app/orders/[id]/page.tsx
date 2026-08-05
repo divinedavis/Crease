@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { currentStaff, supabaseServer } from '@/lib/supabase';
 import { LEG_LABEL, TIER_LABEL, money, statusLabel, statusTone } from '@/lib/status';
+import { DEFAULT_TURNAROUND_HOURS, isPastDue, readyRangeLabel } from '@/lib/ready';
 import { LiveRefresh } from '@/app/live-refresh';
 import { IntakeForm } from './intake-form';
 import { ActionsPanel } from './actions-panel';
@@ -24,7 +25,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
        customer:profiles!orders_customer_profile_fkey(full_name, phone),
        order_items(id, service_item_id, label, quantity, unit_price_cents),
        delivery_legs(id, leg, status, provider, courier_name, courier_vehicle,
-                     tracking_url, fee_cents, attempt, last_error, created_at)`,
+                     tracking_url, fee_cents, attempt, last_error, created_at, completed_at)`,
     )
     .eq('id', id)
     .maybeSingle();
@@ -43,14 +44,20 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     .eq('active', true)
     .order('sort_order');
 
-  // Pre-select the ready time this service actually takes. Wash & fold is two
-  // hours and dry cleaning is two days; a dropdown that always opens on 48
-  // means every laundry order is quoted five times too slow unless the
-  // counter remembers to change it, and they will not.
-  const turnarounds = (services ?? [])
-    .map((s) => s.turnaround_hours)
-    .filter((h): h is number => typeof h === 'number');
-  const defaultReadyHours = turnarounds.length ? Math.min(...turnarounds) : 48;
+  // The shop's own speed, for the services that do not override it. Taken from
+  // the staff record rather than re-queried: the session already carries every
+  // shop this user works for.
+  const shop = staff.staff.find((s) => s.cleaner_id === order.cleaner_id)?.cleaners as any;
+  const shopTurnaroundHours = Number(shop?.turnaround_hours) || DEFAULT_TURNAROUND_HOURS;
+
+  // The pickup window is spent the moment the bag is on the counter, so what
+  // the customer is watching from here on is the ready estimate. Shown only
+  // while it is still a promise — once ready_at exists it is a fact, and a
+  // stale guess sitting next to it invites the counter to quote the wrong one.
+  const readyRange = ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status)
+    ? readyRangeLabel(order.estimated_ready_at)
+    : null;
+  const readyPastDue = readyRange !== null && isPastDue(order.estimated_ready_at);
 
   const initial: Record<string, number> = {};
   for (const item of order.order_items ?? []) {
@@ -60,6 +67,16 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const legs = [...(order.delivery_legs ?? [])].sort(
     (a: any, b: any) => +new Date(a.created_at) - +new Date(b.created_at),
   );
+
+  // What the ready estimate is measured from, and the same leg the dispatcher
+  // asks. A preview anchored on this render instead would read hours later than
+  // the number saving actually writes, and the counter would watch the promise
+  // jump the moment they pressed save.
+  const arrivedAtMs =
+    Date.parse(
+      legs.filter((l: any) => l.leg === 'pickup' && l.status === 'delivered').pop()
+        ?.completed_at ?? '',
+    ) || Date.now();
 
   // A drop-off has no courier leg to carry it into 'at_cleaner' — the customer
   // walks it in — so the counter counting the bag is the event that proves it
@@ -109,6 +126,28 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
+      {readyRange && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 20,
+            display: 'flex',
+            gap: 12,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
+              Ready by — what the customer has been told
+            </div>
+            <div style={{ fontWeight: 600 }}>{readyRange}</div>
+          </div>
+          {readyPastDue && <span className="pill danger">Past due</span>}
+        </div>
+      )}
+
       {order.customer_notes && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
@@ -128,7 +167,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             estimateCents={order.estimate_subtotal_cents}
             thresholdCents={order.approval_threshold_cents}
             notes={order.cleaner_notes}
-            defaultReadyHours={defaultReadyHours}
+            shopTurnaroundHours={shopTurnaroundHours}
+            // Arrival, not this render: it is what the saved estimate is
+            // measured from, and passing it in also keeps the preview identical
+            // before and after hydration — a client-side clock would differ
+            // from the HTML it replaces by however long the page took to reach
+            // the tablet.
+            arrivedAtMs={arrivedAtMs}
           />
         </section>
       ) : (

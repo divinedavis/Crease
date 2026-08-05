@@ -8,6 +8,7 @@ import {
   type Waypoint,
 } from './deps.js';
 import { config } from './config.js';
+import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 
 export type LegType = 'pickup' | 'return';
 
@@ -268,10 +269,15 @@ export class OrderService {
       })
       .eq('id', legId);
 
-    await this.applyOrderStatus(leg.order_id, leg.leg as LegType, event.status);
+    await this.applyOrderStatus(leg.order_id, leg.leg as LegType, event.status, event.completedAt);
   }
 
-  private async applyOrderStatus(orderId: string, leg: LegType, legStatus: LegStatus) {
+  private async applyOrderStatus(
+    orderId: string,
+    leg: LegType,
+    legStatus: LegStatus,
+    completedAt?: string,
+  ) {
     const next = ORDER_STATUS_BY_LEG[leg][legStatus];
     if (!next) return;
 
@@ -293,6 +299,106 @@ export class OrderService {
 
     await this.db.from('orders').update({ status: next }).eq('id', orderId);
     this.log.info({ orderId, leg, legStatus, orderStatus: next }, 'order status advanced');
+
+    if (next === 'at_cleaner') await this.stampReadyEstimate(orderId, completedAt);
+  }
+
+  /**
+   * The first honest answer to "when will it be done", written the moment the
+   * bag lands at the shop.
+   *
+   * Until this exists the only time on the order is the pickup window, which by
+   * now is in the past and describes something that has already happened. The
+   * clock runs from the courier's completion time rather than from now(), so a
+   * webhook that arrives late — or is replayed hours afterwards — does not push
+   * the estimate out past a shop that has been working on it since the handoff.
+   */
+  private async stampReadyEstimate(orderId: string, arrivedAt?: string) {
+    const { data: order, error } = await this.db
+      .from('orders')
+      .select('cleaner:cleaners(turnaround_hours)')
+      .eq('id', orderId)
+      .maybeSingle();
+    if (error || !order) {
+      this.log.warn({ orderId, err: error }, 'could not stamp the ready estimate');
+      return;
+    }
+
+    // The shop's own speed, and nothing finer: what is actually in the bag is
+    // not known until somebody counts it, which is what refines this later.
+    const hours = (order as any).cleaner?.turnaround_hours;
+    const estimate = readyAtFrom(
+      arrivedAt ?? new Date().toISOString(),
+      hours ?? DEFAULT_TURNAROUND_HOURS,
+    );
+    await this.db.from('orders').update({ estimated_ready_at: estimate }).eq('id', orderId);
+    this.log.info({ orderId, estimatedReadyAt: estimate, hours }, 'ready estimate set on arrival');
+  }
+
+  /**
+   * Recompute the estimate from what the shop actually counted.
+   *
+   * Arrival could only assume the shop's default speed, and that default is a
+   * dry cleaning number — days. A bag that turns out to be wash & fold is done
+   * in about two hours, and a customer told Thursday for something ready this
+   * afternoon has been given the wrong answer, not a cautious one.
+   *
+   * Still measured from arrival, never from intake: the clock started when the
+   * clothes landed, and a shop that counts a bag at closing time has not thereby
+   * added a day to the work.
+   */
+  async refineReadyEstimate(orderId: string): Promise<string | null> {
+    const { data: order, error } = await this.db
+      .from('orders')
+      .select(
+        `estimated_ready_at,
+         cleaner:cleaners(turnaround_hours),
+         order_items(service_item:service_items(turnaround_hours))`,
+      )
+      .eq('id', orderId)
+      .maybeSingle();
+    if (error || !order) return null;
+
+    // An uncounted order keeps the arrival estimate. Recomputing from nothing
+    // would hand back the shop default dressed up as a refined number.
+    const counted = ((order as any).order_items ?? []) as any[];
+    if (counted.length === 0) return (order as any).estimated_ready_at ?? null;
+
+    // A line with no catalogue entry behind it inherits the shop's speed rather
+    // than dropping out — one custom item must not halve the estimate.
+    const hours = longestTurnaroundHours(
+      counted.map((i) => i.service_item),
+      (order as any).cleaner?.turnaround_hours,
+    );
+    const estimate = readyAtFrom(await this.arrivedAt(orderId), hours);
+
+    const { error: writeError } = await this.db
+      .from('orders')
+      .update({ estimated_ready_at: estimate })
+      .eq('id', orderId);
+    if (writeError) {
+      this.log.warn({ orderId, err: writeError }, 'could not refine the ready estimate');
+      return (order as any).estimated_ready_at ?? null;
+    }
+
+    this.log.info({ orderId, estimatedReadyAt: estimate, hours }, 'ready estimate refined at intake');
+    return estimate;
+  }
+
+  /** When the bag reached the shop. A return_only order has no courier leg to
+   *  ask, and for that tier the bag arrives in the customer's own hands at the
+   *  moment the shop counts it. */
+  private async arrivedAt(orderId: string): Promise<string> {
+    const { data: leg } = await this.db
+      .from('delivery_legs')
+      .select('completed_at, updated_at')
+      .eq('order_id', orderId)
+      .eq('leg', 'pickup')
+      .eq('status', 'delivered')
+      .order('attempt', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return leg?.completed_at ?? leg?.updated_at ?? new Date().toISOString();
   }
 
   private async recordLegFailure(orderId: string, leg: LegType, message: string) {

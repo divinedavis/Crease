@@ -21,5 +21,16 @@
   <array>
     <string>merchant.com.divinedavis.crease</string>
   </array>
+
+  <!-- Push Notifications. The value is a build setting (see project.yml) and
+       not a literal, because the two configurations talk to two different
+       APNs: a Debug build registers against sandbox, and anything signed for
+       distribution — TestFlight included — registers against production. A
+       build that claims the wrong one still gets a device token, and every
+       send against it is refused at Apple with a bad-token error the app never
+       sees. The App ID needs the Push Notifications capability enabled too, or
+       the issued profile omits this key and signing fails outright. -->
+  <key>aps-environment</key>
+  <string>$(APS_ENVIRONMENT)</string>
 </dict>
 </plist>

@@ -2,6 +2,9 @@ import SwiftUI
 
 @main
 struct CreaseApp: App {
+    // Push has two entry points SwiftUI does not offer: the device token, and
+    // a notification tapped while the app was not running.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var session = Session()
 
     var body: some Scene {
@@ -28,9 +31,16 @@ struct RootView: View {
                 .background(Color(.systemGroupedBackground))
         case .signedOut:
             SignInView()
-        case .signedIn:
+        case let .signedIn(userId):
             OrdersView()
                 .environmentObject(OrderStore(client: session.client))
+                // Keyed on the customer, not on appearance: signing in as
+                // someone else has to move this device's token to their row,
+                // or the next "your clothes are ready" reaches the phone of
+                // whoever used it before them.
+                .task(id: userId) {
+                    await PushRegistrar.shared.customerSignedIn(userId: userId, session: session)
+                }
         }
     }
 }

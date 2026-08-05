@@ -398,6 +398,13 @@ struct BookPickupView: View {
             if let problem = confirmation?.problem {
                 error = problem
             } else {
+                // The only honest moment to ask. A driver is now coming, the
+                // next thing that happens is hours away, and it happens with
+                // the app closed — so the prompt needs no explaining. Awaited
+                // before the dismiss, because a system alert raised into a
+                // screen that is already going away can be dropped, and iOS
+                // never offers that alert a second time.
+                await PushRegistrar.shared.askAfterBooking()
                 dismiss()
             }
         case let .failed(message):

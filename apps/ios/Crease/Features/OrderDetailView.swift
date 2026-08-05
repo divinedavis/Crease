@@ -265,12 +265,16 @@ struct OrderDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             if let cleaner = live.cleaner {
                 labelled("Cleaner", cleaner.name)
+                callRow(cleaner)
             }
             if let address = live.address {
                 labelled("Pickup & delivery", address.oneLine)
             }
-            if let ready = live.estimatedReadyAt, live.readyAt == nil, live.status == .cleaning {
-                labelled("Estimated ready", ready.formatted(date: .abbreviated, time: .shortened))
+            // The one thing worth knowing while the bag is at the shop. Anchored
+            // on when it arrived there, not on when it was booked, and absent
+            // entirely until the server has a number — see `showsReadyEstimate`.
+            if live.showsReadyEstimate, let window = live.readyWindowText {
+                labelled("Ready by", window)
             }
             if let start = live.returnWindowStart, let end = live.returnWindowEnd {
                 labelled(
@@ -280,8 +284,11 @@ struct OrderDetailView: View {
             }
             // Every order carries a pickup window from booking, but nobody is
             // collecting a return-only one — showing it promises a driver the
-            // tier never bought.
-            if !live.isReturnOnly, let start = live.pickupWindowStart, let end = live.pickupWindowEnd {
+            // tier never bought. It expires as information too: once the bag is
+            // at the shop that window has already happened, and the customer
+            // watched it happen. "Ready by" above is what they are asking.
+            if !live.isReturnOnly, !live.hasReachedCleaner,
+               let start = live.pickupWindowStart, let end = live.pickupWindowEnd {
                 labelled(
                     "Pickup window",
                     "\(start.formatted(date: .abbreviated, time: .shortened)) – \(end.formatted(date: .omitted, time: .shortened))"
@@ -382,15 +389,37 @@ struct OrderDetailView: View {
                 Text(cancellationMoneyNote)
             }
         } else if live.status.isActive {
-            HStack(spacing: 8) {
-                Image(systemName: "info.circle")
-                Text(cannotCancelReason)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                    Text(cannotCancelReason)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                // This card is the one that says "call the shop". Telling
+                // someone to call and not giving them the number is a dead end
+                // dressed up as help.
+                if let cleaner = live.cleaner { callRow(cleaner) }
             }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .creaseCard()
+        }
+    }
+
+    /// The shop's number, dialable.
+    ///
+    /// Dropped whole when there is nothing to dial rather than rendered as
+    /// dead text: an affordance that does nothing when tapped is worse than an
+    /// absent one, because the customer keeps tapping it.
+    @ViewBuilder
+    private func callRow(_ cleaner: Cleaner) -> some View {
+        if let number = cleaner.formattedPhone, let url = cleaner.callURL {
+            Link(destination: url) {
+                Label(number, systemImage: "phone.fill")
+                    .font(.subheadline.weight(.medium))
+            }
+            .accessibilityLabel("Call \(cleaner.name) at \(number)")
         }
     }
 
@@ -443,6 +472,9 @@ struct OrderDetailView: View {
             // unpaid card, so without this the screen simply goes quiet on a
             // customer who is now owed either a courier or their money back.
             payError = confirmation?.problem
+            // A draft finished here is a booking finished — same moment as the
+            // booking screen, reached through the other door.
+            if payError == nil { await PushRegistrar.shared.askAfterBooking() }
         case let .failed(message):
             // Reloaded on the way out too. The failures that matter here are
             // the ones after the charge, and the order has moved off 'draft'

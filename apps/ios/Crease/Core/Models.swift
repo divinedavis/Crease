@@ -113,6 +113,9 @@ enum OrderStatus: String, Codable, CaseIterable {
 struct Cleaner: Codable, Identifiable, Hashable {
     let id: UUID
     let name: String
+    // Three cards tell the customer to call the shop. Without this they name
+    // it and stop there, which is an instruction with nowhere to go.
+    let phone: String?
     let line1: String?
     let city: String
     let state: String
@@ -124,8 +127,29 @@ struct Cleaner: Codable, Identifiable, Hashable {
     let lng: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, line1, city, state, lat, lng
+        case id, name, phone, line1, city, state, lat, lng
         case turnaroundHours = "turnaround_hours"
+    }
+
+    /// The number as a person reads it. Shops give us whatever shape they use
+    /// — `+15555550201`, `555-555-0201` — and a bare E.164 string in the
+    /// middle of a sentence is something people read twice to be sure of.
+    var formattedPhone: String? {
+        guard let phone else { return nil }
+        let digits = phone.filter(\.isNumber)
+        let local = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+        guard local.count == 10 else { return phone }
+        return "(\(local.prefix(3))) \(local.dropFirst(3).prefix(3))-\(local.suffix(4))"
+    }
+
+    /// Only when there is something real to dial. A `tel:` built from a blank
+    /// or truncated number opens an empty dialer, which reads as the tap
+    /// having failed rather than as the shop never having given us a number.
+    var callURL: URL? {
+        guard let phone else { return nil }
+        let digits = phone.filter(\.isNumber)
+        guard digits.count >= 10 else { return nil }
+        return URL(string: "tel:\(phone.hasPrefix("+") ? "+" : "")\(digits)")
     }
 
     var coordinate: CLLocationCoordinate2D? {
@@ -338,6 +362,71 @@ struct Order: Codable, Identifiable, Hashable {
     /// for a delivery time here would be selling a leg that was never paid for.
     var awaitsCounterCollection: Bool {
         status == .ready && isPickupOnly
+    }
+
+    /// Whether the bag has stopped being a courier's problem.
+    ///
+    /// Read off the journey track rather than listed status by status, because
+    /// it is the same line the track already draws: everything from the shop's
+    /// counter onwards is past the pickup, and a pickup window shown past it
+    /// is a time that has already been and gone.
+    var hasReachedCleaner: Bool { (status.stepIndex ?? 0) >= 1 }
+
+    /// Whether "Ready by" is worth a row.
+    ///
+    /// A null estimate shows nothing at all. The number the customer reads has
+    /// to be the number the shop is working to, and one computed on the phone
+    /// from a booking time would disagree with it the moment intake counts the
+    /// bag and the turnaround changes — wash and fold is hours, dry cleaning
+    /// is days, and the app cannot know which until the shop says.
+    var showsReadyEstimate: Bool {
+        hasReachedCleaner && status.isActive && readyAt == nil && estimatedReadyAt != nil
+    }
+
+    /// The estimate rendered as a window.
+    ///
+    /// To the minute it reads as a commitment the shop never made; ±30 minutes
+    /// is the same number told honestly, and it is the shape people already
+    /// expect from a delivery estimate.
+    var readyWindowText: String? {
+        guard let estimate = estimatedReadyAt else { return nil }
+        let start = estimate.addingTimeInterval(-30 * 60)
+        let end = estimate.addingTimeInterval(30 * 60)
+        let calendar = Calendar.current
+        let sameDay = calendar.isDate(start, inSameDayAs: end)
+        // "5:50 PM – 6:50 PM" reads as two separate times when it is one
+        // window. The shortcut only holds inside a single half of a single day
+        // — across noon or midnight the shorter form reads backwards.
+        let sameHalfOfDay = sameDay
+            && (calendar.component(.hour, from: start) < 12)
+                == (calendar.component(.hour, from: end) < 12)
+        let from = sameHalfOfDay ? Self.timeWithoutDayPeriod(start) : Self.time(start)
+        let to = sameDay
+            ? Self.time(end)
+            : "\(end.formatted(.dateTime.month(.abbreviated).day())), \(Self.time(end))"
+        return "\(start.formatted(.dateTime.month(.abbreviated).day())), ~\(from) – \(to)"
+    }
+
+    private static func time(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+
+    /// The same time with the repeated AM/PM taken off.
+    ///
+    /// Trimmed from the formatted string rather than asked for as a format:
+    /// the hour skeleton that omits the marker zero-pads the hour too, and
+    /// "~05:50" reads like a clock readout rather than a time of day. A locale
+    /// that has no marker, or puts it somewhere other than the end, is left
+    /// exactly as it formatted itself.
+    private static func timeWithoutDayPeriod(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        let text = formatter.string(from: date)
+        for marker in [formatter.amSymbol, formatter.pmSymbol].compactMap({ $0 })
+        where !marker.isEmpty && text.hasSuffix(marker) {
+            return String(text.dropLast(marker.count)).trimmingCharacters(in: .whitespaces)
+        }
+        return text
     }
 
     /// The status wording, corrected for what the customer actually bought.

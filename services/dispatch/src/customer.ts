@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderService } from './orders.js';
 import type { PaymentService } from './payments.js';
+import type { PushEnvironment, PushService } from './push.js';
 import { confirmAndDispatch } from './confirm.js';
 import { config } from './config.js';
 
@@ -66,6 +67,7 @@ export function registerCustomerRoutes(
   db: SupabaseClient,
   orders: OrderService,
   payments: PaymentService,
+  push: PushService,
 ) {
   /**
    * Resolve the bearer token to a user id.
@@ -115,6 +117,50 @@ export function registerCustomerRoutes(
     }
     return order;
   }
+
+  /**
+   * Where to reach this customer when their laundry is done.
+   *
+   * The app posts its APNs token here on every launch, which is also how a
+   * token that moved between accounts on a shared phone gets reassigned rather
+   * than left pointing at whoever was signed in last.
+   *
+   * The environment comes from the device because only the device knows it: a
+   * TestFlight build registers against production APNs and a Debug build
+   * against sandbox, and a server that guesses gets it wrong for exactly one of
+   * them — silently, since Apple accepts the send and delivers nothing.
+   */
+  app.post<{ Body: { token?: string; environment?: string } }>(
+    '/v1/me/push-tokens',
+    async (req, reply) => {
+      const userId = await userIdFrom(req);
+      if (!userId) return reply.code(401).send({ ok: false, error: 'Please sign in again.' });
+
+      // Shape, not length: APNs tokens are 64 hex characters today and Apple
+      // has changed that before. Lowercased because iOS hands the same device
+      // back in either case, and the token is a unique key — two cases means
+      // two rows and two notifications.
+      const token = String(req.body?.token ?? '').trim().toLowerCase();
+      if (!/^[0-9a-f]{32,200}$/.test(token)) {
+        return reply.code(400).send({ ok: false, error: 'That is not a device token.' });
+      }
+
+      const environment = String(req.body?.environment ?? '');
+      if (environment !== 'sandbox' && environment !== 'production') {
+        return reply
+          .code(400)
+          .send({ ok: false, error: "environment must be 'sandbox' or 'production'." });
+      }
+
+      try {
+        await push.registerToken(userId, token, environment as PushEnvironment);
+        return { ok: true };
+      } catch (err) {
+        req.log.error({ err }, 'device token registration failed');
+        return reply.code(502).send({ ok: false, error: 'Could not register this device.' });
+      }
+    },
+  );
 
   app.post<{ Params: { id: string } }>('/v1/me/orders/:id/payment-intent', async (req, reply) => {
     const order = await ownedOrder(req, reply);

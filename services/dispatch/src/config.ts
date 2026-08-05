@@ -37,6 +37,20 @@ export const config = {
   // the webhook route refuses input rather than acting on an unsigned POST.
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
 
+  // All optional, because the APNs auth key is created by hand in the developer
+  // portal and does not exist yet. Absent, the sender says so once and no-ops:
+  // an order must still reach 'ready' on a box that cannot notify anyone.
+  apns: {
+    keyId: process.env.APNS_KEY_ID ?? '',
+    teamId: process.env.APNS_TEAM_ID ?? '',
+    // The .p8 contents, or a path to the file. A PEM's newlines do not survive
+    // an env file, so an escaped \n is unescaped where the key is parsed.
+    key: process.env.APNS_KEY ?? '',
+    keyPath: process.env.APNS_KEY_PATH ?? '',
+    // The app's bundle id, which is what APNs routes on.
+    bundleId: process.env.APNS_BUNDLE_ID ?? 'com.divinedavis.crease',
+  },
+
   /** What we declare to the carrier per order, capped. See docs/insurance.md. */
   declaredValueDefaultCents: Number(process.env.DECLARED_VALUE_DEFAULT_CENTS ?? 20_000),
   declaredValueMaxCents: Number(process.env.DECLARED_VALUE_MAX_CENTS ?? 50_000),

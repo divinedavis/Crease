@@ -10,6 +10,10 @@ struct OrdersView: View {
     @EnvironmentObject private var store: OrderStore
 
     @State private var flow: BookingStep?
+    /// Owned here so a tapped notification can push a screen the customer
+    /// never navigated to.
+    @State private var path: [Order] = []
+    @ObservedObject private var router = PushRouter.shared
 
     /// The booking flow, one step at a time. Modelled as an enum rather than a
     /// pile of booleans so two sheets can never be presented at once — the
@@ -37,7 +41,7 @@ struct OrdersView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: 14) {
                     greeting
@@ -130,6 +134,21 @@ struct OrdersView: View {
             await store.loadAll()
             await store.startWatching()
         }
+        .task(id: router.pendingOrderId) { await openTappedOrder() }
+    }
+
+    /// A tapped notification names an order id; this screen needs the order.
+    ///
+    /// On a cold start the tap is delivered before anything has loaded, so the
+    /// id waits here until there is a list to resolve it against — otherwise
+    /// the notification that took someone straight to their order takes them
+    /// to the list instead, exactly on the launch where it mattered.
+    private func openTappedOrder() async {
+        guard let id = router.pendingOrderId else { return }
+        if store.orders.isEmpty { await store.loadOrders() }
+        guard let order = store.orders.first(where: { $0.id == id }) else { return }
+        router.pendingOrderId = nil
+        if path.last?.id != order.id { path.append(order) }
     }
 
     private var greeting: some View {

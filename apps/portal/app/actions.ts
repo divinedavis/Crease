@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase';
 import { billableUnits, lineTotalCents } from '@/lib/pricing';
+import { readyHoursFor } from '@/lib/ready';
 
 /**
  * All mutations live here so the dispatch shared secret stays server-side.
@@ -62,27 +63,38 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
     .single();
   if (!order) return { error: 'order not found' };
 
+  // Read on its own rather than embedded in the order: the shop's default is
+  // what every service without its own turnaround inherits, and an embed that
+  // comes back shaped differently than expected would quietly fall back to 48
+  // — a promise the form had already shown the counter as two hours.
+  const { data: shop } = await db
+    .from('cleaners')
+    .select('turnaround_hours')
+    .eq('id', order.cleaner_id)
+    .maybeSingle();
+
   // Filtered here as well as in the form. The form decides what is shown; this
   // decides what can be saved, and a posted quantity for another service's
   // item would otherwise bill a laundry rate against a dry cleaning order.
   const { data: services } = await db
     .from('service_items')
-    .select('id, code, label, unit_price_cents, unit, minimum_units')
+    .select('id, code, label, unit_price_cents, unit, minimum_units, turnaround_hours')
     .eq('cleaner_id', order.cleaner_id)
     .eq('service_type', order.service_type);
 
-  const rows = (services ?? [])
+  const counted = (services ?? [])
     .map((s) => ({ service: s, qty: Number(formData.get(`qty_${s.id}`) ?? 0) }))
-    .filter(({ qty }) => qty > 0 && Number.isFinite(qty))
-    .map(({ service, qty }) => ({
-      order_id: orderId,
-      service_item_id: service.id,
-      label: service.label,
-      // The weight minimum is applied here, not trusted from the form. Two
-      // decimals because that is what the column holds and what a scale reads.
-      quantity: Math.round(billableUnits(service, qty) * 100) / 100,
-      unit_price_cents: service.unit_price_cents,
-    }));
+    .filter(({ qty }) => qty > 0 && Number.isFinite(qty));
+
+  const rows = counted.map(({ service, qty }) => ({
+    order_id: orderId,
+    service_item_id: service.id,
+    label: service.label,
+    // The weight minimum is applied here, not trusted from the form. Two
+    // decimals because that is what the column holds and what a scale reads.
+    quantity: Math.round(billableUnits(service, qty) * 100) / 100,
+    unit_price_cents: service.unit_price_cents,
+  }));
 
   if (rows.length === 0) return { error: 'Add at least one item.' };
 
@@ -100,12 +112,36 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
     0,
   );
 
-  // The shop is the only party that knows how long the work takes, so this is
-  // where a real estimate enters the system. Until it does, the customer is
-  // told nothing rather than told a guess.
-  const readyHours = Number(formData.get('ready_hours') ?? 0);
-  const estimatedReadyAt =
-    readyHours > 0 ? new Date(Date.now() + readyHours * 3600_000).toISOString() : null;
+  // Until now the customer has been carrying the shop's blanket turnaround,
+  // set when the bag arrived. The count is the first moment anyone knows what
+  // is actually in it, so the estimate is redone from the services counted —
+  // a wash & fold load stops claiming two days the shop was never going to
+  // take. The slowest line decides, and a service with no turnaround of its
+  // own inherits the shop's.
+  //
+  // Measured from arrival, never from the count. The dispatcher recomputes this
+  // the same way inside /settle a moment from now and its write is the one that
+  // survives, so an anchor of Date.now() here is not a second opinion — it is a
+  // number the customer never sees, persisted just long enough to be wrong if
+  // the settle fails. Same anchor, same rule, one answer.
+  const { data: arrival } = await db
+    .from('delivery_legs')
+    .select('completed_at, updated_at')
+    .eq('order_id', orderId)
+    .eq('leg', 'pickup')
+    .eq('status', 'delivered')
+    .order('attempt', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  // A drop-off has no courier leg to ask: the bag arrives in the customer's own
+  // hands at the moment the counter opens it.
+  const arrivedAtMs = Date.parse(arrival?.completed_at ?? arrival?.updated_at ?? '') || Date.now();
+
+  const readyHours = readyHoursFor(
+    counted.map(({ service }) => service),
+    shop?.turnaround_hours,
+  );
+  const estimatedReadyAt = new Date(arrivedAtMs + readyHours * 3600_000).toISOString();
 
   const { error } = await db
     .from('orders')
@@ -142,30 +178,47 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
     return { error: `Intake saved, but payment failed: ${(err as Error).message}` };
   }
 
+  // Read back rather than echoed: settling can move the order, and the shop
+  // has to be told the promise the customer's app is actually showing, not the
+  // one this request posted a moment earlier.
+  const { data: saved } = await db
+    .from('orders')
+    .select('estimated_ready_at')
+    .eq('id', orderId)
+    .maybeSingle();
+
   revalidatePath('/');
   revalidatePath(`/orders/${orderId}`);
-  return { ok: true, subtotal, needsApproval, paymentNote };
+  return {
+    ok: true,
+    subtotal,
+    needsApproval,
+    paymentNote,
+    readyAt: saved?.estimated_ready_at ?? estimatedReadyAt,
+  };
 }
 
 export async function markReady(orderId: string) {
   const db = await supabaseServer();
-  const { data: order } = await db.from('orders').select('status').eq('id', orderId).single();
 
-  // Guard the transition here as well as in the dispatcher — a cleaner
-  // marking an unpriced order ready would send a courier for garments that
-  // were never counted.
-  if (!order || !['cleaning', 'awaiting_approval'].includes(order.status)) {
-    return { error: `Cannot mark ready from status '${order?.status ?? 'unknown'}'.` };
+  // Read through the staff session first, because the call below goes out on
+  // the internal key and that key does not care whose shop this is. RLS is what
+  // stops a counter at one location finishing another location's order.
+  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  if (!order) return { error: 'order not found' };
+
+  // The write happens in the dispatcher rather than here, because of what hangs
+  // off it: this is the transition the customer has to be told about hours
+  // after they closed the app, and a push fired from a render has no ledger
+  // behind it and no way to know a retry already sent it. The dispatcher makes
+  // the same write — status and ready_at, which is a fact and not a promise —
+  // guards the same statuses, and is idempotent from 'ready', so a double-click
+  // at the counter is a success rather than an error in front of a customer.
+  try {
+    await callDispatch(`/v1/orders/${orderId}/ready`);
+  } catch (err) {
+    return { error: (err as Error).message };
   }
-
-  // ready_at is a fact, not a promise. It is what unlocks the customer
-  // choosing a delivery time, so it must only be set when the clothes are
-  // genuinely finished — not when they were estimated to be.
-  const { error } = await db
-    .from('orders')
-    .update({ status: 'ready', ready_at: new Date().toISOString() })
-    .eq('id', orderId);
-  if (error) return { error: error.message };
 
   revalidatePath('/');
   revalidatePath(`/orders/${orderId}`);

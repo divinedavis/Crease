@@ -8,6 +8,8 @@ import { PaymentService } from './payments.js';
 import { PayoutService } from './payouts.js';
 import { registerCustomerRoutes } from './customer.js';
 import { confirmAndDispatch } from './confirm.js';
+import { PushService } from './push.js';
+import { readyWindow } from './ready.js';
 import { buildPaymentProvider, buildConnectProvider, verifyStripeSignature } from '@crease/payments';
 
 const app = Fastify({
@@ -36,11 +38,12 @@ const paymentProvider = buildPaymentProvider(config.payments);
 const payments = new PaymentService(db, paymentProvider, app.log);
 const connectProvider = buildConnectProvider(config.payments);
 const payouts = new PayoutService(db, connectProvider, app.log);
+const push = new PushService(db, app.log);
 
 // Customer-facing routes, authenticated by the caller's own Supabase token.
 // Deliberately separate from /v1/, which stays loopback-only and shared-secret
 // guarded because it can dispatch and charge without an owner check.
-registerCustomerRoutes(app, db, orders, payments);
+registerCustomerRoutes(app, db, orders, payments, push);
 
 // Capture the raw body for every request so signature verification never has
 // to re-serialize a parsed object (key order changes break the HMAC).
@@ -128,11 +131,88 @@ app.post<{ Params: { id: string } }>(
         }
       }
 
-      return { ok: true, ...result };
+      // The count is the first thing anyone knows about what is actually in the
+      // bag, so it is also the first real answer to when it will be done — two
+      // hours for wash & fold against the shop's dry cleaning default of days.
+      // A failure here must not fail the settle: the money is correct, and an
+      // estimate is re-derivable from the same rows on the next intake.
+      let estimatedReadyAt: string | null = null;
+      try {
+        estimatedReadyAt = await orders.refineReadyEstimate(req.params.id);
+      } catch (err) {
+        req.log.error({ err, orderId: req.params.id }, 'ready estimate not refined');
+      }
+
+      // The window is computed here rather than by each surface so the shop and
+      // the customer are never looking at two different ranges.
+      return {
+        ok: true,
+        ...result,
+        estimatedReadyAt,
+        readyWindow: estimatedReadyAt ? readyWindow(estimatedReadyAt) : null,
+      };
     } catch (err) {
       req.log.error({ err, orderId: req.params.id }, 'settle failed');
       return reply.code(402).send({ ok: false, error: (err as Error).message });
     }
+  },
+);
+
+/**
+ * The shop says the clothes are finished.
+ *
+ * The transition lives here rather than in the portal because of what hangs off
+ * it: this is the moment the customer has to be told, hours after they stopped
+ * looking at the app. A push fired from the portal would fire from whichever
+ * render happened to handle the click, with no ledger to stop the second one
+ * and no way to know a retry had already sent it.
+ *
+ * Idempotent from 'ready' — a double-click at the counter is a success, and the
+ * notification ledger underneath refuses the second send on its own.
+ */
+app.post<{ Params: { id: string } }>(
+  '/v1/orders/:id/ready',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    const { data: order } = await db
+      .from('orders')
+      .select('status, ready_at')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (!order) return reply.code(404).send({ ok: false, error: 'order not found' });
+    if (!['cleaning', 'awaiting_approval', 'ready'].includes(order.status)) {
+      return reply
+        .code(409)
+        .send({ ok: false, error: `cannot mark ready from status '${order.status}'` });
+    }
+
+    // ready_at is a fact, not a promise: it is what unlocks the customer
+    // choosing a delivery time, so it records when the shop actually said so and
+    // is never rewritten by a repeat call.
+    let readyAt: string | null = order.ready_at ?? null;
+    if (order.status !== 'ready') {
+      readyAt = new Date().toISOString();
+      const { error } = await db
+        .from('orders')
+        .update({ status: 'ready', ready_at: readyAt })
+        .eq('id', req.params.id);
+      if (error) {
+        req.log.error({ err: error, orderId: req.params.id }, 'could not mark ready');
+        return reply.code(502).send({ ok: false, error: error.message });
+      }
+    }
+
+    // The clothes are done whether or not a phone could be told so. Never fail
+    // this call over a notification.
+    let notified: { sent: number; skipped?: string } = { sent: 0, skipped: 'not_attempted' };
+    try {
+      notified = await push.notifyOrderReady(req.params.id);
+    } catch (err) {
+      req.log.error({ err, orderId: req.params.id }, 'ready notification not sent');
+    }
+
+    return { ok: true, orderStatus: 'ready', readyAt, notified };
   },
 );
 

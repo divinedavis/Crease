@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentStaff, supabaseServer } from '@/lib/supabase';
 import { BOARD, money, statusLabel, statusTone } from '@/lib/status';
+import { isPastDue } from '@/lib/ready';
 import { LiveRefresh } from './live-refresh';
 import { signOut } from './actions';
 
@@ -20,7 +21,7 @@ export default async function QueuePage() {
     .from('orders')
     .select(
       `id, short_code, status, service_tier, subtotal_cents, estimate_subtotal_cents,
-       pickup_window_end, return_window_end, created_at,
+       pickup_window_end, return_window_end, estimated_ready_at, created_at,
        customer:profiles!orders_customer_profile_fkey(full_name),
        order_items(quantity)`,
     )
@@ -99,6 +100,16 @@ export default async function QueuePage() {
                           <span className={`pill ${statusTone(o.status)}`}>
                             {statusLabel(o.status, o.service_tier)}
                           </span>
+                          {/* Only on the rack. Everything else is waiting on
+                              someone who is not the shop, and flagging those
+                              would put a red pill on work nobody here can
+                              move. */}
+                          {o.status === 'cleaning' && isPastDue(o.estimated_ready_at) && (
+                            <>
+                              {' · '}
+                              <span className="pill danger">Past due</span>
+                            </>
+                          )}
                         </div>
                       </span>
                       <span className="money">

@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from 'react';
 import { saveIntake } from '@/app/actions';
 import { money } from '@/lib/status';
 import { billableUnits, lineTotalCents, subtotalCents } from '@/lib/pricing';
+import { readyHoursFor, readyRangeLabel } from '@/lib/ready';
 
 type Service = {
   id: string;
@@ -11,6 +12,7 @@ type Service = {
   unit_price_cents: number;
   unit: 'piece' | 'pound';
   minimum_units: number;
+  turnaround_hours: number | null;
 };
 
 /**
@@ -20,6 +22,11 @@ type Service = {
  * gets charged is decided here and the person entering it should see the
  * consequence before they commit. The estimate is shown alongside so an
  * unusually large gap is obvious in the moment rather than in a dispute.
+ *
+ * The count decides the ready time too, so that moves with the boxes as well.
+ * A wash & fold line pulls the shop's 48-hour default down to two hours, and
+ * the counter should watch that happen rather than learn about it from a
+ * customer who was promised the afternoon.
  */
 export function IntakeForm({
   orderId,
@@ -28,7 +35,8 @@ export function IntakeForm({
   estimateCents,
   thresholdCents,
   notes,
-  defaultReadyHours,
+  shopTurnaroundHours,
+  arrivedAtMs,
 }: {
   orderId: string;
   services: Service[];
@@ -36,7 +44,8 @@ export function IntakeForm({
   estimateCents: number;
   thresholdCents: number;
   notes: string | null;
-  defaultReadyHours: number;
+  shopTurnaroundHours: number;
+  arrivedAtMs: number;
 }) {
   const [qty, setQty] = useState<Record<string, number>>(initial);
   const [state, action, pending] = useActionState(saveIntake.bind(null, orderId), null);
@@ -51,6 +60,21 @@ export function IntakeForm({
   const byWeight = services.some((s) => s.unit === 'pound');
   const count = services.reduce((n, s) => n + (qty[s.id] ?? 0), 0);
 
+  // Only the lines with something in them: a service the counter left blank is
+  // not in the bag, and letting a dry cleaning row nobody counted set the pace
+  // would quote three days for a load of laundry.
+  //
+  // Measured from when the bag arrived, which is what the save writes and what
+  // the customer's app is already showing. Counting a bag that has sat on the
+  // rack since this morning does not buy it another two days.
+  const readyPreview = useMemo(() => {
+    const hours = readyHoursFor(
+      services.filter((s) => (qty[s.id] ?? 0) > 0),
+      shopTurnaroundHours,
+    );
+    return readyRangeLabel(new Date(arrivedAtMs + hours * 3600_000));
+  }, [qty, services, shopTurnaroundHours, arrivedAtMs]);
+
   return (
     <form action={action} className="card">
       {state?.error && <div className="notice danger">{state.error}</div>}
@@ -64,6 +88,10 @@ export function IntakeForm({
           {state.needsApproval
             ? 'Saved and held. The customer has been asked to approve this total before you start.'
             : (state.paymentNote ?? 'Saved. Start cleaning.')}
+          {/* The saved estimate, not the previewed one. This is the number the
+              customer is now looking at, and the counter should read it here
+              rather than from the customer over the phone. */}
+          {state.readyAt && ` Their app now says ready by ${readyRangeLabel(state.readyAt)}.`}
         </div>
       )}
 
@@ -110,22 +138,17 @@ export function IntakeForm({
         })}
       </div>
 
+      {/* Not a field the counter fills in: the services carry their own
+          turnaround, so what is in the bag already answers this. Shown anyway
+          because it is the half of the save that reaches the customer without
+          anyone saying it out loud. */}
       <div className="field" style={{ marginTop: 20 }}>
-        <label htmlFor="ready_hours">When will it be ready?</label>
-        <select id="ready_hours" name="ready_hours" defaultValue={String(defaultReadyHours)}
-                style={{ font: 'inherit', width: '100%', padding: '11px 12px', minHeight: 46,
-                         borderRadius: 8, border: '1px solid var(--border)',
-                         background: 'var(--surface)', color: 'var(--text)' }}>
-          <option value="2">In about 2 hours</option>
-          <option value="4">Later today (~4 hours)</option>
-          <option value="24">Tomorrow (~24 hours)</option>
-          <option value="48">In 2 days (~48 hours)</option>
-          <option value="72">In 3 days (~72 hours)</option>
-          <option value="120">In 5 days (~120 hours)</option>
-        </select>
+        <label>Ready by</label>
+        <div style={{ fontWeight: 600 }}>{readyPreview}</div>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
-          The customer sees this as an estimate. They only get asked to pick a
-          delivery time once you mark the order ready.
+          Worked out from what you counted — the slowest service in the bag sets
+          it. Saving fixes this time and shows it to the customer. They only get
+          asked to pick a delivery time once you mark the order ready.
         </p>
       </div>
 

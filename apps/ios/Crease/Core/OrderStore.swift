@@ -34,7 +34,7 @@ final class OrderStore: ObservableObject {
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
     return_window_start, return_window_end, estimated_ready_at, ready_at,
     customer_notes, cleaner_notes, created_at,
-    cleaner:cleaners(id, name, line1, city, state, turnaround_hours, lat, lng),
+    cleaner:cleaners(id, name, phone, line1, city, state, turnaround_hours, lat, lng),
     address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
     order_items(id, label, quantity, unit_price_cents),
     delivery_legs(id, leg, status, provider, courier_name, courier_vehicle, tracking_url, dropoff_pincode)
@@ -65,7 +65,7 @@ final class OrderStore: ObservableObject {
     func loadCleaners() async {
         cleaners = (try? await client
             .from("cleaners")
-            .select("id, name, line1, city, state, turnaround_hours, lat, lng")
+            .select("id, name, phone, line1, city, state, turnaround_hours, lat, lng")
             .eq("active", value: true)
             .order("name")
             .execute()
