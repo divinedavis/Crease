@@ -219,10 +219,10 @@ private struct ActiveOrderCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(order.status.title)
+                    Text(order.statusTitle)
                         .font(.headline)
-                    if !order.status.detail.isEmpty {
-                        Text(order.status.detail)
+                    if !order.statusDetail.isEmpty {
+                        Text(order.statusDetail)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

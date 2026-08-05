@@ -80,6 +80,15 @@ export class OrderService {
   async dispatchLeg(orderId: string, leg: LegType) {
     const order = await this.loadOrder(orderId);
 
+    // A one-leg order paid for one courier. The other leg has no fee behind
+    // it, so the refusal lives here rather than in each caller — the portal,
+    // the app and the webhooks can all ask for a leg, and only this function
+    // is below all of them.
+    const tier = order.service_tier ?? 'round_trip';
+    if ((leg === 'return' && tier === 'pickup_only') || (leg === 'pickup' && tier === 'return_only')) {
+      throw new Error(`order ${order.short_code} is ${tier} — there is no ${leg} leg to dispatch`);
+    }
+
     const { data: priorLegs } = await this.db
       .from('delivery_legs')
       .select('*')

@@ -4,6 +4,7 @@ import {
   OverAuthorizationError,
   PaymentProviderError,
   type PaymentProvider,
+  type PaymentState,
 } from '@crease/payments';
 
 /**
@@ -51,6 +52,32 @@ export class PaymentService {
       throw new Error(`order ${orderId} has no delivery fee to charge`);
     }
 
+    // Ask before writing. The upsert below stamps 'requires_payment_method',
+    // so a check made after it can only ever see that — which is how re-tapping
+    // Book on a paid order used to reset its payment status — and the row's own
+    // copy is stale anyway until something syncs it.
+    const paid = await this.syncDeliveryPayment(orderId);
+    if (paid) {
+      const status: string = paid.row.status;
+      // 'processing' belongs with the paid ones, not the unstarted ones: the
+      // card is already charged and only the provider's last word is
+      // outstanding. Handing out a second intent there charges twice, and the
+      // sheet refuses to present a live one anyway — so return the same intent
+      // and let the client skip to confirmation.
+      if (['authorized', 'captured'].includes(status) || paid.state.providerStatus === 'processing') {
+        return { clientSecret: paid.state.clientSecret, amountCents: amount, alreadyPaid: true };
+      }
+      // Money that was taken and given back leaves a row whose refs point at a
+      // real charge. Past the provider's idempotency window the upsert below
+      // would mint a fresh intent over the top of them, orphaning the refund so
+      // what came back can no longer be traced to the order it left.
+      if (['refunded', 'partially_refunded', 'cancelled'].includes(status)) {
+        throw new Error(
+          `order ${orderId} has a ${status} payment — book a new order rather than re-charging this one`,
+        );
+      }
+    }
+
     const { data: row, error } = await this.db
       .from('payments')
       .upsert(
@@ -66,12 +93,6 @@ export class PaymentService {
       .select()
       .single();
     if (error) throw new Error(`could not create payment row: ${error.message}`);
-
-    // Already paid — hand back the same intent rather than making a second.
-    if (row.status === 'captured' && row.provider_intent_ref) {
-      const existing = await this.provider.get(row.provider_intent_ref);
-      return { clientSecret: existing.clientSecret, amountCents: amount, alreadyPaid: true };
-    }
 
     const state = await this.provider.authorize({
       orderId,
@@ -94,6 +115,61 @@ export class PaymentService {
 
     this.log.info({ orderId, amount }, 'delivery payment intent created');
     return { clientSecret: state.clientSecret, amountCents: amount, alreadyPaid: false };
+  }
+
+  /**
+   * Re-read the provider's view of the primary intent and persist it.
+   *
+   * The row's status is written when the intent is created — before the
+   * customer has so much as seen the sheet — and nothing on that path ever
+   * revises it. The customer pays the provider directly from the phone, so the
+   * provider is the only party that knows whether money moved; every decision
+   * that turns on "is this paid" has to come through here first.
+   *
+   * Hands back the row and the provider's state together: the row for anything
+   * that has to be durable, the state for the client secret, which we
+   * deliberately never store. Null means no intent was ever started.
+   */
+  async syncDeliveryPayment(orderId: string): Promise<{ row: any; state: PaymentState } | null> {
+    const { data: primary, error: readError } = await this.db
+      .from('payments')
+      .select('*')
+      .eq('order_id', orderId)
+      .eq('kind', 'primary')
+      .maybeSingle();
+    // A database that would not answer is not an order without a payment.
+    // Swallowed, it returns null, the caller reads that as "never paid", and
+    // the webhook that exists to catch exactly this answers 200 — so the event
+    // is retired at the provider and a charged customer's courier is never
+    // sent. Nothing downstream would ever notice. Throw instead.
+    if (readError) {
+      throw new Error(`could not read the payment for order ${orderId}: ${readError.message}`);
+    }
+
+    if (!primary?.provider_intent_ref) return null;
+
+    const state = await this.provider.get(primary.provider_intent_ref);
+    const { data: updated, error: writeError } = await this.db
+      .from('payments')
+      .update({
+        status: state.status,
+        captured_cents: state.capturedCents ?? primary.captured_cents,
+        charge_ref: state.chargeRef ?? primary.charge_ref,
+        last_error: state.error ?? null,
+      })
+      .eq('id', primary.id)
+      .select()
+      .single();
+    // Same failure one step later: falling back to the unsynced row hands the
+    // caller the status from before the customer paid.
+    if (writeError) {
+      throw new Error(`could not record the payment for order ${orderId}: ${writeError.message}`);
+    }
+
+    if (primary.status !== state.status) {
+      this.log.info({ orderId, from: primary.status, to: state.status }, 'payment status synced');
+    }
+    return { row: updated, state };
   }
 
   /** Place the hold. Idempotent on the order. */
@@ -193,11 +269,19 @@ export class PaymentService {
    * Returns `{ needsApproval: true }` rather than throwing when the count comes
    * in above the hold — that is an ordinary business outcome, not an error, and
    * the caller turns it into a question for the customer.
+   *
+   * `nothingToSettle` says this call moved no money for the shop. It is not the
+   * same as `captured: 0`: the figure reported alongside it is the delivery fee
+   * taken at checkout, which is Crease's, and a caller that reads it as a
+   * capture pays the shop its cleaning share out of the courier's money.
    */
-  async settleOrder(orderId: string): Promise<{ captured: number; needsApproval: boolean }> {
+  async settleOrder(
+    orderId: string,
+  ): Promise<{ captured: number; needsApproval: boolean; nothingToSettle?: boolean }> {
     const order = await this.loadOrder(orderId);
+    const cleaning = order.subtotal_cents ?? order.estimate_subtotal_cents ?? 0;
     const total =
-      (order.subtotal_cents ?? order.estimate_subtotal_cents) +
+      cleaning +
       order.delivery_fee_cents +
       order.service_fee_cents +
       order.tax_cents +
@@ -213,8 +297,28 @@ export class PaymentService {
     if (!primary?.provider_intent_ref) {
       throw new Error(`order ${orderId} has no authorized payment to settle`);
     }
+
+    // Crease charges for transport, and that fee was taken in full at
+    // checkout. When the shop counts nothing onto the order there is no
+    // further money to move, and capturing again against an intent the
+    // provider already settled comes back as an error — which the portal shows
+    // the shop as a payment failure on a perfectly healthy order.
+    if (cleaning <= 0) {
+      const synced = await this.syncDeliveryPayment(orderId);
+      await this.db.from('orders').update({ total_cents: total }).eq('id', orderId);
+      return {
+        captured: synced?.row.captured_cents ?? 0,
+        needsApproval: false,
+        nothingToSettle: true,
+      };
+    }
+
+    // The fee was already taken at checkout, so there is nothing left to
+    // capture — and the amount on the row is that fee, not a cleaning bill this
+    // call collected.
     if (primary.status === 'captured') {
-      return { captured: primary.captured_cents ?? 0, needsApproval: false };
+      await this.db.from('orders').update({ total_cents: total }).eq('id', orderId);
+      return { captured: primary.captured_cents ?? 0, needsApproval: false, nothingToSettle: true };
     }
 
     try {

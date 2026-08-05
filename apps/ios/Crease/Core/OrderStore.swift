@@ -30,14 +30,14 @@ final class OrderStore: ObservableObject {
     }
 
     private static let orderSelect = """
-    id, short_code, status, estimate_subtotal_cents, subtotal_cents, total_cents,
+    id, short_code, status, service_tier, estimate_subtotal_cents, subtotal_cents, total_cents,
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
     return_window_start, return_window_end, estimated_ready_at, ready_at,
     customer_notes, cleaner_notes, created_at,
     cleaner:cleaners(id, name, line1, city, state, turnaround_hours, lat, lng),
     address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
     order_items(id, label, quantity, unit_price_cents),
-    delivery_legs(id, leg, status, courier_name, courier_vehicle, tracking_url, dropoff_pincode)
+    delivery_legs(id, leg, status, provider, courier_name, courier_vehicle, tracking_url, dropoff_pincode)
     """
 
     func loadAll() async {
@@ -138,17 +138,6 @@ final class OrderStore: ObservableObject {
         let customer_notes: String?
     }
 
-    /// Move a paid draft to scheduled. Called only after the payment sheet
-    /// reports success, so nothing is ever dispatched unpaid.
-    func markScheduled(_ orderId: UUID) async {
-        try? await client
-            .from("orders")
-            .update(["status": "scheduled"])
-            .eq("id", value: orderId)
-            .execute()
-        await loadOrders()
-    }
-
     func createOrder(_ draft: NewOrder) async -> Order? {
         do {
             let created: Order = try await client
@@ -166,17 +155,26 @@ final class OrderStore: ObservableObject {
         }
     }
 
-    /// Record the delivery window the customer chose, then ask the dispatcher
-    /// to book the return courier for it.
+    private struct ReturnWindow: Encodable {
+        let start: Date
+        let end: Date
+    }
+
+    /// Ask the dispatcher to book the return courier for the window the
+    /// customer chose.
+    ///
+    /// The window used to be written straight to `orders` from here first.
+    /// RLS lets a customer update their own order only at 'draft' or
+    /// 'awaiting_approval', and this runs at 'ready' — so the write matched
+    /// zero rows, reported no error, and the dispatch call that followed
+    /// refused every time with "Choose a delivery time first." on a time that
+    /// had been chosen. The service writes it now, with the one credential
+    /// that is allowed to.
     func scheduleReturn(order: Order, start: Date, end: Date) async -> String? {
         do {
-            try await client
-                .from("orders")
-                .update(["return_window_start": start, "return_window_end": end])
-                .eq("id", value: order.id)
-                .execute()
             _ = try await DispatchAPI(accessToken: try await accessToken()).post(
                 "/v1/me/orders/\(order.id.uuidString.lowercased())/dispatch-return",
+                body: ReturnWindow(start: start, end: end),
                 as: DispatchAPI.Ack.self
             )
             await loadOrders()

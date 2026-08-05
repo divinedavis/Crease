@@ -41,7 +41,10 @@ async function makeOrder() {
     status: 'scheduled',
     estimate_subtotal_cents: 0,
     delivery_fee_cents: 1995,
-    service_tier: 'return_only',
+    // Case 2 cancels a courier mid-flight, so the fixture has to be a tier that
+    // gets one. return_only never has a pickup leg — the dispatcher refuses it
+    // outright now, which used to look like a cancellation bug in this script.
+    service_tier: 'pickup_only',
   }).select('id, short_code').single();
   return data;
 }

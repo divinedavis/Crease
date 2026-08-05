@@ -212,6 +212,55 @@ final class CreaseUITests: XCTestCase {
         attach(app, "tiers")
     }
 
+    /// The whole point of the booking screen: it takes money.
+    ///
+    /// The sheet used to be handed to SwiftUI as state and presented by
+    /// `.paymentSheet(isPresented:)` from inside a `.background { if let
+    /// sheet ... }`, so the presenter was installed in the same update that
+    /// already had the binding true. There was no false→true edge left to
+    /// observe, nothing appeared, and the customer sat on the booking screen
+    /// forever. Nothing about that shows up in a build log or a unit test —
+    /// only driving the button does.
+    func testBookingPresentsThePaymentSheet() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        // "Book a pickup" opened this flow; the confirm button carries a price,
+        // which is what tells the two apart.
+        let confirm = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Book ' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 15), "booking must offer a priced confirm button")
+        confirm.tap()
+
+        // Stripe mints the intent and loads the sheet over the network, so this
+        // is slow by nature. It either arrives or the flow is dead — which is
+        // precisely the failure being guarded.
+        let payButton = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Pay $'"))
+            .firstMatch
+        let appeared = payButton.waitForExistence(timeout: 45)
+            || app.textFields["Card number"].waitForExistence(timeout: 5)
+            || app.staticTexts["Card information"].waitForExistence(timeout: 5)
+        attach(app, "payment-sheet")
+        XCTAssertTrue(
+            appeared,
+            "payment sheet never presented. Buttons: "
+                + app.buttons.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
+                + " · texts: "
+                + app.staticTexts.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
+        )
+    }
+
     func testCancelIsOfferedAndConfirmed() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
@@ -256,8 +305,14 @@ final class CreaseUITests: XCTestCase {
                 button("Cancel pickup", in: app),
                 "cancelling is irreversible, so it must be confirmed"
             )
+            // The wording moved when the courier fee started being taken at
+            // booking: "you won't be charged" is only true of a draft now, and
+            // every other cancellable status is a refund. What must not change
+            // is that the dialog says which of the two this is.
             let explained = app.staticTexts.allElementsBoundByIndex.contains {
-                $0.label.contains("won't be charged") || $0.label.contains("that trip is charged")
+                $0.label.contains("costs you nothing")
+                    || $0.label.contains("comes back to you")
+                    || $0.label.contains("that trip is charged")
             }
             XCTAssertTrue(explained, "the confirmation must say whether cancelling costs anything")
             attach(app, "cancel-confirm")

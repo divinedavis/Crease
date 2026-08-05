@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { currentStaff, supabaseServer } from '@/lib/supabase';
-import { LEG_LABEL, STATUS_LABEL, money, statusTone } from '@/lib/status';
+import { LEG_LABEL, TIER_LABEL, money, statusLabel, statusTone } from '@/lib/status';
 import { LiveRefresh } from '@/app/live-refresh';
 import { IntakeForm } from './intake-form';
 import { ActionsPanel } from './actions-panel';
@@ -61,7 +61,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     (a: any, b: any) => +new Date(a.created_at) - +new Date(b.created_at),
   );
 
-  const showIntake = ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status);
+  // A drop-off has no courier leg to carry it into 'at_cleaner' — the customer
+  // walks it in — so the counter counting the bag is the event that proves it
+  // arrived. Without this the order sits at 'scheduled' with nothing on the
+  // screen that can move it, waiting on a driver that was never booked.
+  const showIntake =
+    ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status) ||
+    (order.status === 'scheduled' && order.service_tier === 'return_only');
 
   return (
     <div className="shell">
@@ -72,12 +78,18 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           <h1>
             {order.short_code}{' '}
             <span className={`pill ${statusTone(order.status)}`}>
-              {STATUS_LABEL[order.status] ?? order.status}
+              {statusLabel(order.status, order.service_tier)}
             </span>
           </h1>
           <div className="who">
             {(order.customer as any)?.full_name ?? 'Customer'}
             {(order.customer as any)?.phone && ` · ${(order.customer as any).phone}`}
+          </div>
+          {/* Which ending this order has. Whether the bag leaves by courier or
+              over the counter is not visible anywhere else on the screen, and
+              guessing it wrong costs a courier fare nobody paid. */}
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 2 }}>
+            {TIER_LABEL[order.service_tier] ?? order.service_tier}
           </div>
         </div>
         <Link href="/" className="btn" style={{ textDecoration: 'none' }}>
@@ -147,6 +159,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       <ActionsPanel
         orderId={order.id}
         status={order.status}
+        serviceTier={order.service_tier}
         hasReturnWindow={Boolean(order.return_window_start)}
       />
 

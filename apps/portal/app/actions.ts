@@ -123,9 +123,18 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   // much we are allowed to take. The dispatcher moves the order to
   // 'awaiting_approval' if the count came in above the hold.
   let needsApproval = false;
+  let paymentNote: string | undefined;
   try {
     const res = await callDispatch(`/v1/orders/${orderId}/settle`);
     needsApproval = Boolean(res.needsApproval);
+    // The dispatcher says "nothing to capture" on the 200 rather than by
+    // refusing, so it is read here and not in the catch. The wording has to
+    // hold for every branch that sets it — an order whose fee was taken at
+    // booking, and one already captured at an earlier intake — so it claims
+    // only that no further money moves, not when the money moved.
+    if (res.nothingToSettle) {
+      paymentNote = 'Saved. Nothing further to charge — this order is already paid.';
+    }
   } catch (err) {
     // The garments are already counted and the intake is saved; a payment
     // problem must not silently look like a successful intake.
@@ -135,7 +144,7 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
 
   revalidatePath('/');
   revalidatePath(`/orders/${orderId}`);
-  return { ok: true, subtotal, needsApproval };
+  return { ok: true, subtotal, needsApproval, paymentNote };
 }
 
 export async function markReady(orderId: string) {
@@ -175,7 +184,48 @@ export async function requestReturnCourier(orderId: string) {
   return { ok: true };
 }
 
-/** Retry a leg that failed or came back undelivered. */
+/**
+ * How a pickup-only order ends. There is no leg 2 to book — the customer walks
+ * in and takes the bag — so without this the order sits at 'ready' forever and
+ * the only button on the screen books a courier they never paid for.
+ *
+ * 'delivered' is reused rather than given its own status: the bag reached the
+ * customer, which is the only thing the word has ever meant here.
+ */
+export async function markCollected(orderId: string) {
+  const db = await supabaseServer();
+  const { data: order } = await db
+    .from('orders')
+    .select('status, service_tier')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) return { error: 'order not found' };
+  if (order.service_tier !== 'pickup_only') {
+    return { error: 'This order is delivered back by courier. Use "Send it back".' };
+  }
+  // Already closed is the outcome this button is for, so it is a success, not
+  // an error. A double-click at the counter — or the backend having closed the
+  // order out first — would otherwise put a failure in front of a shop that
+  // just did the right thing, with the customer standing there holding the bag.
+  if (order.status === 'delivered') {
+    revalidatePath('/');
+    revalidatePath(`/orders/${orderId}`);
+    return { ok: true };
+  }
+  if (order.status !== 'ready') {
+    return { error: `Cannot hand over from status '${order.status}'.` };
+  }
+
+  const { error } = await db.from('orders').update({ status: 'delivered' }).eq('id', orderId);
+  if (error) return { error: error.message };
+
+  revalidatePath('/');
+  revalidatePath(`/orders/${orderId}`);
+  return { ok: true };
+}
+
+/** Leg 1, by hand: the shop starting a paid order, or retrying one that failed. */
 export async function retryPickupCourier(orderId: string) {
   try {
     await callDispatch(`/v1/orders/${orderId}/dispatch-pickup`);

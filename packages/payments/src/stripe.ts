@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type {
   AuthorizeRequest,
   CaptureRequest,
@@ -26,6 +27,12 @@ const STATUS_MAP: Record<string, PaymentStatus> = {
   requires_payment_method: 'requires_payment_method',
   requires_confirmation: 'requires_payment_method',
   requires_action: 'requires_payment_method',
+  // Not the same thing as the three above, and the column has no way to say
+  // so: an intent Stripe is still settling has usually already charged the
+  // card, and PaymentSheet reports .completed while it does — normal after
+  // 3DS, Link, or any redirect method. Anything that would turn a customer
+  // away, or hand out a second intent, must read providerStatus instead of
+  // narrowing on this.
   processing: 'requires_payment_method',
   requires_capture: 'authorized',
   succeeded: 'captured',
@@ -161,6 +168,7 @@ export class StripeProvider implements PaymentProvider {
       paymentIntentRef: pi.id,
       chargeRef: expandedCharge?.id ?? (typeof pi.latest_charge === 'string' ? pi.latest_charge : undefined),
       status,
+      providerStatus: pi.status,
       // amount_capturable is what remains holdable; on a captured intent it
       // drops to zero, so fall back to the intent amount for the audit trail.
       authorizedCents: pi.amount_capturable || pi.amount,
@@ -206,4 +214,36 @@ export class StripeProvider implements PaymentProvider {
     }
     return json;
   }
+}
+
+/**
+ * Is this callback really from Stripe?
+ *
+ * Stripe signs `${timestamp}.${rawBody}`, not the body on its own, and puts
+ * the digest in a compound header that carries several v1 entries while a
+ * secret is being rotated — so any one of them matching is a match.
+ *
+ * The timestamp is inside the signed payload for a reason, and checking its
+ * age is not optional here: a captured payload otherwise stays valid forever,
+ * and replaying a payment_intent.succeeded dispatches a courier we never
+ * collected for.
+ */
+export function verifyStripeSignature(
+  rawBody: Buffer,
+  header: string,
+  secret: string,
+  toleranceSeconds = 300,
+): boolean {
+  const parts = header.split(',').map((p) => p.trim().split('='));
+  const timestamp = parts.find((p) => p[0] === 't')?.[1];
+  const sent = parts.filter((p) => p[0] === 'v1').map((p) => p[1]);
+  if (!timestamp || !sent.length) return false;
+
+  const age = Math.abs(Date.now() / 1000 - Number(timestamp));
+  if (!Number.isFinite(age) || age > toleranceSeconds) return false;
+
+  const expected = createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex');
+  return sent.some(
+    (sig) => sig.length === expected.length && timingSafeEqual(Buffer.from(sig), Buffer.from(expected)),
+  );
 }

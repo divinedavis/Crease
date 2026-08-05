@@ -43,6 +43,11 @@ export interface PaymentState {
    *  payout does not have to wait on the platform's available balance. */
   chargeRef?: string;
   status: PaymentStatus;
+  /** The provider's own word, unmapped. `status` is squeezed into an enum with
+   *  no value for "in flight", so it cannot tell a payment the bank is still
+   *  settling from one that never started — and those two owe the customer
+   *  opposite answers. Callers that must distinguish them read this. */
+  providerStatus?: string;
   authorizedCents?: number;
   capturedCents?: number;
   refundedCents?: number;

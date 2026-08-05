@@ -33,6 +33,10 @@ export const config = {
   // on its own. The secret key never leaves this process.
   stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
 
+  // Optional, because a mock-payments box has no Stripe to hear from. Absent,
+  // the webhook route refuses input rather than acting on an unsigned POST.
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+
   /** What we declare to the carrier per order, capped. See docs/insurance.md. */
   declaredValueDefaultCents: Number(process.env.DECLARED_VALUE_DEFAULT_CENTS ?? 20_000),
   declaredValueMaxCents: Number(process.env.DECLARED_VALUE_MAX_CENTS ?? 50_000),

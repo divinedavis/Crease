@@ -51,7 +51,7 @@ struct ServiceOption: Identifiable, Hashable {
             pickupEtaMinutes: nil,
             symbol: "arrow.down.circle",
             legs: 1,
-            isRecommended: true
+            isRecommended: false
         ),
         ServiceOption(
             id: "pickup_only",
@@ -61,7 +61,13 @@ struct ServiceOption: Identifiable, Hashable {
             pickupEtaMinutes: 20,
             symbol: "arrow.up.circle",
             legs: 1,
-            isRecommended: false
+            // The default, and what "Best value" now marks. Same $19.95 as
+            // return only, but a driver comes to the customer instead of the
+            // customer carrying the bag — more for the same money, which is
+            // the only claim that badge can honestly make. It sat on return
+            // only, the one tier that dispatches no courier at all, so the
+            // default tap sent nobody anywhere.
+            isRecommended: true
         ),
     ]
 

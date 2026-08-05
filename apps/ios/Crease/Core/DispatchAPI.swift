@@ -22,11 +22,33 @@ struct DispatchAPI {
 
     struct Failure: LocalizedError {
         let message: String
+        /// The server's own name for this refusal, when it has one. Some of
+        /// them need different handling rather than different words: a charge
+        /// with no courier behind it is not something to retry, and the retry
+        /// advice the app gives by default sends that customer at a route that
+        /// will refuse them.
+        var code: String? = nil
         var errorDescription: String? { message }
     }
 
     @discardableResult
     func post<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+        try await send(path, body: Data("{}".utf8), as: type)
+    }
+
+    /// POST with a body.
+    ///
+    /// Dates go out as ISO-8601 because that is what the service reads them
+    /// back as; the default encoding is a bare number of seconds since 2001,
+    /// which arrives as a nonsense timestamp rather than as an error.
+    @discardableResult
+    func post<T: Decodable>(_ path: String, body: some Encodable, as type: T.Type) async throws -> T {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return try await send(path, body: try encoder.encode(body), as: type)
+    }
+
+    private func send<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         guard isConfigured, let url = URL(string: baseURL + path) else {
             throw Failure(message: "The app is not configured to reach Crease.")
         }
@@ -34,7 +56,7 @@ struct DispatchAPI {
         request.httpMethod = "POST"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "authorization")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.httpBody = Data("{}".utf8)
+        request.httpBody = body
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -43,8 +65,11 @@ struct DispatchAPI {
             // Surface the server's reason. A carrier refusing to cancel after
             // pickup is a real answer the customer needs to read, not a
             // generic failure to retry against.
-            let reason = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.readable
-            throw Failure(message: reason ?? "That didn't work (\(status)).")
+            let failure = try? JSONDecoder().decode(ErrorBody.self, from: data)
+            throw Failure(
+                message: failure?.readable ?? "That didn't work (\(status)).",
+                code: failure?.code
+            )
         }
         do {
             return try JSONDecoder().decode(T.self, from: data)
@@ -60,6 +85,7 @@ struct DispatchAPI {
     private struct ErrorBody: Decodable {
         let error: String?
         let errors: [String]?
+        let code: String?
         var readable: String? { error ?? errors?.joined(separator: "\n") }
     }
 

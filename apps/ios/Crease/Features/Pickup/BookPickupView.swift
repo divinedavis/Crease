@@ -1,5 +1,4 @@
 import MapKit
-import StripePaymentSheet
 import SwiftUI
 
 /// The booking screen: route on a map, options in a sheet over it.
@@ -25,7 +24,29 @@ struct BookPickupView: View {
     @State private var pickupDay = Date()
     @State private var choosingCleaner = false
     @StateObject private var checkout = Checkout()
-    @State private var pendingOrderId: UUID?
+    @State private var draft: Draft?
+    /// Whether this screen is still the one presented.
+    ///
+    /// The payment sheet goes up from whatever UIKit controller is topmost,
+    /// which after a dismissal is the order list — so a booking that outlives
+    /// its screen puts a sheet over Orders with nothing to explain it, and
+    /// paying that sheet dispatches a courier for a booking the customer
+    /// walked away from. Read from the environment rather than tracked with
+    /// `onDisappear`: swapping the cover's item from the address step to this
+    /// one delivers a disappear into the same slot after this view has already
+    /// appeared, and a flag cleared by that event kills the live booking it
+    /// was meant to protect.
+    @Environment(\.isPresented) private var isPresented
+
+    /// The order this screen already created, and the choice it was created
+    /// for. Kept so a retry can pay for it instead of making another, and
+    /// discarded as soon as the choice changes — the price and the shop are
+    /// baked into the row at insert.
+    private struct Draft {
+        let id: UUID
+        let tier: String
+        let cleanerId: UUID
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -33,21 +54,6 @@ struct BookPickupView: View {
             header
         }
         .safeAreaInset(edge: .bottom) { optionsSheet }
-        .background {
-            // Stripe's modifier takes a non-optional sheet, so it is attached
-            // only once one exists rather than guarded inside the call.
-            if let sheet = checkout.sheet {
-                Color.clear.paymentSheet(
-                    isPresented: $checkout.isPresenting,
-                    paymentSheet: sheet
-                ) { result in
-                    checkout.handle(result)
-                    if case .paid = checkout.state {
-                        Task { await confirmPaidOrder() }
-                    }
-                }
-            }
-        }
         .sheet(isPresented: $choosingCleaner) {
             CleanerPickerView(
                 cleaners: store.cleaners,
@@ -104,12 +110,18 @@ struct BookPickupView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
+            // Closed while a booking is in flight. The order row and the
+            // payment intent are already being created by then, and leaving
+            // this live means the customer can walk out mid-charge — there is
+            // no cancel to offer them at that point, only a screen that has to
+            // stay put until the sheet answers.
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
                     .frame(width: 40, height: 40)
                     .background(.regularMaterial, in: Circle())
             }
+            .disabled(submitting)
             .accessibilityLabel("Back")
 
             HStack(spacing: 6) {
@@ -154,7 +166,7 @@ struct BookPickupView: View {
             }
             .padding(.horizontal, 16)
 
-            Text("Covers pickup and delivery only. You pay \(cleaner?.name ?? "the shop") for the cleaning. They'll tell you when it's ready and you choose a delivery time.")
+            Text(feeExplainer)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -178,6 +190,22 @@ struct BookPickupView: View {
         .background(.regularMaterial)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    /// The fee buys couriers, and which couriers depends on the tier. Under
+    /// Pickup only the old single sentence promised a delivery time that tier
+    /// does not pay for, which is the same lie the Orders screen used to tell
+    /// once the clothes were ready.
+    private var feeExplainer: String {
+        let shop = cleaner?.name ?? "the shop"
+        switch selected.id {
+        case "pickup_only":
+            return "Covers the courier to \(shop) only. You pay them for the cleaning and collect it from their counter when it's done."
+        case "return_only":
+            return "Covers the courier back to you only — you drop the bag at \(shop). You pay them for the cleaning, and pick a delivery time once it's ready."
+        default:
+            return "Covers pickup and delivery only. You pay \(shop) for the cleaning. They'll tell you when it's ready and you choose a delivery time."
+        }
     }
 
     private var cleanerRow: some View {
@@ -270,20 +298,20 @@ struct BookPickupView: View {
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
-    /// Payment succeeded: promote the draft so it can be dispatched, and get
-    /// out of the way.
-    private func confirmPaidOrder() async {
-        if let id = pendingOrderId {
-            await store.markScheduled(id)
-        }
-        dismiss()
-    }
-
     private func book() async {
         guard let cleaner, let userId = session.userId else { return }
         submitting = true
         error = nil
         defer { submitting = false }
+
+        // A dismissed payment sheet leaves the draft row behind. Retrying the
+        // same choice pays for that row rather than inserting another order —
+        // otherwise every abandoned tap adds a near-identical draft to the
+        // list and none of them can be told apart.
+        if let draft, draft.tier == selected.id, draft.cleanerId == cleaner.id {
+            await settle(orderId: draft.id)
+            return
+        }
 
         // Reuse a saved address when it is the same place. Inserting on every
         // booking piled up near-identical rows and made the saved list useless
@@ -336,12 +364,49 @@ struct BookPickupView: View {
 
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.
-        pendingOrderId = created.id
+        draft = Draft(id: created.id, tier: selected.id, cleanerId: cleaner.id)
+        await settle(orderId: created.id)
+    }
+
+    /// Charge the courier fee and let the dispatcher decide what the order
+    /// becomes.
+    ///
+    /// The server is what calls an order paid. This used to flip the row to
+    /// `scheduled` from the phone the moment Stripe's sheet closed, which is
+    /// how you get an order that looks scheduled to its owner and unpaid to
+    /// everyone else — including the code that refuses to dispatch a courier
+    /// for it.
+    private func settle(orderId: UUID) async {
         guard let token = try? await store.accessToken() else {
             error = "Please sign in again."
             return
         }
-        await checkout.prepare(orderId: created.id, accessToken: token)
-        if case let .failed(message) = checkout.state { error = message }
+        // The draft survives this screen; a payment sheet does not. Leave the
+        // order to be paid from its own detail screen rather than putting a
+        // sheet up over whatever the customer moved on to.
+        guard isPresented else { return }
+
+        let confirmation = await checkout.pay(orderId: orderId, accessToken: token)
+        switch checkout.state {
+        case .paid:
+            // The dispatcher promoted the order and booked the courier before
+            // it answered, so the list this returns to is already right.
+            await store.loadOrders()
+            // Unless it could not find one. The money moved either way, so
+            // leaving on the success animation would hide a paid order that
+            // nobody is coming for behind a list of finished ones.
+            if let problem = confirmation?.problem {
+                error = problem
+            } else {
+                dismiss()
+            }
+        case let .failed(message):
+            // A declined card used to close the sheet in total silence, which
+            // reads as the app having lost the booking. Stay on the screen and
+            // say what happened — the draft is still here to retry against.
+            error = message
+        case .idle, .working:
+            break
+        }
     }
 }

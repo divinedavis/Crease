@@ -38,6 +38,10 @@ enum OrderStatus: String, Codable, CaseIterable {
 
     var detail: String {
         switch self {
+        // A draft is a booking whose card never went through. Left blank it
+        // rendered as a card saying "Draft" and nothing else, which explains
+        // neither why it is stuck nor that the customer can still finish it.
+        case .draft: "Payment wasn't completed, so no driver has been booked. Tap to pay or cancel."
         case .scheduled: "We'll send a driver in your pickup window."
         case .pickupDispatched: "They'll text when they're outside."
         case .inTransitToCleaner: "Your bag is on its way to the shop."
@@ -48,7 +52,10 @@ enum OrderStatus: String, Codable, CaseIterable {
         case .returnDispatched: "A driver is picking it up from the shop."
         case .inTransitToCustomer: "Almost there."
         case .delivered: "Thanks for using Crease."
-        case .failed: "Something went wrong — we're on it."
+        // Almost always a paid order no courier accepted. "We're on it" told
+        // someone whose money had already moved that there was nothing to do,
+        // when the one thing they can do — get it back — is on this screen.
+        case .failed: "We couldn't book a driver for this order. You can cancel it for a refund."
         default: ""
         }
     }
@@ -72,8 +79,13 @@ enum OrderStatus: String, Codable, CaseIterable {
         }
     }
 
+    /// Whether the order still belongs at the top of the list.
+    ///
+    /// `failed` counts. It is not a finished order — it is a paid one with no
+    /// courier — and filing it under Past orders is how a customer is charged
+    /// for a pickup that never happened and never finds out.
     var isActive: Bool {
-        self != .delivered && self != .cancelled && self != .failed
+        self != .delivered && self != .cancelled
     }
 
     /// Whether the customer can still call it off.
@@ -82,9 +94,10 @@ enum OrderStatus: String, Codable, CaseIterable {
     /// bag, cancelling would strand someone else's clothes in a stranger's
     /// car, and once the shop has started cleaning there is work to pay for.
     /// Before a courier is holding anything, cancelling is free and should be
-    /// one tap.
+    /// one tap. `failed` is the extreme case of that — nobody ever collected
+    /// anything, and cancelling is the only way the fee comes back.
     var isCancellable: Bool {
-        [.draft, .scheduled, .pickupDispatched].contains(self)
+        [.draft, .scheduled, .pickupDispatched, .failed].contains(self)
     }
 
     /// A courier may already be on their way, so the carrier can bill us for
@@ -204,13 +217,14 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     let id: UUID
     let leg: String
     let status: String
+    let provider: String
     let courierName: String?
     let courierVehicle: String?
     let trackingUrl: String?
     let dropoffPincode: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, leg, status
+        case id, leg, status, provider
         case courierName = "courier_name"
         case courierVehicle = "courier_vehicle"
         case trackingUrl = "tracking_url"
@@ -220,12 +234,27 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     var isLive: Bool {
         !["delivered", "returned", "cancelled", "failed"].contains(status)
     }
+
+    /// Where to watch the driver, when there is somewhere real to watch them.
+    ///
+    /// The mock courier hands back https://track.crease.local/<id>, a host that
+    /// does not resolve — offering it is a browser error page dressed up as
+    /// tracking, and it looks like the feature is broken rather than absent.
+    var trackingURL: URL? {
+        guard provider != "mock", let trackingUrl else { return nil }
+        return URL(string: trackingUrl)
+    }
 }
 
 struct Order: Codable, Identifiable, Hashable {
     let id: UUID
     let shortCode: String
     let status: OrderStatus
+    /// Which courier legs were bought: `round_trip`, `pickup_only` or
+    /// `return_only`. Written at booking and, until now, never read back — so
+    /// a pickup-only order still asked for a delivery time and would have sent
+    /// a second courier the one-leg price never covered.
+    let serviceTier: String
     let estimateSubtotalCents: Int
     let subtotalCents: Int?
     let totalCents: Int?
@@ -251,6 +280,7 @@ struct Order: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, status, cleaner, address
         case shortCode = "short_code"
+        case serviceTier = "service_tier"
         case estimateSubtotalCents = "estimate_subtotal_cents"
         case subtotalCents = "subtotal_cents"
         case totalCents = "total_cents"
@@ -279,11 +309,57 @@ struct Order: Codable, Identifiable, Hashable {
 
     var itemCount: Int { orderItems?.reduce(0) { $0 + $1.quantity } ?? 0 }
 
+    /// Pickup only: the courier fee bought one leg, to the shop. The clothes
+    /// come home in the customer's hands.
+    var isPickupOnly: Bool { serviceTier == "pickup_only" }
+
+    /// Return only: the fee bought the leg home. Nobody is collecting — the
+    /// bag gets to the shop because the customer carries it there.
+    var isReturnOnly: Bool { serviceTier == "return_only" }
+
+    /// Paid, and waiting on the customer to walk the bag in.
+    ///
+    /// Return-only used to be jumped straight to 'at_cleaner' when the payment
+    /// cleared, which claimed the shop was counting items still sitting in the
+    /// customer's hallway. It sits at 'scheduled' now, which is true and needs
+    /// saying, because 'scheduled' otherwise means a driver is coming.
+    var awaitsCustomerDropOff: Bool {
+        status == .scheduled && isReturnOnly
+    }
+
     /// The clothes are done and no delivery has been booked, so the customer
     /// owes us a choice. This is the one moment the app should be asking for
     /// something rather than reporting.
     var needsReturnScheduling: Bool {
-        readyAt != nil && returnWindowStart == nil && status == .ready
+        readyAt != nil && returnWindowStart == nil && status == .ready && !isPickupOnly
+    }
+
+    /// Same moment, other tier: done, but nobody is bringing it back. Asking
+    /// for a delivery time here would be selling a leg that was never paid for.
+    var awaitsCounterCollection: Bool {
+        status == .ready && isPickupOnly
+    }
+
+    /// The status wording, corrected for what the customer actually bought.
+    /// The raw status cannot know: `ready` means "pick a delivery time" on a
+    /// round trip and "come and get it" on a pickup-only order, and telling
+    /// the second customer their order is out for delivery is a lie the app
+    /// would then have to be caught in. `scheduled` divides the same way —
+    /// a driver is coming, unless the tier is the one where nobody is.
+    var statusTitle: String {
+        if awaitsCounterCollection { return "Ready to collect" }
+        if awaitsCustomerDropOff { return "Drop your bag off" }
+        return status.title
+    }
+
+    var statusDetail: String {
+        if awaitsCounterCollection {
+            return "Waiting for you at \(cleaner?.name ?? "the shop")."
+        }
+        if awaitsCustomerDropOff {
+            return "Take your bag to \(cleaner?.name ?? "the shop"). They'll count it in, and we'll deliver it back once it's ready."
+        }
+        return status.detail
     }
 }
 

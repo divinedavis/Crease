@@ -55,6 +55,18 @@ export function IntakeForm({
     <form action={action} className="card">
       {state?.error && <div className="notice danger">{state.error}</div>}
 
+      {/* Saving leaves the form on screen, so without this the counter cannot
+          tell a save that went through from one that did nothing. The money
+          line is spelled out because the alternative — silence — is what let a
+          transport-only order read as a payment problem. */}
+      {state?.ok && (
+        <div className={`notice ${state.needsApproval ? 'warn' : 'ok'}`}>
+          {state.needsApproval
+            ? 'Saved and held. The customer has been asked to approve this total before you start.'
+            : (state.paymentNote ?? 'Saved. Start cleaning.')}
+        </div>
+      )}
+
       <div className="intake">
         {services.map((s) => {
           const entered = qty[s.id] ?? 0;

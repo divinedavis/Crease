@@ -51,13 +51,15 @@ async function waitForOrder(orderId, wanted, timeoutMs = 30_000) {
 // Anchor for run-scoped assertions below.
 const runStartedAt = new Date().toISOString();
 
-// Most recent seeded order.
-const { data: order } = await db
-  .from('orders')
-  .select('id, short_code, status, cleaner_id')
-  .order('created_at', { ascending: false })
-  .limit(1)
-  .single();
+// An explicit id when you have one, most recent otherwise. Naming the order
+// matters now that real bookings land in this table: "most recent" used to mean
+// the seeded fixture and today can just as easily mean a customer's live order,
+// which this script would rewrite.
+const COLUMNS = 'id, short_code, status, cleaner_id, customer_id, delivery_fee_cents, service_tier';
+const wanted = process.argv[2];
+const { data: order } = wanted
+  ? await db.from('orders').select(COLUMNS).eq('id', wanted).single()
+  : await db.from('orders').select(COLUMNS).order('created_at', { ascending: false }).limit(1).single();
 
 console.log(`\norder ${order.short_code} (${order.id})\n`);
 
@@ -67,10 +69,10 @@ console.log(`\norder ${order.short_code} (${order.id})\n`);
 // in for a completed PaymentSheet on the device.
 console.log('CHECKOUT  pay the delivery fee');
 const intent = await post(`/v1/orders/${order.id}/payment-intent`);
-check('intent created for the delivery fee', intent.amountCents, 2995);
+check('intent created for the delivery fee', intent.amountCents, order.delivery_fee_cents);
 check('client secret returned', Boolean(intent.clientSecret), true);
 
-await db.from('payments').update({ status: 'captured', captured_cents: 2995 })
+await db.from('payments').update({ status: 'captured', captured_cents: order.delivery_fee_cents })
   .eq('order_id', order.id).eq('kind', 'primary');
 
 // --- leg 1: customer -> cleaner ------------------------------------------
@@ -110,31 +112,44 @@ await db.from('orders')
   .update({ status: 'ready', ready_at: new Date().toISOString() })
   .eq('id', order.id);
 
-// A return must NOT be dispatchable until the customer has chosen a window —
-// otherwise a courier turns up at whatever moment the shop pressed a button.
-const premature = await fetch(`${BASE}/v1/orders/${order.id}/dispatch-return`, {
-  method: 'POST',
-  headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
-  body: '{}',
-});
-check('return refused before the customer picks a time', premature.status, 409);
+// Only the tiers that bought a second leg get one. On a pickup_only order the
+// customer collects at the counter, and asking for a return here would assert a
+// courier they never paid for — which the dispatcher now refuses outright.
+if (order.service_tier === 'pickup_only') {
+  console.log('\nLEG 2  skipped — pickup_only ends at the counter');
+  const refused = await fetch(`${BASE}/v1/orders/${order.id}/dispatch-return`, {
+    method: 'POST',
+    headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  check('return refused for a one-leg order', refused.status >= 400, true);
+} else {
+  // A return must NOT be dispatchable until the customer has chosen a window —
+  // otherwise a courier turns up at whatever moment the shop pressed a button.
+  const premature = await fetch(`${BASE}/v1/orders/${order.id}/dispatch-return`, {
+    method: 'POST',
+    headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  check('return refused before the customer picks a time', premature.status, 409);
 
-// Customer picks a delivery window.
-const windowStart = new Date(Date.now() + 3600_000);
-await db.from('orders').update({
-  return_window_start: windowStart.toISOString(),
-  return_window_end: new Date(windowStart.getTime() + 3 * 3600_000).toISOString(),
-}).eq('id', order.id);
+  // Customer picks a delivery window.
+  const windowStart = new Date(Date.now() + 3600_000);
+  await db.from('orders').update({
+    return_window_start: windowStart.toISOString(),
+    return_window_end: new Date(windowStart.getTime() + 3 * 3600_000).toISOString(),
+  }).eq('id', order.id);
 
-// --- leg 2: cleaner -> customer ------------------------------------------
-console.log('\nLEG 2  cleaner -> customer');
-const ret = await post(`/v1/orders/${order.id}/dispatch-return`);
-check('leg type', ret.leg.leg, 'return');
-check('direction flipped', ret.leg.pickup_address, pickup.leg.dropoff_address);
+  // --- leg 2: cleaner -> customer ----------------------------------------
+  console.log('\nLEG 2  cleaner -> customer');
+  const ret = await post(`/v1/orders/${order.id}/dispatch-return`);
+  check('leg type', ret.leg.leg, 'return');
+  check('direction flipped', ret.leg.pickup_address, pickup.leg.dropoff_address);
 
-check('return dispatched', await waitForOrder(order.id, ['return_dispatched']), 'return_dispatched');
-check('out for delivery', await waitForOrder(order.id, ['in_transit_to_customer']), 'in_transit_to_customer');
-check('delivered', await waitForOrder(order.id, ['delivered']), 'delivered');
+  check('return dispatched', await waitForOrder(order.id, ['return_dispatched']), 'return_dispatched');
+  check('out for delivery', await waitForOrder(order.id, ['in_transit_to_customer']), 'in_transit_to_customer');
+  check('delivered', await waitForOrder(order.id, ['delivered']), 'delivered');
+}
 
 // --- guard: an unfunded order must not get a courier ----------------------
 console.log('\nGUARD  unfunded order');

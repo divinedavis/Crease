@@ -61,6 +61,16 @@ final class JourneyTrackTests: XCTestCase {
         XCTAssertTrue(OrderStatus.cleaning.isActive)
         XCTAssertFalse(OrderStatus.delivered.isActive)
         XCTAssertFalse(OrderStatus.cancelled.isActive)
-        XCTAssertFalse(OrderStatus.failed.isActive)
+    }
+
+    /// A failed order is paid and stranded, not finished.
+    ///
+    /// It reaches that status when the fee has been taken and no courier would
+    /// accept the job. Classifying it as terminal filed it under Past orders
+    /// with the delivered ones, so the customer was charged for a pickup that
+    /// never happened and had nowhere to see it, let alone get the money back.
+    func testAFailedOrderStaysVisibleAndCancellable() {
+        XCTAssertTrue(OrderStatus.failed.isActive)
+        XCTAssertTrue(OrderStatus.failed.isCancellable)
     }
 }

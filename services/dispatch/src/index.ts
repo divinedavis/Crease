@@ -7,7 +7,8 @@ import { OrderService, type LegType } from './orders.js';
 import { PaymentService } from './payments.js';
 import { PayoutService } from './payouts.js';
 import { registerCustomerRoutes } from './customer.js';
-import { buildPaymentProvider, buildConnectProvider } from '@crease/payments';
+import { confirmAndDispatch } from './confirm.js';
+import { buildPaymentProvider, buildConnectProvider, verifyStripeSignature } from '@crease/payments';
 
 const app = Fastify({
   logger: { level: config.logLevel },
@@ -111,11 +112,15 @@ app.post<{ Params: { id: string } }>(
     try {
       const result = await payments.settleOrder(req.params.id);
 
-      // Pay the shop out of money we now actually hold. A payout failure must
-      // not fail the settle call — the customer has been charged correctly and
-      // the row is retried by the sweep; conflating the two would make the
-      // portal show a payment error for a bookkeeping problem.
-      if (!result.needsApproval && result.captured > 0) {
+      // Pay the shop out of money we now actually hold — money THIS settle
+      // collected. `captured` on a settle that took nothing is the delivery fee
+      // charged at checkout, which is ours to pay a courier with; paying the
+      // shop's cleaning share against it hands them a bill we never collected,
+      // out of a fee we still owe. A payout failure must not fail the settle
+      // call — the customer has been charged correctly and the row is retried
+      // by the sweep; conflating the two would make the portal show a payment
+      // error for a bookkeeping problem.
+      if (!result.needsApproval && !result.nothingToSettle && result.captured > 0) {
         try {
           await payouts.payoutOrder(req.params.id);
         } catch (err) {
@@ -352,6 +357,84 @@ app.post<{ Params: { id: string } }>(
     return { ok: true, refundPending: false };
   },
 );
+
+/**
+ * Stripe's copy of news the app has usually already told us.
+ *
+ * The app calls confirm-payment the instant the sheet closes, but a phone that
+ * is killed — or walks into a lift — between paying and telling us leaves a
+ * charged customer whose courier was never sent, and nothing else in the
+ * system would ever notice. This is that backstop, and it runs the identical
+ * path so the two can never disagree about what a payment leads to.
+ */
+app.post('/webhooks/stripe', async (req, reply) => {
+  if (!config.stripeWebhookSecret) {
+    // With no secret there is nothing to verify against, and an unsigned POST
+    // here dispatches couriers on demand. Refuse rather than trust.
+    req.log.warn({ ip: req.ip }, 'stripe webhook received but no signing secret is configured');
+    return reply.code(503).send({ ok: false, error: 'stripe webhooks are not configured' });
+  }
+
+  const rawBody: Buffer = (req as any).rawBody ?? Buffer.from('');
+  const signature = String(req.headers['stripe-signature'] ?? '');
+  if (!verifyStripeSignature(rawBody, signature, config.stripeWebhookSecret)) {
+    req.log.warn({ ip: req.ip }, 'stripe webhook signature rejected');
+    return reply.code(401).send({ ok: false, error: 'bad signature' });
+  }
+
+  const event = (req.body ?? {}) as any;
+  if (event.type !== 'payment_intent.succeeded') {
+    return { ok: true, ignored: event.type };
+  }
+
+  const intentRef = event.data?.object?.id;
+  const { data: payment, error: lookupError } = await db
+    .from('payments')
+    .select('order_id')
+    .eq('provider', paymentProvider.name)
+    .eq('provider_intent_ref', intentRef)
+    .maybeSingle();
+
+  // A lookup that failed is not an intent we do not know, and the 200 below
+  // would retire this event at Stripe for good. 500 so it comes back.
+  if (lookupError) {
+    req.log.error({ err: lookupError, intentRef }, 'stripe webhook lookup failed');
+    return reply.code(500).send({ ok: false });
+  }
+
+  // An intent we do not know is not an error — the same Stripe account can be
+  // signing for something else. Acknowledge it so Stripe stops retrying.
+  if (!payment?.order_id) {
+    req.log.warn({ intentRef }, 'stripe webhook for an unknown intent');
+    return { ok: true, ignored: 'no matching payment' };
+  }
+
+  try {
+    const result = await confirmAndDispatch(db, orders, payments, payment.order_id, req.log);
+
+    // Stripe is telling us this intent succeeded. If our own read of it says
+    // there is no intent, or that it is not paid, the two disagree about real
+    // money — and answering 200 is how Stripe is told to stop mentioning it.
+    // There is no reconciler behind this, so the retry is the only thing left.
+    if (['no_intent', 'unpaid', 'processing'].includes(result.outcome)) {
+      req.log.error(
+        { orderId: payment.order_id, outcome: result.outcome },
+        'stripe reports a succeeded intent we do not see as paid',
+      );
+      return reply.code(500).send({ ok: false, outcome: result.outcome });
+    }
+
+    // 'dispatch_failed' stays a 200: the payment records agree with Stripe, and
+    // no amount of redelivery conjures courier coverage. It is the customer's
+    // to cancel and the portal's to retry.
+    req.log.info({ orderId: payment.order_id, result: result.outcome }, 'stripe webhook applied');
+    return { ok: true, ...result };
+  } catch (err) {
+    // 500 so Stripe retries: a paid order with no courier is worth another go.
+    req.log.error({ err, orderId: payment.order_id }, 'stripe webhook could not be applied');
+    return reply.code(500).send({ ok: false });
+  }
+});
 
 /**
  * Provider callbacks. One route per provider; each verifies its own signature

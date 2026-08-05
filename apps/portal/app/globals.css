@@ -181,6 +181,7 @@ label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 
 .notice { border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
 .notice.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.notice.ok { background: var(--live-bg); color: var(--live-fg); }
 .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
 
 .empty { color: var(--muted); padding: 28px; text-align: center; }

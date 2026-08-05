@@ -1,6 +1,8 @@
 import { strict as assert } from 'node:assert';
+import { createHmac } from 'node:crypto';
 import { test } from 'node:test';
 import { MockPaymentProvider } from './mock.js';
+import { StripeProvider, verifyStripeSignature } from './stripe.js';
 import { authorizationAmount, OverAuthorizationError, PaymentProviderError } from './types.js';
 
 const auth = (over: Partial<Parameters<MockPaymentProvider['authorize']>[0]> = {}) => ({
@@ -136,6 +138,58 @@ test('the hold never exceeds what we would charge without asking', async () => {
       `${estimate}: hold ${amount} exceeds estimate + threshold`,
     );
   }
+});
+
+const SECRET = 'whsec_test';
+const body = Buffer.from('{"type":"payment_intent.succeeded"}');
+const sign = (ts: number, b: Buffer, secret = SECRET) =>
+  createHmac('sha256', secret).update(`${ts}.`).update(b).digest('hex');
+const now = () => Math.floor(Date.now() / 1000);
+
+test('a webhook signed for these exact bytes is accepted', () => {
+  const t = now();
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=${sign(t, body)}`, SECRET), true);
+});
+
+test('a signature from a different body is rejected', () => {
+  // What this stops: an attacker replaying a genuine succeeded event with the
+  // intent id swapped for someone else's order, which would dispatch a courier
+  // nobody paid for.
+  const t = now();
+  const header = `t=${t},v1=${sign(t, body)}`;
+  assert.equal(verifyStripeSignature(Buffer.from('{"type":"tampered"}'), header, SECRET), false);
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=${sign(t, body, 'whsec_other')}`, SECRET), false);
+});
+
+test('an old signature is rejected however valid it once was', () => {
+  const stale = now() - 4000;
+  assert.equal(verifyStripeSignature(body, `t=${stale},v1=${sign(stale, body)}`, SECRET), false);
+});
+
+test('any v1 entry matching is enough, so a rotating secret does not drop events', () => {
+  const t = now();
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=beef,v1=${sign(t, body)}`, SECRET), true);
+  assert.equal(verifyStripeSignature(body, `t=${t},v0=${sign(t, body)}`, SECRET), false);
+  assert.equal(verifyStripeSignature(body, '', SECRET), false);
+});
+
+test('an intent still settling is not reported as one that never started', async () => {
+  // Our status enum has no in-flight value, so both collapse to
+  // 'requires_payment_method'. Acting on that alone turns a customer whose card
+  // WAS charged away with "try again" — and the retry re-presents a live
+  // intent, which the payment sheet refuses. The raw status is the only thing
+  // that separates them, so it has to survive the mapping.
+  const stripe = new StripeProvider({
+    secretKey: 'sk_test',
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ id: 'pi_1', status: 'processing', amount: 1995 }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+  });
+
+  const state = await stripe.get('pi_1');
+  assert.equal(state.status, 'requires_payment_method');
+  assert.equal(state.providerStatus, 'processing');
 });
 
 test('a small overage captures without a second customer decision', async () => {

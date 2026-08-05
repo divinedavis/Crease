@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentStaff, supabaseServer } from '@/lib/supabase';
-import { BOARD, STATUS_LABEL, money, statusTone } from '@/lib/status';
+import { BOARD, money, statusLabel, statusTone } from '@/lib/status';
 import { LiveRefresh } from './live-refresh';
 import { signOut } from './actions';
 
@@ -19,7 +19,7 @@ export default async function QueuePage() {
   const { data: orders } = await db
     .from('orders')
     .select(
-      `id, short_code, status, subtotal_cents, estimate_subtotal_cents,
+      `id, short_code, status, service_tier, subtotal_cents, estimate_subtotal_cents,
        pickup_window_end, return_window_end, created_at,
        customer:profiles!orders_customer_profile_fkey(full_name),
        order_items(quantity)`,
@@ -30,6 +30,19 @@ export default async function QueuePage() {
 
   const rows = orders ?? [];
   const shopName = (staff.staff[0]?.cleaners as any)?.name ?? 'Your shop';
+
+  // The first column that claims a row keeps it. Filtering each column
+  // independently would draw a drop-off under both "Expecting a drop-off" and
+  // "Waiting on a courier" — the same bag twice, once with a driver attached
+  // that nobody booked.
+  const columns = BOARD.map((col) => ({ col, inCol: [] as typeof rows }));
+  for (const o of rows) {
+    columns
+      .find(
+        ({ col }) => col.statuses.includes(o.status) && (!col.tier || col.tier === o.service_tier),
+      )
+      ?.inCol.push(o);
+  }
 
   return (
     <div className="shell">
@@ -51,8 +64,7 @@ export default async function QueuePage() {
         </div>
       )}
 
-      {BOARD.map((col) => {
-        const inCol = rows.filter((o) => col.statuses.includes(o.status));
+      {columns.map(({ col, inCol }) => {
         // "Needs attention" is noise when empty; the working columns are not.
         if (inCol.length === 0 && !col.empty) return null;
 
@@ -85,7 +97,7 @@ export default async function QueuePage() {
                             : 'Not counted yet'}
                           {' · '}
                           <span className={`pill ${statusTone(o.status)}`}>
-                            {STATUS_LABEL[o.status] ?? o.status}
+                            {statusLabel(o.status, o.service_tier)}
                           </span>
                         </div>
                       </span>

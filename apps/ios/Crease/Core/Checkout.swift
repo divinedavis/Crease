@@ -16,86 +16,159 @@ import SwiftUI
 final class Checkout: ObservableObject {
     enum State: Equatable {
         case idle
-        case preparing
-        case ready(PaymentSheet)
+        case working
         case paid
         case failed(String)
-
-        static func == (a: State, b: State) -> Bool {
-            switch (a, b) {
-            case (.idle, .idle), (.preparing, .preparing), (.paid, .paid): true
-            case let (.failed(x), .failed(y)): x == y
-            case (.ready, .ready): true
-            default: false
-            }
-        }
     }
 
     @Published private(set) var state: State = .idle
-    /// Non-nil exactly when a sheet is ready to present.
-    @Published var sheet: PaymentSheet?
-    @Published var isPresenting = false
 
-    /// Ask the server for an intent and build the sheet around it.
+    /// Mint the intent, take the money, then let the server act on it.
+    ///
+    /// One call from end to end, and imperative on purpose. The sheet used to
+    /// be handed to SwiftUI as `@Published` state and presented by
+    /// `.paymentSheet(isPresented:)`, which never fired: the modifier only
+    /// exists once a sheet exists, so it was installed in the same update that
+    /// already had the binding true and there was no false→true edge left for
+    /// it to observe. Presenting directly removes the race instead of trying
+    /// to out-time it.
     ///
     /// The access token is the customer's own; the server checks the order
     /// belongs to them. No shared secret ships in this app.
-    func prepare(orderId: UUID, accessToken: String) async {
-        state = .preparing
+    ///
+    /// Returns the dispatcher's answer when the money moved, because "paid" is
+    /// not the same as "a driver is coming" and the caller has to be able to
+    /// tell those apart.
+    func pay(orderId: UUID, accessToken: String) async -> Confirmation? {
+        state = .working
 
         let api = DispatchAPI(accessToken: accessToken)
         guard api.isConfigured else {
             state = .failed("Payments are not configured in this build.")
-            return
+            return nil
         }
+        let order = "/v1/me/orders/\(orderId.uuidString.lowercased())"
+
+        // The screen the customer tapped from, read before any network hop and
+        // compared against the top of the stack when the sheet is ready. A
+        // booking takes a second or two to mint an intent, and whatever is
+        // topmost after that is not necessarily what they were looking at when
+        // they agreed to pay.
+        let origin = Self.topViewController()
+
+        // Whether the card has been charged by the time something goes wrong.
+        // Everything after the sheet closes can still fail, and a failure on
+        // that side of the line needs an entirely different sentence.
+        var charged = false
 
         do {
-            let body: IntentResponse = try await api.post(
-                "/v1/me/orders/\(orderId.uuidString.lowercased())/payment-intent",
+            let intent: IntentResponse = try await api.post(
+                order + "/payment-intent",
                 as: IntentResponse.self
             )
-            guard let secret = body.clientSecret,
-                  let publishable = body.publishableKey, !publishable.isEmpty
+            guard let secret = intent.clientSecret,
+                  let publishable = intent.publishableKey, !publishable.isEmpty
             else {
-                state = .failed(body.error ?? "Couldn't start payment.")
-                return
+                state = .failed(intent.error ?? "Couldn't start payment.")
+                return nil
             }
 
-            STPAPIClient.shared.publishableKey = publishable
+            // An intent that already succeeded must not be presented a second
+            // time: Stripe refuses it, and the customer reads that refusal as
+            // their payment failing. Skip straight to confirmation, which is
+            // also how a booking whose confirm call was lost gets finished.
+            charged = intent.alreadyPaid == true
+            if !charged {
+                STPAPIClient.shared.publishableKey = publishable
 
-            var config = PaymentSheet.Configuration()
-            config.merchantDisplayName = "Crease"
-            config.applePay = .init(
-                merchantId: "merchant.com.divinedavis.crease",
-                merchantCountryCode: "US"
+                var config = PaymentSheet.Configuration()
+                config.merchantDisplayName = "Crease"
+                config.applePay = .init(
+                    merchantId: "merchant.com.divinedavis.crease",
+                    merchantCountryCode: "US"
+                )
+                // Apple Pay first: it is one authentication instead of typing a
+                // card, and it is why most people finish a checkout on a phone.
+                config.primaryButtonColor = UIColor(Theme.accent)
+                config.allowsDelayedPaymentMethods = false
+
+                // Two refusals in one. A controller that is off-window or on
+                // its way out never gets a sheet on screen, and Stripe only
+                // calls back from a sheet that made it there — so presenting
+                // into one awaits a continuation nobody will ever resume, and
+                // the button that started it reads "Booking…" until the app is
+                // killed. A controller that is simply not the one they started
+                // from is worse: the sheet does appear, over whatever screen
+                // they moved on to, and paying it books a courier for a
+                // booking they walked away from.
+                guard let presenter = Self.topViewController(), presenter === origin,
+                      presenter.isViewLoaded, presenter.view.window != nil,
+                      !presenter.isBeingDismissed
+                else {
+                    state = .failed("Couldn't open the payment sheet. Try again.")
+                    return nil
+                }
+                let sheet = PaymentSheet(paymentIntentClientSecret: secret, configuration: config)
+                switch await sheet.presented(from: presenter) {
+                case .completed:
+                    charged = true
+                case .canceled:
+                    // Not a failure — the customer changed their mind, and
+                    // telling them something went wrong would be a lie.
+                    state = .idle
+                    return nil
+                case let .failed(error):
+                    state = .failed(error.localizedDescription)
+                    return nil
+                }
+            }
+
+            // The server decides an order is paid, never this. It re-reads the
+            // intent from the provider before it promotes anything, so a sheet
+            // that reported success against an intent that did not settle
+            // dispatches nobody.
+            let confirmation: Confirmation = try await api.post(
+                order + "/confirm-payment",
+                as: Confirmation.self
             )
-            // Apple Pay first: it is one authentication instead of typing a
-            // card, and it is why most people finish a checkout on a phone.
-            config.primaryButtonColor = UIColor(Theme.accent)
-            config.allowsDelayedPaymentMethods = false
-
-            let built = PaymentSheet(paymentIntentClientSecret: secret, configuration: config)
-            sheet = built
-            state = .ready(built)
-            isPresenting = true
+            state = .paid
+            return confirmation
         } catch {
-            state = .failed(error.localizedDescription)
+            // Paid, and no courier would take it. The server has already said
+            // the only useful thing — cancel it and take the money back — and
+            // the retry sentence below would contradict that in the same
+            // breath. Retrying cannot work either: the order has left 'draft'
+            // by now and the intent route refuses anything that has.
+            if let failure = error as? DispatchAPI.Failure, failure.code == "no_courier" {
+                state = .failed(failure.message)
+                return nil
+            }
+            // Past the sheet, the card has been charged and the error is only
+            // about finishing the booking. Left unsaid, the customer reads
+            // "The request timed out." under a button still offering to take
+            // their money and assumes either nothing happened or that tapping
+            // again pays twice. Neither is true.
+            state = .failed(charged
+                ? "Your card was charged. We couldn't finish booking the driver: \(error.localizedDescription) Tap again to finish — you won't be charged twice."
+                : error.localizedDescription)
+            return nil
         }
     }
 
-    func handle(_ result: PaymentSheetResult) {
-        isPresenting = false
-        sheet = nil
-        switch result {
-        case .completed:
-            state = .paid
-        case .canceled:
-            // Not a failure — the customer changed their mind, and telling them
-            // something went wrong would be a lie.
-            state = .idle
-        case let .failed(error):
-            state = .failed(error.localizedDescription)
-        }
+    /// The controller Stripe presents from.
+    ///
+    /// Resolved at present time rather than captured earlier: booking runs
+    /// inside a `fullScreenCover`, so the root controller already has
+    /// something presented and presenting from it trips Stripe's
+    /// `alreadyPresented` assertion. Walking to the deepest presented
+    /// controller finds whatever is actually on screen, wherever checkout was
+    /// started from.
+    private static func topViewController() -> UIViewController? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        guard var top = scene?.keyWindow?.rootViewController else { return nil }
+        while let presented = top.presentedViewController { top = presented }
+        return top
     }
 
     struct IntentResponse: Decodable {
@@ -105,5 +178,66 @@ final class Checkout: ObservableObject {
         let amountCents: Int?
         let alreadyPaid: Bool?
         let error: String?
+    }
+
+    /// The dispatcher's verdict. A 402 or 409 arrives as a thrown `Failure`
+    /// carrying the server's reason, so anything decoded here means the money
+    /// moved — which is not the same as the order being on its way.
+    struct Confirmation: Decodable {
+        let ok: Bool?
+        let outcome: String?
+        let paymentStatus: String?
+        let orderStatus: String?
+        /// False is legitimate: a return-only order has no pickup leg to book.
+        let dispatched: Bool?
+        /// The dispatch failure, carried on a 200 because the charge itself
+        /// succeeded. Ignoring it is how "we took your money and found nobody
+        /// to collect your bag" gets handled as a clean booking.
+        let error: String?
+
+        /// Why this is not a booking yet, if it is not one.
+        ///
+        /// A 200 here means the money moved; it does not mean a courier did.
+        /// Nothing else distinguishes the two, so without this the screen
+        /// closes on a success animation and a paid order with no driver goes
+        /// into the list as though it were on its way. Read broadly on
+        /// purpose — the dispatcher reports the same fact through `outcome`,
+        /// `error` and the order's own status, and only one of them has to
+        /// arrive for the customer to deserve the truth.
+        var problem: String? {
+            if outcome == "processing" {
+                return "Your bank is still confirming this payment, so no driver is booked yet. We'll book one as soon as it clears — you don't need to pay again."
+            }
+            guard ok == false || outcome == "dispatch_failed"
+                    || error != nil || orderStatus == "failed"
+            else { return nil }
+            return "Your payment went through, but we couldn't find a driver. Nothing has been collected — cancel this order for a refund, or leave it with us and we'll try to book one again."
+        }
+    }
+}
+
+private extension PaymentSheet {
+    /// `@MainActor` is load-bearing, not decoration. Without it this is a
+    /// nonisolated async function, so awaiting it from `pay` hops off the main
+    /// actor and Stripe builds its bottom sheet on a background thread —
+    /// UIKit's view-hierarchy assertion fires and the app aborts before the
+    /// sheet ever draws.
+    @MainActor
+    func presented(from presenter: UIViewController) async -> PaymentSheetResult {
+        await withCheckedContinuation { continuation in
+            // Stripe really does call this twice: dismissing the loading sheet
+            // fires `.canceled` and clears its stored completion, and the load
+            // still in flight then calls this closure directly, which nothing
+            // on their side nil-guards. A second `resume` is a fatalError in
+            // Release as well as Debug — the app dies mid-checkout. The old
+            // declarative path shrugged a double call off, so the one-shot is
+            // owed to the bridge, not to Stripe.
+            var resumed = false
+            present(from: presenter) { result in
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: result)
+            }
+        }
     }
 }
