@@ -397,10 +397,10 @@ struct OrderDetailView: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                // This card is the one that says "call the shop". Telling
-                // someone to call and not giving them the number is a dead end
-                // dressed up as help.
-                if let cleaner = live.cleaner { callRow(cleaner) }
+                // No number here. This card tells the customer to call, and the
+                // cleaner card directly above it is already showing the number
+                // to call — repeating it reads as two different numbers at a
+                // glance, which is worse than the dead end it was fixing.
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .creaseCard()
