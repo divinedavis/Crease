@@ -341,6 +341,37 @@ struct Order: Codable, Identifiable, Hashable {
     /// bag gets to the shop because the customer carries it there.
     var isReturnOnly: Bool { serviceTier == "return_only" }
 
+    /// The tier in the customer's own words — the same names the booking
+    /// screen offered, read back from the one list that defines them so the
+    /// two can never drift apart.
+    var serviceTierName: String {
+        ServiceOption.all.first { $0.id == serviceTier }?.name
+            ?? serviceTier.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    /// What the address on the order is actually used for, which is not the
+    /// same in all three tiers. Calling it "Pickup & delivery" on a one-leg
+    /// order describes a service the customer did not buy: on pickup-only
+    /// nobody is delivering to it, and on return-only nobody is collecting
+    /// from it.
+    var addressLabel: String {
+        if isPickupOnly { return "Pickup address" }
+        if isReturnOnly { return "Delivery address" }
+        return "Pickup & delivery"
+    }
+
+    /// The journey track's labels, for the legs this order paid for.
+    ///
+    /// The last step is the one that differs: a round trip and a return-only
+    /// order end with a driver at the door, a pickup-only order ends at the
+    /// shop counter. The first differs too — return-only starts with the
+    /// customer carrying the bag in, not a courier arriving.
+    var journeySteps: [String] {
+        let first = isReturnOnly ? "Drop off" : "Pickup"
+        let last = isPickupOnly ? "Collect" : "Return"
+        return [first, "At cleaner", "Cleaning", last]
+    }
+
     /// Paid, and waiting on the customer to walk the bag in.
     ///
     /// Return-only used to be jumped straight to 'at_cleaner' when the payment

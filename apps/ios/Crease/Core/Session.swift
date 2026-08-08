@@ -30,10 +30,29 @@ final class Session: ObservableObject {
         let info = Bundle.main.infoDictionary
         let host = info?["SUPABASE_HOST"] as? String ?? ""
         let key = info?["SUPABASE_ANON_KEY"] as? String ?? ""
-        client = SupabaseClient(
-            supabaseURL: URL(string: "https://\(host)")!,
-            supabaseKey: key
-        )
+        let url = URL(string: "https://\(host)")!
+
+        #if DEBUG
+        // A signed-out UI test gets a client that stores its session nowhere.
+        //
+        // Reaching signed-out by calling signOut() looked equivalent and was
+        // not: /logout revokes the session on the server, and the session in
+        // question is the single one scripts/ios-test.sh mints for the whole
+        // run. Every signed-in test scheduled after the sign-out test then
+        // launched to the sign-in screen with "Auth session missing", which
+        // reads as a broken feature rather than a poisoned fixture.
+        if ProcessInfo.processInfo.arguments.contains("-uiTestSignedOut") {
+            client = SupabaseClient(
+                supabaseURL: url,
+                supabaseKey: key,
+                options: .init(auth: .init(storage: EphemeralAuthStorage()))
+            )
+            Task { await restore() }
+            return
+        }
+        #endif
+
+        client = SupabaseClient(supabaseURL: url, supabaseKey: key)
         Task { await restore() }
     }
 
@@ -45,12 +64,12 @@ final class Session: ObservableObject {
     private func restore() async {
         #if DEBUG
         // Supabase persists the session in the keychain, which outlives an app
-        // reinstall on the simulator. Without an explicit reset the signed-in
-        // tests leak a session into the sign-out test, which then quietly
-        // asserts against the wrong screen — and passes or fails for reasons
-        // that have nothing to do with the code under test.
+        // reinstall on the simulator, so the signed-in tests would otherwise
+        // leak a session into the sign-out test and it would assert against
+        // the wrong screen. Nothing to clear here though: this client was
+        // built on storage that starts empty and dies with the process (see
+        // init), and signing out would revoke the shared test session.
         if ProcessInfo.processInfo.arguments.contains("-uiTestSignedOut") {
-            try? await client.auth.signOut()
             state = .signedOut
             return
         }
@@ -141,3 +160,30 @@ final class Session: ObservableObject {
         return raw
     }
 }
+
+#if DEBUG
+/// Session storage that keeps nothing past the process.
+///
+/// Used only by the signed-out UI test launch, which needs an app that starts
+/// with no session and leaves the real one — server-side and in the simulator
+/// keychain — exactly as it found it.
+private final class EphemeralAuthStorage: AuthLocalStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [String: Data] = [:]
+
+    func store(key: String, value: Data) throws {
+        lock.lock(); defer { lock.unlock() }
+        items[key] = value
+    }
+
+    func retrieve(key: String) throws -> Data? {
+        lock.lock(); defer { lock.unlock() }
+        return items[key]
+    }
+
+    func remove(key: String) throws {
+        lock.lock(); defer { lock.unlock() }
+        items[key] = nil
+    }
+}
+#endif

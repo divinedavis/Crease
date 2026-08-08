@@ -57,8 +57,14 @@ struct StatusPill: View {
 /// than as the app having gone quiet.
 struct JourneyTrack: View {
     let status: OrderStatus
+    /// Supplied by the order rather than fixed here: the track used to promise
+    /// a "Return" leg on every order, including the tier that never bought one.
+    let steps: [String]
 
-    private let steps = ["Pickup", "At cleaner", "Cleaning", "Return"]
+    init(order: Order) {
+        status = order.status
+        steps = order.journeySteps
+    }
 
     var body: some View {
         let current = status.stepIndex ?? -1

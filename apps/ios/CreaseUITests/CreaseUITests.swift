@@ -122,6 +122,47 @@ final class CreaseUITests: XCTestCase {
         attach(app, "order-detail")
     }
 
+    /// The address row has to name the legs the order actually bought.
+    ///
+    /// Real order 9864CA was `pickup_only` — one courier, to the shop, and the
+    /// customer collects — and the screen still headed its address "Pickup &
+    /// delivery", promising a driver who was never paid for.
+    func testTheAddressRowNamesOnlyTheLegsTheOrderBought() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        let card = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
+        ).firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no seeded order to open — run scripts/seed.mjs first")
+        }
+        card.tap()
+        sleep(3)
+
+        let labels = app.staticTexts.allElementsBoundByIndex.map(\.label)
+        let onScreen = labels.prefix(16).joined(separator: " | ")
+        guard let tier = labels.first(where: {
+            ["Round trip", "Pickup only", "Return only"].contains($0)
+        }) else {
+            return XCTFail("the detail screen should say which service was bought: \(onScreen)")
+        }
+
+        // An order with no address on file draws no row at all, which is not
+        // this test's business.
+        let heads = ["Pickup & delivery", "Pickup address", "Delivery address"]
+        guard let shown = labels.first(where: { heads.contains($0) }) else {
+            throw XCTSkip("this order has no address row: \(onScreen)")
+        }
+        let expected = switch tier {
+        case "Pickup only": "Pickup address"
+        case "Return only": "Delivery address"
+        default: "Pickup & delivery"
+        }
+        XCTAssertEqual(shown, expected, "a \(tier) order headed its address \"\(shown)\"")
+        attach(app, "detail-service-tier")
+    }
+
     func testBookingFlowStartsFromTheAddressEntry() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
@@ -356,8 +397,10 @@ final class CreaseUITests: XCTestCase {
 
         // Confirm we actually reached a detail screen before asserting about
         // its contents; otherwise a failed tap reads as a missing feature.
-        XCTAssertFalse(
-            app.navigationBars["Crease"].exists,
+        // The title no longer distinguishes them — both screens say "Crease" —
+        // so this asks for a row only the detail screen draws.
+        XCTAssertTrue(
+            app.staticTexts["Service"].waitForExistence(timeout: 8),
             "tapping an order should push its detail screen"
         )
 

@@ -253,7 +253,7 @@ private struct ActiveOrderCard: View {
                     .foregroundStyle(.tertiary)
             }
 
-            JourneyTrack(status: order.status)
+            JourneyTrack(order: order)
 
             if let leg = order.liveLeg, let courier = leg.courierName {
                 HStack(spacing: 8) {

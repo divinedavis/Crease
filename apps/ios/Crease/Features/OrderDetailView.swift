@@ -44,7 +44,7 @@ struct OrderDetailView: View {
             .padding(16)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(live.shortCode)
+        .navigationTitle("Crease")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $schedulingReturn) {
             ScheduleReturnView(order: live)
@@ -61,7 +61,7 @@ struct OrderDetailView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            JourneyTrack(status: live.status)
+            JourneyTrack(order: live)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .creaseCard()
@@ -263,12 +263,17 @@ struct OrderDetailView: View {
 
     private var detailsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // The title used to carry this. It is the only handle the customer
+            // can give the shop over the phone, so it moves here rather than
+            // disappearing with the title.
+            labelled("Order", live.shortCode)
             if let cleaner = live.cleaner {
                 labelled("Cleaner", cleaner.name)
                 callRow(cleaner)
             }
+            labelled("Service", live.serviceTierName)
             if let address = live.address {
-                labelled("Pickup & delivery", address.oneLine)
+                labelled(live.addressLabel, address.oneLine)
             }
             // The one thing worth knowing while the bag is at the shop. Anchored
             // on when it arrived there, not on when it was booked, and absent
