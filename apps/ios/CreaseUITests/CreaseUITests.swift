@@ -163,6 +163,42 @@ final class CreaseUITests: XCTestCase {
         attach(app, "detail-service-tier")
     }
 
+    /// A courier who finished has to leave something on the screen.
+    ///
+    /// The courier card describes the live leg only, so on order 2232C4 — whose
+    /// pickup leg was driven all the way to `delivered` — the entire journey
+    /// was represented by one green segment and no words.
+    func testACompletedPickupIsReportedOnTheDetailScreen() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        // Matched on the at-the-cleaner wording specifically: a bag that is at
+        // the shop got there somehow, and on every tier but return-only a
+        // courier is what took it.
+        let card = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] 'counting your items'")
+        ).firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            throw XCTSkip("no order sitting at the cleaner to open. Cards: "
+                + app.buttons.allElementsBoundByIndex.prefix(8).map(\.label)
+                    .joined(separator: " ||| "))
+        }
+        card.tap()
+        sleep(3)
+
+        let labels = app.staticTexts.allElementsBoundByIndex.map(\.label)
+        let onScreen = labels.prefix(20).joined(separator: " | ")
+        guard !labels.contains("Return only") else {
+            throw XCTSkip("return-only: the customer carried it in, no courier to report")
+        }
+
+        XCTAssertTrue(
+            labels.contains(where: { $0.hasPrefix("Dropped off at") }),
+            "a bag at the shop was delivered there by a driver, and the screen should say so: \(onScreen)"
+        )
+        attach(app, "completed-leg-detail")
+    }
+
     func testBookingFlowStartsFromTheAddressEntry() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))

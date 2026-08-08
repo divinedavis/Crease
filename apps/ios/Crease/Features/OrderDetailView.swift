@@ -36,6 +36,7 @@ struct OrderDetailView: View {
                 if live.awaitsCounterCollection { collectionCard }
                 if live.awaitsCustomerDropOff { dropOffCard }
                 if live.status == .awaitingApproval { approvalCard }
+                if !live.finishedLegs.isEmpty { handoverCard(live.finishedLegs) }
                 if let items = live.orderItems, !items.isEmpty { itemsCard(items) }
                 detailsCard
                 if let leg = live.liveLeg { courierCard(leg) }
@@ -308,6 +309,95 @@ struct OrderDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .creaseCard()
+    }
+
+    /// What already happened, stated in words.
+    ///
+    /// The courier card describes the live leg and vanishes the moment that
+    /// leg ends, so a bag that was collected, driven across Brooklyn and
+    /// handed over left nothing behind but a lit segment on the track. A
+    /// delivery that worked should say so, with the time and the person who
+    /// did it — and one that did not should say that even louder.
+    private func handoverCard(_ legs: [DeliveryLeg]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(legs) { leg in
+                ForEach(handoverRows(leg)) { row in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: row.failed
+                              ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(row.failed ? Theme.warn : Theme.accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row.title)
+                                .font(.subheadline.weight(.medium))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(row.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .creaseCard()
+    }
+
+    private struct HandoverRow: Identifiable {
+        let id: String
+        let title: String
+        let detail: String
+        var failed = false
+    }
+
+    /// Up to two rows a leg: custody taken, custody given up.
+    ///
+    /// Both ends matter and they are different events — "collected 1:24" and
+    /// "at the shop 1:41" is the difference between a driver holding your
+    /// clothes and the shop holding them.
+    private func handoverRows(_ leg: DeliveryLeg) -> [HandoverRow] {
+        let shop = live.cleaner?.name ?? "the shop"
+        var rows: [HandoverRow] = []
+
+        if let taken = leg.pickedUpAt {
+            rows.append(HandoverRow(
+                id: "\(leg.id)-taken",
+                title: leg.isPickup ? "Collected from you" : "Collected from \(shop)",
+                detail: [stamp(taken), leg.courierName].compactMap { $0 }.joined(separator: " · ")
+            ))
+        }
+
+        // A leg with no completion time is one the provider never closed out.
+        // Inventing a row for it would claim a handover nobody recorded.
+        guard let done = leg.completedAt else { return rows }
+
+        if leg.didDeliver {
+            rows.append(HandoverRow(
+                id: "\(leg.id)-done",
+                title: leg.isPickup ? "Dropped off at \(shop)" : "Delivered to you",
+                detail: stamp(done)
+            ))
+        } else if leg.status == "cancelled" {
+            rows.append(HandoverRow(
+                id: "\(leg.id)-done",
+                title: leg.isPickup ? "Pickup cancelled" : "Delivery cancelled",
+                detail: stamp(done),
+                failed: true
+            ))
+        } else {
+            rows.append(HandoverRow(
+                id: "\(leg.id)-done",
+                title: leg.isPickup
+                    ? "The driver couldn't collect your bag"
+                    : "The driver couldn't deliver it — it's back at \(shop)",
+                detail: stamp(done),
+                failed: true
+            ))
+        }
+        return rows
+    }
+
+    private func stamp(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private func courierCard(_ leg: DeliveryLeg) -> some View {

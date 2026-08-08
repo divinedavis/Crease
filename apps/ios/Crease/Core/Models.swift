@@ -246,6 +246,10 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     let courierVehicle: String?
     let trackingUrl: String?
     let dropoffPincode: String?
+    /// When the courier took custody, and when they gave it up. The two facts
+    /// the customer wants back from a leg that has already finished.
+    let pickedUpAt: Date?
+    let completedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, leg, status, provider
@@ -253,11 +257,19 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
         case courierVehicle = "courier_vehicle"
         case trackingUrl = "tracking_url"
         case dropoffPincode = "dropoff_pincode"
+        case pickedUpAt = "picked_up_at"
+        case completedAt = "completed_at"
     }
 
     var isLive: Bool {
         !["delivered", "returned", "cancelled", "failed"].contains(status)
     }
+
+    var isPickup: Bool { leg == "pickup" }
+
+    /// It ended the way it was meant to. Distinguished from merely finished:
+    /// `returned` is also over, and it means the goods came back.
+    var didDeliver: Bool { status == "delivered" }
 
     /// Where to watch the driver, when there is somewhere real to watch them.
     ///
@@ -330,6 +342,19 @@ struct Order: Codable, Identifiable, Hashable {
     var isEstimate: Bool { subtotalCents == nil }
 
     var liveLeg: DeliveryLeg? { deliveryLegs?.first(where: \.isLive) }
+
+    /// Legs that are over, oldest first.
+    ///
+    /// The courier card only ever describes the live leg, so the moment a
+    /// driver finished, every trace of them left the screen — a bag could be
+    /// collected, carried across Brooklyn and handed over, and the only
+    /// evidence was one more lit segment on the track. Ordered by when they
+    /// ended so a round trip reads top to bottom.
+    var finishedLegs: [DeliveryLeg] {
+        (deliveryLegs ?? [])
+            .filter { !$0.isLive }
+            .sorted { ($0.completedAt ?? .distantFuture) < ($1.completedAt ?? .distantFuture) }
+    }
 
     var itemCount: Int { orderItems?.reduce(0) { $0 + $1.quantity } ?? 0 }
 

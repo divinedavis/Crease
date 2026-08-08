@@ -80,15 +80,35 @@ struct JourneyTrack: View {
             }
             HStack {
                 ForEach(steps.indices, id: \.self) { i in
-                    Text(steps[i])
-                        .font(.caption2)
-                        .foregroundStyle(i <= current ? Theme.accent : .secondary)
-                        .frame(maxWidth: .infinity, alignment: i == 0 ? .leading
-                               : (i == steps.count - 1 ? .trailing : .center))
+                    // A lit segment says "we got at least this far", which is
+                    // not the same as "this step is done" — the step someone
+                    // is standing in is lit too. The tick separates them, so a
+                    // pickup that actually happened reads as an event rather
+                    // than as a colour.
+                    HStack(spacing: 3) {
+                        if i < current {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 8, weight: .bold))
+                        }
+                        Text(steps[i])
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(i <= current ? Theme.accent : .secondary)
+                    .frame(maxWidth: .infinity, alignment: i == 0 ? .leading
+                           : (i == steps.count - 1 ? .trailing : .center))
                 }
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Progress: \(status.title)")
+        .accessibilityLabel(accessibilityText(current: current))
+    }
+
+    /// VoiceOver gets the ticks too: without them the track reads as a status
+    /// it already heard from the card above it.
+    private func accessibilityText(current: Int) -> String {
+        let done = steps.prefix(max(current, 0))
+        let progress = "Progress: \(status.title)"
+        guard !done.isEmpty else { return progress }
+        return "\(progress). Completed: \(done.joined(separator: ", "))"
     }
 }
