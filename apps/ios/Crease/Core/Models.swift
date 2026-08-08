@@ -341,6 +341,30 @@ struct Order: Codable, Identifiable, Hashable {
     var displayCents: Int { totalCents ?? subtotalCents ?? estimateSubtotalCents }
     var isEstimate: Bool { subtotalCents == nil }
 
+    /// Whether anyone has put a number on the cleaning yet.
+    ///
+    /// Nobody can price a bag before opening it, so booking writes
+    /// `estimate_subtotal_cents = 0` and it stays zero until the shop counts.
+    /// Rendered as money that zero read "$0.00 est." on every open order —
+    /// a quote of free, on the one part of the bill Crease does not set.
+    var hasPrice: Bool {
+        totalCents != nil || subtotalCents != nil || estimateSubtotalCents > 0
+    }
+
+    /// The cleaning price, or nil while there genuinely isn't one.
+    var priceText: String? { hasPrice ? displayCents.asMoney : nil }
+
+    /// Why the approval screen exists, in the customer's terms.
+    ///
+    /// Without an estimate there is nothing to be "above" — the line the count
+    /// crossed is the hold on the card, which is what the server actually
+    /// compares against before it refuses to capture.
+    var overageReason: String {
+        estimateSubtotalCents > 0
+            ? "above your \(estimateSubtotalCents.asMoney) estimate."
+            : "above the amount held on your card."
+    }
+
     var liveLeg: DeliveryLeg? { deliveryLegs?.first(where: \.isLive) }
 
     /// Legs that are over, oldest first.

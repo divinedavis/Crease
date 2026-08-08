@@ -196,12 +196,18 @@ struct OrderDetailView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.warn)
 
-            Text("\(live.cleaner?.name ?? "The cleaner") counted more items than your estimate covered. Nothing has been charged beyond your original hold.")
+            Text(live.estimateSubtotalCents > 0
+                 ? "\(live.cleaner?.name ?? "The cleaner") counted more items than your estimate covered. Nothing has been charged beyond your original hold."
+                 : "\(live.cleaner?.name ?? "The cleaner") counted your items, and the total came to more than the amount held on your card. Nothing has been charged beyond that hold.")
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 7) {
-                row("Your estimate", live.estimateSubtotalCents.asMoney, muted: true)
+                // An estimate row reading $0.00 invents a quote nobody gave, and
+                // sits directly above the number it is supposed to explain.
+                if live.estimateSubtotalCents > 0 {
+                    row("Your estimate", live.estimateSubtotalCents.asMoney, muted: true)
+                }
                 row("Counted at the shop", (live.subtotalCents ?? 0).asMoney, muted: true)
                 Divider()
                 row("New total", live.displayCents.asMoney, bold: true)

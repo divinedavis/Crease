@@ -215,7 +215,7 @@ private struct ApprovalBanner: View {
 
             Text(order.needsReturnScheduling
                  ? "\(order.cleaner?.name ?? "The shop") has finished your order. Choose when you'd like it delivered."
-                 : "\(order.cleaner?.name ?? "The cleaner") counted \(order.itemCount) items — \(order.displayCents.asMoney), above your \(order.estimateSubtotalCents.asMoney) estimate.")
+                 : "\(order.cleaner?.name ?? "The cleaner") counted \(order.itemCount) items — \(order.displayCents.asMoney), \(order.overageReason)")
                 .font(.subheadline)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -270,10 +270,18 @@ private struct ActiveOrderCard: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(order.displayCents.asMoney)
-                    .font(.footnote.weight(.semibold).monospacedDigit())
-                if order.isEstimate {
-                    Text("est.")
+                // No number until the shop has one. "$0.00 est." is not a
+                // cheap order, it is the absence of a price rendered as money.
+                if let price = order.priceText {
+                    Text(price)
+                        .font(.footnote.weight(.semibold).monospacedDigit())
+                    if order.isEstimate {
+                        Text("est.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                } else {
+                    Text("Priced after counting")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -297,7 +305,9 @@ private struct PastOrderRow: View {
             }
             Spacer()
             StatusPill(status: order.status)
-            Text(order.displayCents.asMoney)
+            // A cancelled order never reached a counter, so it has no price and
+            // an em dash is the honest column.
+            Text(order.priceText ?? "—")
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
