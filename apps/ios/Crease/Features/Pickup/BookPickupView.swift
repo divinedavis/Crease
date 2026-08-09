@@ -23,6 +23,12 @@ struct BookPickupView: View {
     @State private var error: String?
     @State private var pickupDay = Date()
     @State private var choosingCleaner = false
+    /// How many pieces are going in the bag, 0 meaning "didn't count".
+    /// Optional on purpose: nobody should have to count socks to book a
+    /// courier, but a number given here is what the shop checks the bag
+    /// against at the counter — the earliest a garment lost in transit can
+    /// be noticed.
+    @State private var itemCount = 0
     @StateObject private var checkout = Checkout()
     @State private var draft: Draft?
     /// Whether this screen is still the one presented.
@@ -166,6 +172,10 @@ struct BookPickupView: View {
             }
             .padding(.horizontal, 16)
 
+            itemCountRow
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+
             Text(feeExplainer)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -206,6 +216,36 @@ struct BookPickupView: View {
         default:
             return "Covers pickup and delivery only. You pay \(shop) for the cleaning. They'll tell you when it's ready and you choose a delivery time."
         }
+    }
+
+    /// Costs nothing and promises nothing — it just writes down the number so
+    /// the shop can check the same one at the counter.
+    private var itemCountRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "tshirt")
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Items in the bag")
+                    .font(.subheadline.weight(.medium))
+                Text(itemCount == 0 ? "Optional — helps track your garments" : "The cleaner will confirm this count")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Stepper(
+                itemCount == 0 ? "—" : "\(itemCount)",
+                value: $itemCount,
+                in: 0...200
+            )
+            .font(.subheadline.weight(.semibold).monospacedDigit())
+            .fixedSize()
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Items in the bag: \(itemCount == 0 ? "not counted" : String(itemCount)). Optional.")
     }
 
     private var cleanerRow: some View {
@@ -309,6 +349,10 @@ struct BookPickupView: View {
         // otherwise every abandoned tap adds a near-identical draft to the
         // list and none of them can be told apart.
         if let draft, draft.tier == selected.id, draft.cleanerId == cleaner.id {
+            // The count is the one field the customer can revise between
+            // attempts, so the retry carries whatever the stepper says now —
+            // including nothing.
+            await store.setCustomerItemCount(orderId: draft.id, count: itemCount > 0 ? itemCount : nil)
             await settle(orderId: draft.id)
             return
         }
@@ -356,7 +400,8 @@ struct BookPickupView: View {
             service_tier: selected.id,
             pickup_window_start: now,
             pickup_window_end: now.addingTimeInterval(2 * 3600),
-            customer_notes: nil
+            customer_notes: nil,
+            customer_item_count: itemCount > 0 ? itemCount : nil
         )) else {
             error = store.errorMessage ?? "Couldn't book that pickup."
             return

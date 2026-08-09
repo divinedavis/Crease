@@ -37,6 +37,8 @@ export function IntakeForm({
   notes,
   shopTurnaroundHours,
   arrivedAtMs,
+  customerItemCount,
+  initialItemCount,
 }: {
   orderId: string;
   services: Service[];
@@ -46,6 +48,8 @@ export function IntakeForm({
   notes: string | null;
   shopTurnaroundHours: number;
   arrivedAtMs: number;
+  customerItemCount: number | null;
+  initialItemCount: number | null;
 }) {
   const [qty, setQty] = useState<Record<string, number>>(initial);
   const [state, action, pending] = useActionState(saveIntake.bind(null, orderId), null);
@@ -136,6 +140,36 @@ export function IntakeForm({
             </div>
           );
         })}
+      </div>
+
+      {/* The bag-check. Separate from the billable lines above because it
+          answers a different question — not "what does this cost" but "did
+          everything the customer sent actually arrive". Optional on purpose:
+          a shop that won't type it can still save. */}
+      <div className="field" style={{ marginTop: 20 }}>
+        <label htmlFor="item_count">
+          Pieces in the bag{' '}
+          <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· optional</span>
+        </label>
+        <input
+          id="item_count"
+          name="item_count"
+          type="number"
+          min={1}
+          max={200}
+          step={1}
+          inputMode="numeric"
+          defaultValue={initialItemCount ?? ''}
+          placeholder="e.g. 8"
+          style={{ maxWidth: 120 }}
+        />
+        {customerItemCount != null && (
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 0 }}>
+            The customer says they sent {customerItemCount} piece
+            {customerItemCount === 1 ? '' : 's'}. If you count something different, enter what
+            you see — a mismatch caught now is a lost-garment dispute that never happens.
+          </p>
+        )}
       </div>
 
       {/* Not a field the counter fills in: the services carry their own

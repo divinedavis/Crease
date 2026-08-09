@@ -33,7 +33,7 @@ final class OrderStore: ObservableObject {
     id, short_code, status, service_tier, estimate_subtotal_cents, subtotal_cents, total_cents,
     delivery_fee_cents, service_fee_cents, pickup_window_start, pickup_window_end,
     return_window_start, return_window_end, estimated_ready_at, ready_at,
-    customer_notes, cleaner_notes, created_at,
+    customer_notes, cleaner_notes, customer_item_count, cleaner_item_count, created_at,
     cleaner:cleaners(id, name, phone, line1, city, state, turnaround_hours, lat, lng),
     address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
     order_items(id, label, quantity, unit_price_cents),
@@ -137,6 +137,29 @@ final class OrderStore: ObservableObject {
         let pickup_window_start: Date
         let pickup_window_end: Date
         let customer_notes: String?
+        /// How many pieces they say are in the bag. Optional — nil is encoded
+        /// as an absent key, so an uncounted bag stays null rather than zero.
+        var customer_item_count: Int? = nil
+    }
+
+    /// The customer's own bag count, editable for as long as the row is still
+    /// a draft. A retried payment reuses the draft row, and the number typed
+    /// on this attempt should win over the one from the abandoned attempt —
+    /// including clearing it, which is why nil is encoded as an explicit null.
+    func setCustomerItemCount(orderId: UUID, count: Int?) async {
+        struct Patch: Encodable {
+            let customer_item_count: Int?
+            enum CodingKeys: String, CodingKey { case customer_item_count }
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(customer_item_count, forKey: .customer_item_count)
+            }
+        }
+        _ = try? await client
+            .from("orders")
+            .update(Patch(customer_item_count: count))
+            .eq("id", value: orderId)
+            .execute()
     }
 
     func createOrder(_ draft: NewOrder) async -> Order? {

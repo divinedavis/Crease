@@ -143,11 +143,22 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   );
   const estimatedReadyAt = new Date(arrivedAtMs + readyHours * 3600_000).toISOString();
 
+  // The bag-check, not the bill: how many pieces the counter can see, next to
+  // whatever number the customer wrote at booking. Optional — a blank on a
+  // recount genuinely means "no count", so blank writes null rather than
+  // preserving a number nobody stands behind.
+  const rawItemCount = String(formData.get('item_count') ?? '').trim();
+  const cleanerItemCount = rawItemCount === '' ? null : Math.round(Number(rawItemCount));
+  if (cleanerItemCount !== null && !(cleanerItemCount >= 1 && cleanerItemCount <= 200)) {
+    return { error: 'Item count must be a number between 1 and 200.' };
+  }
+
   const { error } = await db
     .from('orders')
     .update({
       subtotal_cents: subtotal,
       cleaner_notes: String(formData.get('cleaner_notes') ?? '') || null,
+      cleaner_item_count: cleanerItemCount,
       estimated_ready_at: estimatedReadyAt,
       status: 'cleaning',
     })

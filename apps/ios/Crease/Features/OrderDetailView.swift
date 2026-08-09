@@ -279,6 +279,12 @@ struct OrderDetailView: View {
                 callRow(cleaner)
             }
             labelled("Service", live.serviceTierName)
+            // The bag-check: the count given at booking next to the one the
+            // counter saw. Neither is billing — the priced lines have their
+            // own card — this is "did everything I sent come back".
+            if let bagCheck = live.bagCheckText {
+                labelled("Items", bagCheck)
+            }
             if let address = live.address {
                 labelled(live.addressLabel, address.oneLine)
             }

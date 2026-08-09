@@ -307,6 +307,12 @@ struct Order: Codable, Identifiable, Hashable {
     let readyAt: Date?
     let customerNotes: String?
     let cleanerNotes: String?
+    /// How many pieces the customer said they sent at booking. Optional — a
+    /// claim, not a count, but it is the number the shop checks the bag
+    /// against.
+    let customerItemCount: Int?
+    /// How many pieces the shop saw at the counter. Optional — the check.
+    let cleanerItemCount: Int?
     let createdAt: Date
     let cleaner: Cleaner?
     let address: Address?
@@ -330,9 +336,28 @@ struct Order: Codable, Identifiable, Hashable {
         case readyAt = "ready_at"
         case customerNotes = "customer_notes"
         case cleanerNotes = "cleaner_notes"
+        case customerItemCount = "customer_item_count"
+        case cleanerItemCount = "cleaner_item_count"
         case createdAt = "created_at"
         case orderItems = "order_items"
         case deliveryLegs = "delivery_legs"
+    }
+
+    /// The bag-check in one line: who counted what. Nil while nobody has.
+    ///
+    /// The two numbers are shown together because the difference is the whole
+    /// point — agreement is reassurance, disagreement is a conversation to
+    /// have while the clothes are still findable.
+    var bagCheckText: String? {
+        switch (customerItemCount, cleanerItemCount) {
+        case (nil, nil): return nil
+        case let (mine?, nil): return "\(mine) — your count"
+        case let (nil, theirs?): return "\(theirs) — counted by the cleaner"
+        case let (mine?, theirs?):
+            return mine == theirs
+                ? "\(theirs) — confirmed by the cleaner"
+                : "You counted \(mine), the cleaner counted \(theirs)"
+        }
     }
 
     /// What the customer owes right now: the counted total once it exists,

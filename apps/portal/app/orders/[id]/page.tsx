@@ -174,6 +174,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             // from the HTML it replaces by however long the page took to reach
             // the tablet.
             arrivedAtMs={arrivedAtMs}
+            customerItemCount={order.customer_item_count ?? null}
+            initialItemCount={order.cleaner_item_count ?? null}
           />
         </section>
       ) : (
@@ -196,6 +198,34 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   <span>{money(order.subtotal_cents)}</span>
                 </div>
               </div>
+              {/* Both sides' piece counts, once the counting is done. A
+                  mismatch is worth a phone call before the courier is booked,
+                  not after the customer opens the bag at home. */}
+              {(order.cleaner_item_count != null || order.customer_item_count != null) && (
+                <p
+                  style={{
+                    fontSize: 13,
+                    marginTop: 12,
+                    marginBottom: 0,
+                    color:
+                      order.cleaner_item_count != null &&
+                      order.customer_item_count != null &&
+                      order.cleaner_item_count !== order.customer_item_count
+                        ? 'var(--danger-fg)'
+                        : 'var(--muted)',
+                  }}
+                >
+                  Bag check:
+                  {order.cleaner_item_count != null && ` you counted ${order.cleaner_item_count}`}
+                  {order.cleaner_item_count != null && order.customer_item_count != null && ' ·'}
+                  {order.customer_item_count != null &&
+                    ` customer says ${order.customer_item_count}`}
+                  {order.cleaner_item_count != null &&
+                    order.customer_item_count != null &&
+                    order.cleaner_item_count !== order.customer_item_count &&
+                    ' — the counts differ.'}
+                </p>
+              )}
             </div>
           </section>
         )
