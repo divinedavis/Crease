@@ -42,3 +42,43 @@ test('the signature is the raw r||s pair APNs accepts, not DER', () => {
       .verify({ key: publicKey, dsaEncoding: 'ieee-p1363' }, raw),
   );
 });
+
+const { receivedAlert } = await import('./push.js');
+
+test('received push quotes the count back and promises the ready ping', () => {
+  const alert = receivedAlert({
+    shop: 'Bedford Cleaners',
+    shortCode: 'CR-1234',
+    status: 'cleaning',
+    itemCount: 12,
+  });
+  assert.equal(alert.title, 'Your cleaner has your order');
+  assert.equal(
+    alert.body,
+    "Bedford Cleaners has received order CR-1234. 12 pieces counted. We'll tell you the moment it's ready.",
+  );
+});
+
+test('a single piece is not "1 pieces", and no count is no clause', () => {
+  assert.match(
+    receivedAlert({ shop: 'S', shortCode: 'C', status: 'cleaning', itemCount: 1 }).body,
+    /1 piece counted/,
+  );
+  assert.equal(
+    receivedAlert({ shop: 'S', shortCode: 'C', status: 'cleaning', itemCount: null }).body,
+    "S has received order C. We'll tell you the moment it's ready.",
+  );
+});
+
+test('an over-hold count asks for approval instead of celebrating', () => {
+  // The one branch where "good news" wording would actively hurt: the order is
+  // stuck until the customer acts, and a reassuring push gets swiped away.
+  const alert = receivedAlert({
+    shop: 'Bedford Cleaners',
+    shortCode: 'CR-1234',
+    status: 'awaiting_approval',
+    itemCount: 30,
+  });
+  assert.equal(alert.title, 'Action needed on your order');
+  assert.match(alert.body, /Review and approve it in the app/);
+});

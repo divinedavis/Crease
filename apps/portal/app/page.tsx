@@ -54,9 +54,14 @@ export default async function QueuePage() {
           <h1>{shopName}</h1>
           <div className="who">{staff.user.email}</div>
         </div>
-        <form action={signOut}>
-          <button type="submit">Sign out</button>
-        </form>
+        <div className="row-actions">
+          <Link href="/settings" className="btn">
+            Settings
+          </Link>
+          <form action={signOut}>
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
       </header>
 
       {cleanerIds.length === 0 && (

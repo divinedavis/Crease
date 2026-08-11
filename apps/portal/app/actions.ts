@@ -5,28 +5,12 @@ import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase';
 import { billableUnits, lineTotalCents } from '@/lib/pricing';
 import { readyHoursFor } from '@/lib/ready';
+import { callDispatch } from '@/lib/dispatch';
 
 /**
  * All mutations live here so the dispatch shared secret stays server-side.
  * The browser never learns INTERNAL_API_KEY or the dispatch URL.
  */
-
-const DISPATCH_URL = process.env.DISPATCH_URL ?? 'http://localhost:8080';
-
-async function callDispatch(path: string) {
-  const res = await fetch(`${DISPATCH_URL}${path}`, {
-    method: 'POST',
-    headers: {
-      'x-crease-key': process.env.INTERNAL_API_KEY!,
-      'content-type': 'application/json',
-    },
-    body: '{}',
-    cache: 'no-store',
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error ?? `dispatch returned ${res.status}`);
-  return json;
-}
 
 export async function signIn(_prev: unknown, formData: FormData) {
   const db = await supabaseServer();

@@ -57,6 +57,37 @@ export function apnsJwt(
  * says so once and no-ops. It starts working the moment the key is set, with no
  * other change.
  */
+/**
+ * Wording for the 'received' push, kept pure so the branches are testable.
+ *
+ * The count is the shop's number, not the customer's estimate — quoting it back
+ * is what makes the message reassuring rather than generic. An intake that
+ * settled above the hold reads differently: the customer has to act, and a
+ * notification that buries that under "good news" wording gets swiped away.
+ */
+export function receivedAlert(order: {
+  shop: string;
+  shortCode: string;
+  status: string;
+  itemCount: number | null;
+}): { title: string; body: string } {
+  if (order.status === 'awaiting_approval') {
+    return {
+      title: 'Action needed on your order',
+      body:
+        `${order.shop} counted order ${order.shortCode} and the total came in ` +
+        'above your estimate. Review and approve it in the app.',
+    };
+  }
+  const counted = order.itemCount
+    ? `${order.itemCount} piece${order.itemCount === 1 ? '' : 's'} counted. `
+    : '';
+  return {
+    title: 'Your cleaner has your order',
+    body: `${order.shop} has received order ${order.shortCode}. ${counted}We'll tell you the moment it's ready.`,
+  };
+}
+
 export class PushService {
   private key?: KeyObject;
   private keyUnusable = false;
@@ -95,12 +126,56 @@ export class PushService {
    * disappointment, and a duplicate one at eleven at night is a complaint.
    */
   async notifyOrderReady(orderId: string): Promise<{ sent: number; skipped?: string }> {
+    return this.notifyOrder(orderId, 'ready', (order) => {
+      const shop = order.cleaner?.name ?? 'Your cleaner';
+      const tier = order.service_tier ?? 'round_trip';
+      return {
+        title: 'Your laundry is ready',
+        // pickup_only has no second leg, so there is nothing for them to
+        // schedule and nobody coming — saying otherwise sends someone home to
+        // wait for a courier that was never paid for.
+        body:
+          tier === 'pickup_only'
+            ? `${shop} has finished order ${order.short_code}. It's ready to collect.`
+            : `${shop} has finished order ${order.short_code}. Choose a delivery time in the app.`,
+      };
+    });
+  }
+
+  /**
+   * "Your cleaner has your order", sent when the bag is opened and counted.
+   *
+   * Fired from settle rather than from the courier leg landing: a bag sitting
+   * unopened behind the counter has not really been received, and for a
+   * return_only order there is no courier leg at all — the count is the first
+   * moment the shop has confirmably taken custody on every tier. The ledger
+   * makes a recount silent: (order, kind) is claimed once, so re-counting a bag
+   * does not re-announce it.
+   */
+  async notifyOrderReceived(orderId: string): Promise<{ sent: number; skipped?: string }> {
+    return this.notifyOrder(orderId, 'received', (order) =>
+      receivedAlert({
+        shop: order.cleaner?.name ?? 'Your cleaner',
+        shortCode: order.short_code,
+        status: order.status,
+        itemCount: order.cleaner_item_count ?? null,
+      }),
+    );
+  }
+
+  private async notifyOrder(
+    orderId: string,
+    kind: 'ready' | 'received',
+    alertFor: (order: any) => { title: string; body: string },
+  ): Promise<{ sent: number; skipped?: string }> {
     const creds = this.credentials();
     if (!creds) return { sent: 0, skipped: 'apns_not_configured' };
 
     const { data: order } = await this.db
       .from('orders')
-      .select('id, short_code, customer_id, service_tier, cleaner:cleaners(name)')
+      .select(
+        'id, short_code, customer_id, service_tier, status, cleaner_item_count, cleaner:cleaners(name)',
+      )
       .eq('id', orderId)
       .maybeSingle();
     if (!order) return { sent: 0, skipped: 'order_not_found' };
@@ -116,7 +191,7 @@ export class PushService {
 
     const { data: claim, error: claimError } = await this.db
       .from('notifications_sent')
-      .insert({ order_id: orderId, user_id: (order as any).customer_id, kind: 'ready' })
+      .insert({ order_id: orderId, user_id: (order as any).customer_id, kind })
       .select('id')
       .maybeSingle();
     if (claimError) {
@@ -124,31 +199,20 @@ export class PushService {
       // Anything else means the ledger could not answer, and sending without a
       // ledger is how the same person gets notified on every retry.
       if (claimError.code !== '23505') {
-        this.log.error({ err: claimError, orderId }, 'could not claim the ready notification');
+        this.log.error({ err: claimError, orderId, kind }, 'could not claim the notification');
         return { sent: 0, skipped: 'ledger_unavailable' };
       }
       return { sent: 0, skipped: 'already_sent' };
     }
 
-    const shop = (order as any).cleaner?.name ?? 'Your cleaner';
-    const tier = (order as any).service_tier ?? 'round_trip';
     const payload = JSON.stringify({
       aps: {
-        alert: {
-          title: 'Your laundry is ready',
-          // pickup_only has no second leg, so there is nothing for them to
-          // schedule and nobody coming — saying otherwise sends someone home to
-          // wait for a courier that was never paid for.
-          body:
-            tier === 'pickup_only'
-              ? `${shop} has finished order ${(order as any).short_code}. It's ready to collect.`
-              : `${shop} has finished order ${(order as any).short_code}. Choose a delivery time in the app.`,
-        },
+        alert: alertFor(order),
         sound: 'default',
       },
       // So a tap opens the order rather than the app's front page.
       orderId,
-      kind: 'ready',
+      kind,
     });
 
     const byEnvironment = new Map<PushEnvironment, string[]>();
@@ -161,7 +225,7 @@ export class PushService {
     const stale: string[] = [];
     const errors: string[] = [];
     for (const [environment, tokens] of byEnvironment) {
-      const result = await this.deliver(environment, tokens, payload, `ready-${orderId}`, creds);
+      const result = await this.deliver(environment, tokens, payload, `${kind}-${orderId}`, creds);
       sent += result.sent;
       stale.push(...result.stale);
       errors.push(...result.errors);
@@ -184,7 +248,7 @@ export class PushService {
         .eq('id', (claim as any).id);
     }
 
-    this.log.info({ orderId, sent, pruned: stale.length, failed: errors.length }, 'ready push sent');
+    this.log.info({ orderId, kind, sent, pruned: stale.length, failed: errors.length }, 'push sent');
     return { sent };
   }
 

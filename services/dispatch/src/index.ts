@@ -143,6 +143,18 @@ app.post<{ Params: { id: string } }>(
         req.log.error({ err, orderId: req.params.id }, 'ready estimate not refined');
       }
 
+      // The count is also the first confirmable "we have your clothes" on
+      // every tier, so the customer is told here — after settle has decided
+      // whether the message is reassurance or an approval request. The ledger
+      // dedupes recounts, and a push must never fail a settle that already
+      // moved money correctly.
+      let notified: { sent: number; skipped?: string } = { sent: 0, skipped: 'not_attempted' };
+      try {
+        notified = await push.notifyOrderReceived(req.params.id);
+      } catch (err) {
+        req.log.error({ err, orderId: req.params.id }, 'received notification not sent');
+      }
+
       // The window is computed here rather than by each surface so the shop and
       // the customer are never looking at two different ranges.
       return {
@@ -150,6 +162,7 @@ app.post<{ Params: { id: string } }>(
         ...result,
         estimatedReadyAt,
         readyWindow: estimatedReadyAt ? readyWindow(estimatedReadyAt) : null,
+        notified,
       };
     } catch (err) {
       req.log.error({ err, orderId: req.params.id }, 'settle failed');
