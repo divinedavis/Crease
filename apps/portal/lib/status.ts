@@ -89,11 +89,25 @@ export function money(cents: number | null | undefined): string {
  * directly above the untiered column it narrows: the narrow one takes the
  * orders it names and the general one catches everything else, including a
  * tier this build has never heard of.
+ *
+ * `tile` marks the columns worth a headline number at the top of the page —
+ * the counts a shop glances at between customers. `tone` colors that tile's
+ * dot only; the number itself stays in text ink. `background` collapses the
+ * column behind its count: those orders exist, but they are not this
+ * counter's work, and 29 unpaid drafts must not bury the three bags that are.
  */
-export const BOARD: { title: string; statuses: string[]; tier?: string; empty: string }[] = [
+export const BOARD: {
+  title: string;
+  statuses: string[];
+  tier?: string;
+  empty: string;
+  tile?: boolean;
+  tone?: 'neutral' | 'live' | 'warn' | 'danger';
+  background?: boolean;
+}[] = [
   // Neither of the first two is the shop's work, so they stay out of the way
   // until something is genuinely stuck in one.
-  { title: 'Not paid yet', statuses: ['draft'], empty: '' },
+  { title: 'Not paid yet', statuses: ['draft'], empty: '', background: true },
   // A drop-off never gets a leg 1 — the customer carries the bag in — so
   // filing it under couriers would have the counter waiting on a driver who
   // was never booked. What this column is really saying is "expect a person".
@@ -107,13 +121,21 @@ export const BOARD: { title: string; statuses: string[]; tier?: string; empty: s
   // road" because nothing is moving yet — filing it under couriers told the
   // counter a driver was coming when nobody had asked for one.
   { title: 'Waiting on a courier', statuses: ['scheduled'], empty: '' },
-  { title: 'Needs intake', statuses: ['at_cleaner'], empty: 'Nothing waiting to be counted.' },
+  {
+    title: 'Needs intake',
+    statuses: ['at_cleaner'],
+    empty: 'Nothing waiting to be counted.',
+    tile: true,
+    tone: 'warn',
+  },
   {
     title: 'Waiting on customer',
     statuses: ['awaiting_approval'],
     empty: 'No orders held for approval.',
+    tile: true,
+    tone: 'warn',
   },
-  { title: 'Cleaning', statuses: ['cleaning'], empty: 'Nothing on the rack.' },
+  { title: 'Cleaning', statuses: ['cleaning'], empty: 'Nothing on the rack.', tile: true, tone: 'neutral' },
   // Split off before "send back" can be read as an instruction: this bag is
   // collected over the counter, and a courier booked against it is a fare
   // nobody paid for.
@@ -123,7 +145,13 @@ export const BOARD: { title: string; statuses: string[]; tier?: string; empty: s
     tier: 'pickup_only',
     empty: '',
   },
-  { title: 'Ready to send back', statuses: ['ready'], empty: 'Nothing ready to go out.' },
+  {
+    title: 'Ready to send back',
+    statuses: ['ready'],
+    empty: 'Nothing ready to go out.',
+    tile: true,
+    tone: 'warn',
+  },
   {
     title: 'On the road',
     statuses: [
@@ -133,6 +161,8 @@ export const BOARD: { title: string; statuses: string[]; tier?: string; empty: s
       'in_transit_to_customer',
     ],
     empty: 'No couriers moving.',
+    tile: true,
+    tone: 'live',
   },
-  { title: 'Needs attention', statuses: ['failed'], empty: '' },
+  { title: 'Needs attention', statuses: ['failed'], empty: '', tile: true, tone: 'danger' },
 ];

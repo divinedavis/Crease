@@ -8,6 +8,14 @@ import { signOut } from './actions';
 
 export const dynamic = 'force-dynamic';
 
+/** Rows shown before a long queue folds behind "show more". */
+const FOLD_AT = 6;
+
+/** Statuses where the garments are physically in the shop's custody. */
+const IN_SHOP = ['at_cleaner', 'awaiting_approval', 'cleaning', 'ready'];
+
+const anchorId = (title: string) => 'q-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
 export default async function QueuePage() {
   const staff = await currentStaff();
   if (!staff) redirect('/login');
@@ -45,6 +53,58 @@ export default async function QueuePage() {
       ?.inCol.push(o);
   }
 
+  // The glanceable layer: the counts a shop reads between customers, plus the
+  // one money number that means anything mid-shift — the value of what is
+  // physically on the racks right now. Estimates stand in until a bag is
+  // counted, which is exactly the promise the customer was shown.
+  const tiles = columns
+    .filter(({ col, inCol }) => col.tile && (col.tone !== 'danger' || inCol.length > 0))
+    .map(({ col, inCol }) => ({
+      title: col.title,
+      tone: col.tone ?? 'neutral',
+      count: inCol.length,
+      href: `#${anchorId(col.title)}`,
+    }));
+  const inShopCents = rows
+    .filter((o) => IN_SHOP.includes(o.status))
+    .reduce((n, o) => n + (o.subtotal_cents ?? o.estimate_subtotal_cents ?? 0), 0);
+
+  const orderRow = (o: (typeof rows)[number]) => {
+    const counted = (o.order_items ?? []).reduce((n: number, i: any) => n + i.quantity, 0);
+    return (
+      <Link href={`/orders/${o.id}`} className="order-row" key={o.id}>
+        <span className="code">{o.short_code}</span>
+        <span>
+          <div className="who">{(o.customer as any)?.full_name ?? 'Customer'}</div>
+          <div className="sub">
+            {counted > 0 ? `${counted} garment${counted === 1 ? '' : 's'}` : 'Not counted yet'}
+            {' · '}
+            <span className={`pill ${statusTone(o.status)}`}>
+              {statusLabel(o.status, o.service_tier)}
+            </span>
+            {/* Only on the rack. Everything else is waiting on someone who is
+                not the shop, and flagging those would put a red pill on work
+                nobody here can move. */}
+            {o.status === 'cleaning' && isPastDue(o.estimated_ready_at) && (
+              <>
+                {' · '}
+                <span className="pill danger">Past due</span>
+              </>
+            )}
+          </div>
+        </span>
+        <span className="money">
+          {money(o.subtotal_cents ?? o.estimate_subtotal_cents)}
+          {o.subtotal_cents == null && (
+            <div className="sub" style={{ fontWeight: 400 }}>
+              est.
+            </div>
+          )}
+        </span>
+      </Link>
+    );
+  };
+
   return (
     <div className="shell">
       <LiveRefresh cleanerIds={cleanerIds} />
@@ -70,69 +130,68 @@ export default async function QueuePage() {
         </div>
       )}
 
-      {columns.map(({ col, inCol }) => {
-        // "Needs attention" is noise when empty; the working columns are not.
-        if (inCol.length === 0 && !col.empty) return null;
+      {cleanerIds.length > 0 && (
+        <div className="stats">
+          {tiles.map((t) => (
+            <a className="stat" href={t.href} key={t.title}>
+              <span className="stat-num">
+                <i className={`dot ${t.tone}`} aria-hidden />
+                {t.count}
+              </span>
+              <span className="stat-label">{t.title}</span>
+            </a>
+          ))}
+          <div className="stat">
+            <span className="stat-num">{money(inShopCents)}</span>
+            <span className="stat-label">In the shop</span>
+          </div>
+        </div>
+      )}
 
-        return (
-          <section className="group" key={col.title}>
-            <h2>
+      <div className="board">
+        {columns.map(({ col, inCol }) => {
+          // "Needs attention" is noise when empty; the working columns are not.
+          if (inCol.length === 0 && !col.empty) return null;
+
+          const heading = (
+            <>
               {col.title}
               {inCol.length > 0 && ` · ${inCol.length}`}
-            </h2>
+            </>
+          );
 
-            {inCol.length === 0 ? (
-              <div className="card empty">{col.empty}</div>
-            ) : (
-              <div className="queue">
-                {inCol.map((o) => {
-                  const counted = (o.order_items ?? []).reduce(
-                    (n: number, i: any) => n + i.quantity,
-                    0,
-                  );
-                  return (
-                    <Link href={`/orders/${o.id}`} className="order-row" key={o.id}>
-                      <span className="code">{o.short_code}</span>
-                      <span>
-                        <div className="who">
-                          {(o.customer as any)?.full_name ?? 'Customer'}
-                        </div>
-                        <div className="sub">
-                          {counted > 0
-                            ? `${counted} garment${counted === 1 ? '' : 's'}`
-                            : 'Not counted yet'}
-                          {' · '}
-                          <span className={`pill ${statusTone(o.status)}`}>
-                            {statusLabel(o.status, o.service_tier)}
-                          </span>
-                          {/* Only on the rack. Everything else is waiting on
-                              someone who is not the shop, and flagging those
-                              would put a red pill on work nobody here can
-                              move. */}
-                          {o.status === 'cleaning' && isPastDue(o.estimated_ready_at) && (
-                            <>
-                              {' · '}
-                              <span className="pill danger">Past due</span>
-                            </>
-                          )}
-                        </div>
-                      </span>
-                      <span className="money">
-                        {money(o.subtotal_cents ?? o.estimate_subtotal_cents)}
-                        {o.subtotal_cents == null && (
-                          <div className="sub" style={{ fontWeight: 400 }}>
-                            est.
-                          </div>
-                        )}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        );
-      })}
+          // Not this counter's work: present, countable, folded away.
+          if (col.background) {
+            return (
+              <details className="panel background" id={anchorId(col.title)} key={col.title}>
+                <summary>
+                  <h2>{heading}</h2>
+                </summary>
+                <div className="queue">{inCol.map(orderRow)}</div>
+              </details>
+            );
+          }
+
+          return (
+            <section className="panel" id={anchorId(col.title)} key={col.title}>
+              <h2>{heading}</h2>
+              {inCol.length === 0 ? (
+                <div className="empty">{col.empty}</div>
+              ) : (
+                <div className="queue">
+                  {inCol.slice(0, FOLD_AT).map(orderRow)}
+                  {inCol.length > FOLD_AT && (
+                    <details className="more">
+                      <summary>Show {inCol.length - FOLD_AT} more</summary>
+                      {inCol.slice(FOLD_AT).map(orderRow)}
+                    </details>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -75,13 +75,98 @@ header.top .who { color: var(--muted); font-size: 14px; }
 }
 
 .group { margin-bottom: 32px; }
-.group h2 {
+.group h2,
+.panel h2 {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
   margin: 0 0 10px;
 }
+
+/* --- dashboard ---------------------------------------------------------- */
+
+/* Glanceable counts. The number wears text ink; the dot alone carries tone,
+   so the tiles read as one calm row rather than a traffic light. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  text-decoration: none;
+  display: block;
+}
+a.stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stat-num {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.stat-label { color: var(--muted); font-size: 13px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.warn { background: var(--warn-fg); }
+.dot.live { background: var(--live-fg); }
+.dot.danger { background: var(--danger-fg); }
+.dot.neutral { background: var(--border); }
+
+/* Queues side by side where the screen allows, one card per queue. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  scroll-margin-top: 12px;
+}
+.panel h2 { padding: 14px 16px 0; margin: 0; }
+.panel .queue { gap: 0; padding-top: 10px; }
+.panel .order-row,
+.panel .empty {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+}
+.panel .order-row { padding: 12px 16px; }
+.panel .order-row:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+
+details.more summary,
+details.background summary {
+  cursor: pointer;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details.more summary::-webkit-details-marker,
+details.background summary::-webkit-details-marker { display: none; }
+details.more summary {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+details.more summary::before { content: '▸ '; }
+details[open].more summary::before { content: '▾ '; }
+details.background summary { padding: 0 0 14px; }
+details.background summary h2 { display: inline; padding: 14px 16px; }
+details.background summary::after { content: '▸'; color: var(--muted); font-size: 13px; }
+details[open].background summary::after { content: '▾'; }
 
 .queue { display: grid; gap: 10px; }
 
@@ -188,8 +273,19 @@ label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 
 @media (max-width: 640px) {
-  .order-row { grid-template-columns: 1fr auto; }
-  .order-row .code { grid-column: 1 / -1; }
+  .shell { padding: 12px 12px 48px; }
+  header.top { padding: 10px 0 14px; margin-bottom: 16px; }
+  header.top h1 { font-size: 18px; }
+
+  /* Two tiles per row keeps the numbers big enough to read at arm's length. */
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-num { font-size: 21px; }
+  .stat-label { font-size: 12px; }
+
+  .board { grid-template-columns: 1fr; gap: 12px; }
+
+  .order-row { grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .order-row .code { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
   .intake-row { grid-template-columns: 1fr 80px; }
   .intake-row .line-total { grid-column: 2; text-align: center; }
 }
