@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Crease — Brooklyn canvass</title>
+<style>
+  /* Street tool: used one-handed on a phone between shop doors. Big targets,
+     the working state visible without a tap, nothing precious. */
+  :root {
+    --bg: #f6f6f4; --surface: #fff; --border: #e2e0da; --text: #1c1b18;
+    --muted: #6b6862; --accent: #1f6f5c; --accent-fg: #fff;
+    --warn-bg: #fdf3e2; --warn-fg: #8a5a12;
+    --danger-bg: #fdeceb; --danger-fg: #a32b22;
+    --live-bg: #e8f2ef; --live-fg: #1f6f5c;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a; --surface: #1f1f24; --border: #33333b; --text: #f0efec;
+      --muted: #9d9a94; --accent: #3fa587; --accent-fg: #0c1512;
+      --warn-bg: #3a2e18; --warn-fg: #f0c274;
+      --danger-bg: #3b1f1d; --danger-fg: #f19a92;
+      --live-bg: #16302a; --live-fg: #6fd0b4;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 ui-sans-serif, -apple-system, system-ui, sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 720px; margin: 0 auto; padding: 12px 12px 80px; }
+  h1 { font-size: 18px; margin: 8px 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 16px; }
+  button, .btn { font: inherit; font-weight: 600; min-height: 44px;
+    padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    -webkit-tap-highlight-color: transparent; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+  input, textarea { font: inherit; width: 100%; padding: 10px 12px; min-height: 44px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); }
+  textarea { min-height: 72px; resize: vertical; }
+  label { font-size: 13px; font-weight: 600; display: block; margin: 0 0 4px; }
+  .field { margin-bottom: 12px; }
+  .notice { border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+  .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
+
+  header.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0 10px; }
+  .counts { font-variant-numeric: tabular-nums; }
+
+  /* The split the pitch depends on: dry cleaner vs laundromat is a mode,
+     not a search term, so it gets the biggest control on the page. */
+  .seg { display: grid; grid-auto-flow: column; gap: 0; border: 1px solid var(--border);
+         border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button { border: none; border-radius: 0; min-height: 42px; padding: 8px 6px;
+                font-size: 14px; background: transparent; }
+  .seg button.on { background: var(--accent); color: var(--accent-fg); }
+  .filters { display: grid; gap: 8px; margin-bottom: 12px; }
+  .filters .row2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;
+            padding: 0 12px; white-space: nowrap; }
+  .toggle input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--accent); }
+
+  details.hood { background: var(--surface); border: 1px solid var(--border);
+                 border-radius: var(--radius); margin-bottom: 10px; }
+  details.hood summary { display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 13px 14px; cursor: pointer; list-style: none; font-weight: 700;
+    -webkit-tap-highlight-color: transparent; }
+  details.hood summary::-webkit-details-marker { display: none; }
+  details.hood summary .prog { color: var(--muted); font-weight: 600; font-size: 14px;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  details.hood summary .prog.done { color: var(--live-fg); }
+
+  .shop { border-top: 1px solid var(--border); padding: 12px 14px; display: grid;
+          grid-template-columns: 34px 1fr auto; gap: 10px; align-items: start; }
+  .shop.visited .name { color: var(--muted); }
+  .shop input[type=checkbox] { width: 26px; height: 26px; min-height: 0; margin: 2px 0 0;
+                               accent-color: var(--accent); }
+  .shop .name { font-weight: 700; }
+  .shop .meta { color: var(--muted); font-size: 13px; margin-top: 1px; overflow-wrap: anywhere; }
+  .shop .links { display: flex; gap: 6px; }
+  .shop .links a { display: grid; place-items: center; width: 40px; height: 40px;
+    border: 1px solid var(--border); border-radius: 8px; text-decoration: none;
+    font-size: 17px; background: var(--surface); }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px;
+          font-weight: 700; vertical-align: 1px; margin-left: 6px; white-space: nowrap; }
+  .chip.dc { background: var(--live-bg); color: var(--live-fg); }
+  .chip.lm { background: var(--warn-bg); color: var(--warn-fg); }
+  .chip.interested { background: var(--live-bg); color: var(--live-fg); }
+  .chip.follow_up { background: var(--warn-bg); color: var(--warn-fg); }
+  .chip.declined { background: var(--danger-bg); color: var(--danger-fg); }
+  .notes-preview { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 2px;
+                   overflow-wrap: anywhere; }
+
+  .editor { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 4px; }
+  .editor .seg button { font-size: 13px; }
+  .savestate { font-size: 12px; color: var(--muted); text-align: right; min-height: 16px; }
+  .savestate.ok { color: var(--live-fg); }
+  .empty { color: var(--muted); text-align: center; padding: 32px 12px; }
+</style>
+</head>
+<body>
+<div class="shell" id="app"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__');
+const app = document.getElementById('app');
+
+const KIND_LABEL = { dry_cleaner: 'Dry cleaner', laundromat: 'Laundromat' };
+const OUTCOMES = [['interested', 'Interested'], ['follow_up', 'Follow up'], ['declined', 'Declined']];
+
+let rows = [];
+const ui = {
+  kind: localStorage.canvassKind ?? 'dry_cleaner',
+  q: '',
+  hideVisited: localStorage.canvassHide === '1',
+  open: new Set(JSON.parse(localStorage.canvassOpen ?? '[]')),
+  expanded: null,           // id of the row whose editor is showing
+};
+const persistUi = () => {
+  localStorage.canvassKind = ui.kind;
+  localStorage.canvassHide = ui.hideVisited ? '1' : '0';
+  localStorage.canvassOpen = JSON.stringify([...ui.open]);
+};
+
+const esc = (s) => (s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function main() {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) return renderLogin();
+  const { data, error } = await db.from('prospects').select('*').limit(1000);
+  if (error) return renderLogin(`Couldn't load the list: ${error.message}`);
+  if (!data.length) return renderLogin('Signed in, but this account cannot see the canvass list.');
+  rows = data;
+  render();
+}
+
+function renderLogin(err) {
+  app.innerHTML = `
+    <h1>Crease — Brooklyn canvass</h1>
+    <p class="sub">Sign in to work the list.</p>
+    ${err ? `<div class="notice danger">${esc(err)}</div>` : ''}
+    <form class="card" id="login">
+      <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username" required /></div>
+      <div class="field"><label>Password</label><input id="pw" type="password" autocomplete="current-password" required /></div>
+      <button class="primary" style="width:100%">Sign in</button>
+    </form>`;
+  document.getElementById('login').onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await db.auth.signInWithPassword({
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('pw').value,
+    });
+    error ? renderLogin(error.message) : main();
+  };
+}
+
+const visible = () => rows.filter((r) =>
+  (ui.kind === 'all' || r.kind === ui.kind) &&
+  (!ui.hideVisited || !r.visited) &&
+  (!ui.q || (r.name + ' ' + (r.address ?? '') + ' ' + r.neighborhood).toLowerCase().includes(ui.q)));
+
+function render() {
+  const inKind = rows.filter((r) => ui.kind === 'all' || r.kind === ui.kind);
+  const list = visible();
+
+  const hoods = new Map();
+  for (const r of list) {
+    if (!hoods.has(r.neighborhood)) hoods.set(r.neighborhood, []);
+    hoods.get(r.neighborhood).push(r);
+  }
+  const sorted = [...hoods.entries()].sort((a, b) => b[1].length - a[1].length);
+
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>Brooklyn canvass</h1>
+        <div class="sub counts">${inKind.filter((r) => r.visited).length} of ${inKind.length} visited</div>
+      </div>
+      <button id="signout">Sign out</button>
+    </header>
+    <div class="filters">
+      <div class="seg" id="kindseg">
+        <button data-k="dry_cleaner" ${ui.kind === 'dry_cleaner' ? 'class="on"' : ''}>Dry cleaners · ${rows.filter((r) => r.kind === 'dry_cleaner').length}</button>
+        <button data-k="laundromat" ${ui.kind === 'laundromat' ? 'class="on"' : ''}>Laundromats · ${rows.filter((r) => r.kind === 'laundromat').length}</button>
+        <button data-k="all" ${ui.kind === 'all' ? 'class="on"' : ''}>All</button>
+      </div>
+      <div class="row2">
+        <input id="q" type="search" placeholder="Search name, street, neighborhood" value="${esc(ui.q)}" />
+        <label class="toggle"><input id="hidev" type="checkbox" ${ui.hideVisited ? 'checked' : ''} /> Hide visited</label>
+      </div>
+    </div>
+    <div id="list">
+      ${sorted.length === 0 ? `<div class="empty">Nothing matches.</div>` : sorted.map(([hood, shops]) => {
+        const v = shops.filter((s) => s.visited).length;
+        return `
+        <details class="hood" data-hood="${esc(hood)}" ${ui.open.has(hood) || ui.q ? 'open' : ''}>
+          <summary><span>${esc(hood)}</span>
+            <span class="prog ${v === shops.length ? 'done' : ''}">${v}/${shops.length}</span></summary>
+          ${shops.map(shopRow).join('')}
+        </details>`;
+      }).join('')}
+    </div>`;
+
+  wire();
+}
+
+function shopRow(r) {
+  const maps = `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`;
+  const expanded = ui.expanded === r.id;
+  return `
+  <div class="shop ${r.visited ? 'visited' : ''}" data-id="${r.id}">
+    <input type="checkbox" data-visit ${r.visited ? 'checked' : ''} aria-label="Visited" />
+    <div data-expand>
+      <div class="name">${esc(r.name)}
+        <span class="chip ${r.kind === 'dry_cleaner' ? 'dc' : 'lm'}">${KIND_LABEL[r.kind]}</span>
+        ${r.outcome ? `<span class="chip ${r.outcome}">${OUTCOMES.find(([k]) => k === r.outcome)[1]}</span>` : ''}
+      </div>
+      <div class="meta">${esc(r.address ?? 'No address on file')}${r.zip ? ' · ' + esc(r.zip) : ''}</div>
+      ${r.notes && !expanded ? `<div class="notes-preview">${esc(r.notes)}</div>` : ''}
+    </div>
+    <div class="links">
+      ${r.phone ? `<a href="tel:${esc(r.phone)}" aria-label="Call">📞</a>` : ''}
+      <a href="${maps}" target="_blank" rel="noopener" aria-label="Map">📍</a>
+    </div>
+    ${expanded ? `
+    <div class="editor">
+      <div class="seg" data-outseg>
+        ${OUTCOMES.map(([k, label]) =>
+          `<button data-out="${k}" ${r.outcome === k ? 'class="on"' : ''}>${label}</button>`).join('')}
+      </div>
+      <textarea data-notes placeholder="Notes — who you spoke to, pricing, objections…">${esc(r.notes ?? '')}</textarea>
+      <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${saveText(r)}</div>
+    </div>` : ''}
+  </div>`;
+}
+
+const saveText = (r) =>
+  r._save === 'saving' ? 'Saving…' :
+  r._save === 'ok' ? 'Saved' :
+  r._save === 'err' ? `Not saved: ${r._saveMsg ?? ''}` : '';
+
+/**
+ * The indicator lives on the row, not the DOM node: outcome taps re-render
+ * the list, and a "Saved" pinned to a destroyed element is a save the person
+ * at the counter never sees.
+ */
+function setSaveState(r, s, msg) {
+  r._save = s;
+  r._saveMsg = msg;
+  const el = document.querySelector(`.shop[data-id="${r.id}"] [data-save]`);
+  if (el) { el.className = `savestate ${s === 'ok' ? 'ok' : ''}`; el.textContent = saveText(r); }
+  if (s === 'ok') setTimeout(() => {
+    if (r._save !== 'ok') return;
+    r._save = null;
+    const e2 = document.querySelector(`.shop[data-id="${r.id}"] [data-save]`);
+    if (e2) e2.textContent = '';
+  }, 2500);
+}
+
+async function save(r, patch) {
+  setSaveState(r, 'saving');
+  const { error } = await db.from('prospects')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', r.id);
+  if (error) { setSaveState(r, 'err', error.message); return false; }
+  Object.assign(r, patch);
+  setSaveState(r, 'ok');
+  return true;
+}
+
+function wire() {
+  document.getElementById('signout').onclick = async () => { await db.auth.signOut(); renderLogin(); };
+  document.getElementById('kindseg').onclick = (e) => {
+    const k = e.target.dataset?.k;
+    if (k) { ui.kind = k; persistUi(); render(); }
+  };
+  const q = document.getElementById('q');
+  q.oninput = () => { ui.q = q.value.trim().toLowerCase(); render(); refocus(q); };
+  document.getElementById('hidev').onchange = (e) => { ui.hideVisited = e.target.checked; persistUi(); render(); };
+
+  for (const d of document.querySelectorAll('details.hood')) {
+    d.ontoggle = () => {
+      if (ui.q) return; // search forces everything open; don't persist that
+      d.open ? ui.open.add(d.dataset.hood) : ui.open.delete(d.dataset.hood);
+      persistUi();
+    };
+  }
+
+  for (const shopEl of document.querySelectorAll('.shop')) {
+    const r = rows.find((x) => x.id === shopEl.dataset.id);
+
+    shopEl.querySelector('[data-visit]').onchange = async (e) => {
+      const ok = await save(r, {
+        visited: e.target.checked,
+        visited_at: e.target.checked ? new Date().toISOString() : null,
+      });
+      if (!ok) e.target.checked = !e.target.checked;
+      else render();
+    };
+
+    shopEl.querySelector('[data-expand]').onclick = () => {
+      ui.expanded = ui.expanded === r.id ? null : r.id;
+      render();
+      if (ui.expanded) document.querySelector(`.shop[data-id="${r.id}"] [data-notes]`)?.focus();
+    };
+
+    shopEl.querySelector('[data-outseg]')?.addEventListener('click', (e) => {
+      const k = e.target.dataset?.out;
+      if (!k) return;
+      // tapping the active outcome clears it — a mis-tap must be undoable
+      save(r, { outcome: r.outcome === k ? null : k }).then(() => render());
+    });
+
+    const notes = shopEl.querySelector('[data-notes]');
+    if (notes) {
+      let t;
+      notes.oninput = () => { clearTimeout(t); t = setTimeout(() => save(r, { notes: notes.value || null }), 700); };
+      notes.onblur = () => { clearTimeout(t); save(r, { notes: notes.value || null }); };
+    }
+  }
+}
+
+// keep typing focus through re-renders triggered by search
+function refocus(q) {
+  const nq = document.getElementById('q');
+  nq.focus();
+  nq.setSelectionRange(nq.value.length, nq.value.length);
+}
+
+main();
+</script>
+</body>
+</html>
