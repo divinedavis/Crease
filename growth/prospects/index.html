@@ -92,6 +92,8 @@
   .chip.interested { background: var(--live-bg); color: var(--live-fg); }
   .chip.follow_up { background: var(--warn-bg); color: var(--warn-fg); }
   .chip.declined { background: var(--danger-bg); color: var(--danger-fg); }
+  .chip.fs { background: var(--live-bg); color: var(--live-fg); }
+  .chip.ss { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
   .notes-preview { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 2px;
                    overflow-wrap: anywhere; }
 
@@ -119,12 +121,14 @@ const ui = {
   kind: localStorage.canvassKind ?? 'dry_cleaner',
   q: '',
   hideVisited: localStorage.canvassHide === '1',
+  fullOnly: localStorage.canvassFull === '1',
   open: new Set(JSON.parse(localStorage.canvassOpen ?? '[]')),
   expanded: null,           // id of the row whose editor is showing
 };
 const persistUi = () => {
   localStorage.canvassKind = ui.kind;
   localStorage.canvassHide = ui.hideVisited ? '1' : '0';
+  localStorage.canvassFull = ui.fullOnly ? '1' : '0';
   localStorage.canvassOpen = JSON.stringify([...ui.open]);
 };
 
@@ -163,6 +167,7 @@ function renderLogin(err) {
 
 const visible = () => rows.filter((r) =>
   (ui.kind === 'all' || r.kind === ui.kind) &&
+  (!(ui.fullOnly && ui.kind === 'laundromat') || r.full_service === true) &&
   (!ui.hideVisited || !r.visited) &&
   (!ui.q || (r.name + ' ' + (r.address ?? '') + ' ' + r.neighborhood).toLowerCase().includes(ui.q)));
 
@@ -195,6 +200,10 @@ function render() {
         <input id="q" type="search" placeholder="Search name, street, neighborhood" value="${esc(ui.q)}" />
         <label class="toggle"><input id="hidev" type="checkbox" ${ui.hideVisited ? 'checked' : ''} /> Hide visited</label>
       </div>
+      ${ui.kind === 'laundromat' ? `<label class="toggle" style="padding:0 2px">
+        <input id="fullonly" type="checkbox" ${ui.fullOnly ? 'checked' : ''} />
+        Full service only · ${rows.filter((r) => r.kind === 'laundromat' && r.full_service === true).length} confirmed
+      </label>` : ''}
     </div>
     <div id="list">
       ${sorted.length === 0 ? `<div class="empty">Nothing matches.</div>` : sorted.map(([hood, shops]) => {
@@ -221,6 +230,8 @@ function shopRow(r) {
       <div class="name">${esc(r.name)}
         <span class="chip ${r.kind === 'dry_cleaner' ? 'dc' : 'lm'}">${KIND_LABEL[r.kind]}</span>
         ${r.outcome ? `<span class="chip ${r.outcome}">${OUTCOMES.find(([k]) => k === r.outcome)[1]}</span>` : ''}
+        ${r.kind === 'laundromat' && r.full_service === true ? '<span class="chip fs">Full service</span>' : ''}
+        ${r.kind === 'laundromat' && r.full_service === false ? '<span class="chip ss">Self-serve only</span>' : ''}
       </div>
       <div class="meta">${esc(r.address ?? 'No address on file')}${r.zip ? ' · ' + esc(r.zip) : ''}</div>
       ${r.notes && !expanded ? `<div class="notes-preview">${esc(r.notes)}</div>` : ''}
@@ -235,6 +246,10 @@ function shopRow(r) {
         ${OUTCOMES.map(([k, label]) =>
           `<button data-out="${k}" ${r.outcome === k ? 'class="on"' : ''}>${label}</button>`).join('')}
       </div>
+      ${r.kind === 'laundromat' ? `<div class="seg" data-fsseg>
+        <button data-fs="true" ${r.full_service === true ? 'class="on"' : ''}>Full service</button>
+        <button data-fs="false" ${r.full_service === false ? 'class="on"' : ''}>Self-serve only</button>
+      </div>` : ''}
       <textarea data-notes placeholder="Notes — who you spoke to, pricing, objections…">${esc(r.notes ?? '')}</textarea>
       <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${saveText(r)}</div>
     </div>` : ''}
@@ -284,6 +299,8 @@ function wire() {
   const q = document.getElementById('q');
   q.oninput = () => { ui.q = q.value.trim().toLowerCase(); render(); refocus(q); };
   document.getElementById('hidev').onchange = (e) => { ui.hideVisited = e.target.checked; persistUi(); render(); };
+  const fo = document.getElementById('fullonly');
+  if (fo) fo.onchange = (e) => { ui.fullOnly = e.target.checked; persistUi(); render(); };
 
   for (const d of document.querySelectorAll('details.hood')) {
     d.ontoggle = () => {
@@ -316,6 +333,13 @@ function wire() {
       if (!k) return;
       // tapping the active outcome clears it — a mis-tap must be undoable
       save(r, { outcome: r.outcome === k ? null : k }).then(() => render());
+    });
+
+    shopEl.querySelector('[data-fsseg]')?.addEventListener('click', (e) => {
+      const v = e.target.dataset?.fs;
+      if (v === undefined) return;
+      const next = String(r.full_service) === v ? null : v === 'true';
+      save(r, { full_service: next }).then(() => render());
     });
 
     const notes = shopEl.querySelector('[data-notes]');

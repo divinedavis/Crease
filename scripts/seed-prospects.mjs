@@ -28,5 +28,19 @@ for (let i = 0; i < rows.length; i += 100) {
 }
 console.log(`${done} prospects upserted`);
 
+// full_service prefills only where nobody has answered yet. The OSM guess
+// must never overwrite what a canvasser learned at the counter, so it lands
+// exclusively on NULL rows — and is therefore excluded from the upsert above.
+for (const value of [true, false]) {
+  const ids = rows.filter((r) => r.full_service === value).map((r) => r.osm_id);
+  if (!ids.length) continue;
+  const { error } = await db.from('prospects')
+    .update({ full_service: value })
+    .in('osm_id', ids)
+    .is('full_service', null);
+  if (error) throw new Error(error.message);
+}
+console.log('full_service prefilled where unknown');
+
 const { count } = await db.from('prospects').select('*', { count: 'exact', head: true });
 console.log(`${count} total in table`);

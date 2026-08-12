@@ -8,7 +8,8 @@
   "phone": "+1-518-290-3010",
   "lat": 40.686761,
   "lng": -73.966438,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/419366928",
@@ -19,7 +20,8 @@
   "phone": "+1-718-935-9077",
   "lat": 40.689799,
   "lng": -73.993618,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/419368026",
@@ -30,7 +32,8 @@
   "phone": "+1-347-712-3375",
   "lat": 40.690273,
   "lng": -73.995101,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/1177271154",
@@ -41,7 +44,8 @@
   "phone": "+1-718-484-0314",
   "lat": 40.673701,
   "lng": -73.953075,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/1907729896",
@@ -52,7 +56,8 @@
   "phone": null,
   "lat": 40.71248,
   "lng": -73.964832,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2105118499",
@@ -63,7 +68,8 @@
   "phone": "+1-347-365-1026",
   "lat": 40.680218,
   "lng": -73.940539,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2273001280",
@@ -74,7 +80,8 @@
   "phone": null,
   "lat": 40.64705,
   "lng": -73.969465,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "node/2275578132",
@@ -85,7 +92,8 @@
   "phone": null,
   "lat": 40.735781,
   "lng": -73.955013,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/2276412684",
@@ -96,7 +104,8 @@
   "phone": null,
   "lat": 40.717632,
   "lng": -73.945053,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2494055565",
@@ -107,7 +116,8 @@
   "phone": null,
   "lat": 40.682872,
   "lng": -73.99987,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/2494064572",
@@ -118,7 +128,8 @@
   "phone": "+1-718-855-2262",
   "lat": 40.69333,
   "lng": -73.968088,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2494076884",
@@ -129,7 +140,8 @@
   "phone": null,
   "lat": 40.692077,
   "lng": -73.968882,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2494104062",
@@ -140,7 +152,8 @@
   "phone": "+1-718-633-6739",
   "lat": 40.647491,
   "lng": -73.973628,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/2494153083",
@@ -151,7 +164,8 @@
   "phone": "+1-718-875-2193",
   "lat": 40.69507,
   "lng": -73.99405,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2494194621",
@@ -162,7 +176,8 @@
   "phone": null,
   "lat": 40.714293,
   "lng": -73.964784,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2494197765",
@@ -173,7 +188,8 @@
   "phone": "+1-718-643-1635",
   "lat": 40.677717,
   "lng": -73.998303,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2494252059",
@@ -184,7 +200,8 @@
   "phone": null,
   "lat": 40.678817,
   "lng": -73.997447,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2494292463",
@@ -195,7 +212,8 @@
   "phone": null,
   "lat": 40.671552,
   "lng": -73.988006,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2494312805",
@@ -206,7 +224,8 @@
   "phone": "+1-718-624-3721",
   "lat": 40.698593,
   "lng": -73.994129,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2523619621",
@@ -217,7 +236,8 @@
   "phone": "+1-718-858-5833",
   "lat": 40.690762,
   "lng": -73.991664,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2545143714",
@@ -228,7 +248,8 @@
   "phone": null,
   "lat": 40.66723,
   "lng": -73.889048,
-  "neighborhood": "East New York (North)"
+  "neighborhood": "East New York (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/2547733518",
@@ -239,7 +260,8 @@
   "phone": "+1-718-768-6508",
   "lat": 40.661899,
   "lng": -73.993056,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/2547745177",
@@ -250,7 +272,8 @@
   "phone": "+1-347-335-0025",
   "lat": 40.661377,
   "lng": -73.996766,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/2549896906",
@@ -261,7 +284,8 @@
   "phone": "+1-718-643-9300",
   "lat": 40.688189,
   "lng": -73.992933,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2549908127",
@@ -272,7 +296,8 @@
   "phone": "+1-718-697-9091",
   "lat": 40.655396,
   "lng": -73.956509,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/2549972113",
@@ -283,7 +308,8 @@
   "phone": null,
   "lat": 40.684961,
   "lng": -73.999178,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/2549972119",
@@ -294,7 +320,8 @@
   "phone": null,
   "lat": 40.684322,
   "lng": -73.999646,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/2549972135",
@@ -305,7 +332,8 @@
   "phone": null,
   "lat": 40.684281,
   "lng": -73.99947,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2550002268",
@@ -316,7 +344,8 @@
   "phone": "+1-718-625-1438",
   "lat": 40.689655,
   "lng": -73.986181,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2550055994",
@@ -327,7 +356,8 @@
   "phone": "+1-929-719-2960",
   "lat": 40.679536,
   "lng": -73.978184,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2550063515",
@@ -338,7 +368,8 @@
   "phone": "+1-718-858-4848",
   "lat": 40.682722,
   "lng": -73.979716,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2550089888",
@@ -349,7 +380,8 @@
   "phone": "+1-347-335-0300",
   "lat": 40.660176,
   "lng": -73.983677,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/2550092411",
@@ -360,7 +392,8 @@
   "phone": null,
   "lat": 40.66157,
   "lng": -73.982493,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/2550140510",
@@ -371,7 +404,8 @@
   "phone": "+1-718-622-9280",
   "lat": 40.680774,
   "lng": -73.951354,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/2550149676",
@@ -382,7 +416,8 @@
   "phone": "+1-718-857-0082",
   "lat": 40.681386,
   "lng": -73.955563,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2550576208",
@@ -393,7 +428,8 @@
   "phone": "+1-718-499-0469",
   "lat": 40.670429,
   "lng": -73.982154,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/2550576222",
@@ -404,7 +440,8 @@
   "phone": "+1-718-499-0644",
   "lat": 40.670411,
   "lng": -73.985079,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2550581282",
@@ -415,7 +452,8 @@
   "phone": "+1-718-965-1492",
   "lat": 40.667416,
   "lng": -73.984667,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/2550581330",
@@ -426,7 +464,8 @@
   "phone": "+1-718-788-8615",
   "lat": 40.669455,
   "lng": -73.989184,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2552509947",
@@ -437,7 +476,8 @@
   "phone": "+1-718-836-3120",
   "lat": 40.613637,
   "lng": -74.033211,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552542690",
@@ -448,7 +488,8 @@
   "phone": "+1-718-833-0078",
   "lat": 40.616769,
   "lng": -74.033621,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552542737",
@@ -459,7 +500,8 @@
   "phone": "+1-718-748-6603",
   "lat": 40.616556,
   "lng": -74.033712,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": false
  },
  {
   "osm_id": "node/2552623796",
@@ -470,7 +512,8 @@
   "phone": "+1-718-679-0900",
   "lat": 40.627248,
   "lng": -74.029685,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552708662",
@@ -481,7 +524,8 @@
   "phone": "+1-718-745-8418",
   "lat": 40.635132,
   "lng": -74.026713,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552708701",
@@ -492,7 +536,8 @@
   "phone": "+1-718-745-5960",
   "lat": 40.634062,
   "lng": -74.026558,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552720443",
@@ -503,7 +548,8 @@
   "phone": null,
   "lat": 40.633452,
   "lng": -74.027153,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552775387",
@@ -514,7 +560,8 @@
   "phone": "+1-347-226-1397",
   "lat": 40.636137,
   "lng": -74.027005,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552775409",
@@ -525,7 +572,8 @@
   "phone": "+1-718-491-2164",
   "lat": 40.636975,
   "lng": -74.025363,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2552883665",
@@ -536,7 +584,8 @@
   "phone": "+1-718-238-3648",
   "lat": 40.622763,
   "lng": -74.024982,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/2553429438",
@@ -547,7 +596,8 @@
   "phone": "+1-718-332-6187",
   "lat": 40.587442,
   "lng": -73.957915,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": true
  },
  {
   "osm_id": "node/2555510873",
@@ -558,7 +608,8 @@
   "phone": "+1 718-484-7676",
   "lat": 40.586274,
   "lng": -73.971443,
-  "neighborhood": "Gravesend (South)"
+  "neighborhood": "Gravesend (South)",
+  "full_service": true
  },
  {
   "osm_id": "node/2555703389",
@@ -569,7 +620,8 @@
   "phone": "+1-718-975-8669",
   "lat": 40.590944,
   "lng": -73.983668,
-  "neighborhood": "Gravesend (South)"
+  "neighborhood": "Gravesend (South)",
+  "full_service": true
  },
  {
   "osm_id": "node/2561485196",
@@ -580,7 +632,8 @@
   "phone": "+1-718-633-1312",
   "lat": 40.634341,
   "lng": -74.007399,
-  "neighborhood": "Sunset Park (East)-Borough Park (West)"
+  "neighborhood": "Sunset Park (East)-Borough Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2561631116",
@@ -591,7 +644,8 @@
   "phone": null,
   "lat": 40.638736,
   "lng": -74.016723,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/2561662336",
@@ -602,7 +656,8 @@
   "phone": null,
   "lat": 40.638903,
   "lng": -74.016537,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/2561707920",
@@ -613,7 +668,8 @@
   "phone": "+1-718-567-7708",
   "lat": 40.644583,
   "lng": -74.018266,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2561907051",
@@ -624,7 +680,8 @@
   "phone": "+1-718-768-2684",
   "lat": 40.656194,
   "lng": -74.002779,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2561930467",
@@ -635,7 +692,8 @@
   "phone": "+1-646-462-9373",
   "lat": 40.642898,
   "lng": -73.989765,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/2561959529",
@@ -646,7 +704,8 @@
   "phone": "+1-718-484-3995",
   "lat": 40.642166,
   "lng": -73.980559,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/2561979816",
@@ -657,7 +716,8 @@
   "phone": "+1-718-633-2071",
   "lat": 40.644032,
   "lng": -73.976846,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/2561983226",
@@ -668,7 +728,8 @@
   "phone": null,
   "lat": 40.644442,
   "lng": -73.975873,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/2561990026",
@@ -679,7 +740,8 @@
   "phone": null,
   "lat": 40.648361,
   "lng": -73.979133,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2562056235",
@@ -690,7 +752,8 @@
   "phone": "+1-718-965-1456",
   "lat": 40.658676,
   "lng": -73.978294,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2562118654",
@@ -701,7 +764,8 @@
   "phone": "+1-718-768-9393",
   "lat": 40.662728,
   "lng": -73.984855,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2562123845",
@@ -712,7 +776,8 @@
   "phone": null,
   "lat": 40.665055,
   "lng": -73.992956,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/2562129134",
@@ -723,7 +788,8 @@
   "phone": "+1-718-499-2197",
   "lat": 40.668125,
   "lng": -73.990845,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2562129139",
@@ -734,7 +800,8 @@
   "phone": "+1-718-832-5445",
   "lat": 40.667334,
   "lng": -73.991507,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/2562885623",
@@ -745,7 +812,8 @@
   "phone": null,
   "lat": 40.594709,
   "lng": -73.950907,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": true
  },
  {
   "osm_id": "node/2563014064",
@@ -756,7 +824,8 @@
   "phone": null,
   "lat": 40.600042,
   "lng": -73.944222,
-  "neighborhood": "Madison"
+  "neighborhood": "Madison",
+  "full_service": true
  },
  {
   "osm_id": "node/2563014091",
@@ -767,7 +836,8 @@
   "phone": "+1-718-303-3838",
   "lat": 40.602388,
   "lng": -73.942421,
-  "neighborhood": "Madison"
+  "neighborhood": "Madison",
+  "full_service": null
  },
  {
   "osm_id": "node/2563439556",
@@ -778,7 +848,8 @@
   "phone": "+1-718-421-0541",
   "lat": 40.634966,
   "lng": -73.962934,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "node/2564817997",
@@ -789,7 +860,8 @@
   "phone": "+1-718-257-8773",
   "lat": 40.642063,
   "lng": -73.899171,
-  "neighborhood": "Canarsie"
+  "neighborhood": "Canarsie",
+  "full_service": null
  },
  {
   "osm_id": "node/2566613894",
@@ -800,7 +872,8 @@
   "phone": null,
   "lat": 40.660693,
   "lng": -73.950829,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/2566640796",
@@ -811,7 +884,8 @@
   "phone": "+1-917-701-8860",
   "lat": 40.66147,
   "lng": -73.960586,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/2566664985",
@@ -822,7 +896,8 @@
   "phone": null,
   "lat": 40.654563,
   "lng": -73.96165,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": true
  },
  {
   "osm_id": "node/2566664991",
@@ -833,7 +908,8 @@
   "phone": "+1-718-697-9710",
   "lat": 40.654705,
   "lng": -73.959846,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": true
  },
  {
   "osm_id": "node/2566670894",
@@ -844,7 +920,8 @@
   "phone": "+1-347-652-7465",
   "lat": 40.652642,
   "lng": -73.959859,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/2566968409",
@@ -855,7 +932,8 @@
   "phone": "+1-347-405-8838",
   "lat": 40.663382,
   "lng": -73.940131,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/2566968411",
@@ -866,7 +944,8 @@
   "phone": "+1-718-778-0197",
   "lat": 40.663007,
   "lng": -73.942616,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567007480",
@@ -877,7 +956,8 @@
   "phone": "+1-718-773-7413",
   "lat": 40.664045,
   "lng": -73.945263,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/2567049268",
@@ -888,7 +968,8 @@
   "phone": "+1-347-205-3552",
   "lat": 40.665534,
   "lng": -73.951357,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": true
  },
  {
   "osm_id": "node/2567049286",
@@ -899,7 +980,8 @@
   "phone": "+1-718-506-9890",
   "lat": 40.666117,
   "lng": -73.950694,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567052677",
@@ -910,7 +992,8 @@
   "phone": null,
   "lat": 40.666492,
   "lng": -73.950658,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567093835",
@@ -921,7 +1004,8 @@
   "phone": "+1-718-467-6620",
   "lat": 40.670102,
   "lng": -73.958334,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567887286",
@@ -932,7 +1016,8 @@
   "phone": "+1-718-455-2021",
   "lat": 40.687386,
   "lng": -73.932798,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567915751",
@@ -943,7 +1028,8 @@
   "phone": null,
   "lat": 40.686803,
   "lng": -73.944441,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567935919",
@@ -954,7 +1040,8 @@
   "phone": "+1-718-230-1888",
   "lat": 40.686509,
   "lng": -73.947041,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567946943",
@@ -965,7 +1052,8 @@
   "phone": "+1-347-955-4444",
   "lat": 40.689382,
   "lng": -73.951232,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567986493",
@@ -976,7 +1064,8 @@
   "phone": "+1-718-782-2019",
   "lat": 40.693134,
   "lng": -73.946017,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2567989953",
@@ -987,7 +1076,8 @@
   "phone": "+1-718-587-2688",
   "lat": 40.694003,
   "lng": -73.952151,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568119941",
@@ -998,7 +1088,8 @@
   "phone": null,
   "lat": 40.68941,
   "lng": -73.951532,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568142045",
@@ -1009,7 +1100,8 @@
   "phone": "+1-718-624-7261",
   "lat": 40.690892,
   "lng": -73.95665,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568163556",
@@ -1020,7 +1112,8 @@
   "phone": null,
   "lat": 40.694807,
   "lng": -73.953152,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568198198",
@@ -1031,7 +1124,8 @@
   "phone": null,
   "lat": 40.695259,
   "lng": -73.956461,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568260651",
@@ -1042,7 +1136,8 @@
   "phone": null,
   "lat": 40.683389,
   "lng": -73.96713,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/2568310628",
@@ -1053,7 +1148,8 @@
   "phone": null,
   "lat": 40.693499,
   "lng": -73.976285,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/2568576399",
@@ -1064,7 +1160,8 @@
   "phone": null,
   "lat": 40.698245,
   "lng": -73.93424,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568667636",
@@ -1075,7 +1172,8 @@
   "phone": "+1-718-366-2614",
   "lat": 40.70297,
   "lng": -73.925913,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/2568698360",
@@ -1086,7 +1184,8 @@
   "phone": "+1-718-788-5133",
   "lat": 40.663922,
   "lng": -73.980933,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2568710153",
@@ -1097,7 +1196,8 @@
   "phone": "+1-718-369-1511",
   "lat": 40.664698,
   "lng": -73.98029,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/2568772618",
@@ -1108,7 +1208,8 @@
   "phone": "+1 718 768 1034",
   "lat": 40.670287,
   "lng": -73.981873,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2568805404",
@@ -1119,7 +1220,8 @@
   "phone": null,
   "lat": 40.671556,
   "lng": -73.977509,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": false
  },
  {
   "osm_id": "node/2568817534",
@@ -1130,7 +1232,8 @@
   "phone": "+1-718-708-7733",
   "lat": 40.70567,
   "lng": -73.918841,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/2568818362",
@@ -1141,7 +1244,8 @@
   "phone": null,
   "lat": 40.674053,
   "lng": -73.975576,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/2568849030",
@@ -1152,7 +1256,8 @@
   "phone": "+1 718 638 9182",
   "lat": 40.676929,
   "lng": -73.972513,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2568867300",
@@ -1163,7 +1268,8 @@
   "phone": null,
   "lat": 40.671338,
   "lng": -73.957879,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/2572981670",
@@ -1174,7 +1280,8 @@
   "phone": "+1-718-855-8517",
   "lat": 40.685382,
   "lng": -73.976492,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/2572981735",
@@ -1185,7 +1292,8 @@
   "phone": null,
   "lat": 40.686005,
   "lng": -73.974035,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/2701690276",
@@ -1196,7 +1304,8 @@
   "phone": "+1-718-622-8769",
   "lat": 40.676941,
   "lng": -73.969335,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2701913444",
@@ -1207,7 +1316,8 @@
   "phone": "+1-917-893-0214",
   "lat": 40.678779,
   "lng": -73.973401,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/2701925858",
@@ -1218,7 +1328,8 @@
   "phone": "+1 718 230 4659",
   "lat": 40.679314,
   "lng": -73.973788,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2722753684",
@@ -1229,7 +1340,8 @@
   "phone": "+1-718-522-1162",
   "lat": 40.698646,
   "lng": -73.992602,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/2793693008",
@@ -1240,7 +1352,8 @@
   "phone": null,
   "lat": 40.733133,
   "lng": -73.954903,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/2838158957",
@@ -1251,7 +1364,8 @@
   "phone": null,
   "lat": 40.710498,
   "lng": -73.96703,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2838353316",
@@ -1262,7 +1376,8 @@
   "phone": null,
   "lat": 40.706806,
   "lng": -73.953982,
-  "neighborhood": "South Williamsburg"
+  "neighborhood": "South Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2839628092",
@@ -1273,7 +1388,8 @@
   "phone": null,
   "lat": 40.714131,
   "lng": -73.961674,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2839789049",
@@ -1284,7 +1400,8 @@
   "phone": null,
   "lat": 40.713053,
   "lng": -73.941039,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2840985122",
@@ -1295,7 +1412,8 @@
   "phone": null,
   "lat": 40.716766,
   "lng": -73.94454,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2842175070",
@@ -1306,7 +1424,8 @@
   "phone": null,
   "lat": 40.714659,
   "lng": -73.949342,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/2842610378",
@@ -1317,7 +1436,8 @@
   "phone": null,
   "lat": 40.722766,
   "lng": -73.948035,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/2944118831",
@@ -1328,7 +1448,8 @@
   "phone": "+1-718-788-9802",
   "lat": 40.666017,
   "lng": -73.950709,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/3154231929",
@@ -1339,7 +1460,8 @@
   "phone": "+1-718-858-1870",
   "lat": 40.687313,
   "lng": -73.975098,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": true
  },
  {
   "osm_id": "node/3154321079",
@@ -1350,7 +1472,8 @@
   "phone": null,
   "lat": 40.645326,
   "lng": -74.013439,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/4015260294",
@@ -1361,7 +1484,8 @@
   "phone": null,
   "lat": 40.586971,
   "lng": -73.952509,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/4096107215",
@@ -1372,7 +1496,8 @@
   "phone": "+1-718-788-0183",
   "lat": 40.663812,
   "lng": -73.984339,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/4149654068",
@@ -1383,7 +1508,8 @@
   "phone": "+1-718-636-0780",
   "lat": 40.675581,
   "lng": -73.956029,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/4195507597",
@@ -1394,7 +1520,8 @@
   "phone": "+17186091212",
   "lat": 40.729884,
   "lng": -73.950695,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/4316479490",
@@ -1405,7 +1532,8 @@
   "phone": "+1-718-576-3349",
   "lat": 40.688425,
   "lng": -73.988218,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/4414353609",
@@ -1416,7 +1544,8 @@
   "phone": "+1-718-455-4002",
   "lat": 40.683485,
   "lng": -73.943796,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/4491464940",
@@ -1427,7 +1556,8 @@
   "phone": null,
   "lat": 40.700302,
   "lng": -73.916326,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/4528315209",
@@ -1438,7 +1568,8 @@
   "phone": "+1-718-222-8883",
   "lat": 40.679832,
   "lng": -74.010214,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/4745452325",
@@ -1449,7 +1580,8 @@
   "phone": null,
   "lat": 40.648753,
   "lng": -73.900198,
-  "neighborhood": "Canarsie"
+  "neighborhood": "Canarsie",
+  "full_service": null
  },
  {
   "osm_id": "node/4884300642",
@@ -1460,7 +1592,8 @@
   "phone": "+1-718-857-5000",
   "lat": 40.674854,
   "lng": -73.975353,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5003541424",
@@ -1471,7 +1604,8 @@
   "phone": "+1 718-389-6502",
   "lat": 40.725774,
   "lng": -73.941845,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5003588922",
@@ -1482,7 +1616,8 @@
   "phone": "+1 718-963-3190",
   "lat": 40.720331,
   "lng": -73.940588,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5003645421",
@@ -1493,7 +1628,8 @@
   "phone": "+1-718-486-9835",
   "lat": 40.714691,
   "lng": -73.938626,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": true
  },
  {
   "osm_id": "node/5010423221",
@@ -1504,7 +1640,8 @@
   "phone": null,
   "lat": 40.725306,
   "lng": -73.945841,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5054861725",
@@ -1515,7 +1652,8 @@
   "phone": null,
   "lat": 40.732923,
   "lng": -73.954896,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5057358326",
@@ -1526,7 +1664,8 @@
   "phone": "+1-718-475-2055",
   "lat": 40.729252,
   "lng": -73.953724,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": true
  },
  {
   "osm_id": "node/5057358521",
@@ -1537,7 +1676,8 @@
   "phone": null,
   "lat": 40.724038,
   "lng": -73.950814,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5155896221",
@@ -1548,7 +1688,8 @@
   "phone": null,
   "lat": 40.637637,
   "lng": -73.953042,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/5163876844",
@@ -1559,7 +1700,8 @@
   "phone": null,
   "lat": 40.694246,
   "lng": -73.91009,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5163879672",
@@ -1570,7 +1712,8 @@
   "phone": "+1-718-418-5344",
   "lat": 40.694712,
   "lng": -73.910909,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5169552822",
@@ -1581,7 +1724,8 @@
   "phone": null,
   "lat": 40.724319,
   "lng": -73.948537,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5191768761",
@@ -1592,7 +1736,8 @@
   "phone": "+1-718-789-9420",
   "lat": 40.674889,
   "lng": -73.976195,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5206201849",
@@ -1603,7 +1748,8 @@
   "phone": "+1-718-622-8276",
   "lat": 40.693815,
   "lng": -73.961751,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/5209147513",
@@ -1614,7 +1760,8 @@
   "phone": null,
   "lat": 40.618892,
   "lng": -73.925575,
-  "neighborhood": "Flatlands"
+  "neighborhood": "Flatlands",
+  "full_service": null
  },
  {
   "osm_id": "node/5209157329",
@@ -1625,7 +1772,8 @@
   "phone": null,
   "lat": 40.681468,
   "lng": -73.88104,
-  "neighborhood": "Cypress Hills"
+  "neighborhood": "Cypress Hills",
+  "full_service": null
  },
  {
   "osm_id": "node/5209157490",
@@ -1636,7 +1784,8 @@
   "phone": null,
   "lat": 40.681248,
   "lng": -73.880847,
-  "neighborhood": "Cypress Hills"
+  "neighborhood": "Cypress Hills",
+  "full_service": null
  },
  {
   "osm_id": "node/5209292721",
@@ -1647,7 +1796,8 @@
   "phone": null,
   "lat": 40.681364,
   "lng": -73.879188,
-  "neighborhood": "Cypress Hills"
+  "neighborhood": "Cypress Hills",
+  "full_service": null
  },
  {
   "osm_id": "node/5209293939",
@@ -1658,7 +1808,8 @@
   "phone": null,
   "lat": 40.681638,
   "lng": -73.878828,
-  "neighborhood": "Cypress Hills"
+  "neighborhood": "Cypress Hills",
+  "full_service": null
  },
  {
   "osm_id": "node/5215082713",
@@ -1669,7 +1820,8 @@
   "phone": null,
   "lat": 40.643895,
   "lng": -73.94843,
-  "neighborhood": "East Flatbush-Erasmus"
+  "neighborhood": "East Flatbush-Erasmus",
+  "full_service": null
  },
  {
   "osm_id": "node/5216103247",
@@ -1680,7 +1832,8 @@
   "phone": null,
   "lat": 40.666808,
   "lng": -73.876436,
-  "neighborhood": "East New York-New Lots"
+  "neighborhood": "East New York-New Lots",
+  "full_service": null
  },
  {
   "osm_id": "node/5218862264",
@@ -1691,7 +1844,8 @@
   "phone": null,
   "lat": 40.599637,
   "lng": -73.989659,
-  "neighborhood": "Gravesend (West)"
+  "neighborhood": "Gravesend (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5220904079",
@@ -1702,7 +1856,8 @@
   "phone": null,
   "lat": 40.679963,
   "lng": -73.939192,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5222906294",
@@ -1713,7 +1868,8 @@
   "phone": null,
   "lat": 40.635393,
   "lng": -73.995538,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/5229546194",
@@ -1724,7 +1880,8 @@
   "phone": null,
   "lat": 40.635987,
   "lng": -74.000922,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": true
  },
  {
   "osm_id": "node/5333315838",
@@ -1735,7 +1892,8 @@
   "phone": "+1 718 399 0510",
   "lat": 40.672871,
   "lng": -73.976386,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5364425492",
@@ -1746,7 +1904,8 @@
   "phone": "+1-347-789-3579",
   "lat": 40.697859,
   "lng": -73.908447,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5401978045",
@@ -1757,7 +1916,8 @@
   "phone": "+1 718-383-3505",
   "lat": 40.729086,
   "lng": -73.953635,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5402946678",
@@ -1768,7 +1928,8 @@
   "phone": null,
   "lat": 40.610355,
   "lng": -73.953998,
-  "neighborhood": "Madison"
+  "neighborhood": "Madison",
+  "full_service": null
  },
  {
   "osm_id": "node/5482780022",
@@ -1779,7 +1940,8 @@
   "phone": "+1-718-388-1221",
   "lat": 40.718943,
   "lng": -73.959294,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5517079871",
@@ -1790,7 +1952,8 @@
   "phone": "+1-718-857-4141",
   "lat": 40.67257,
   "lng": -73.976637,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5531240169",
@@ -1801,7 +1964,8 @@
   "phone": null,
   "lat": 40.696408,
   "lng": -73.988263,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/5549150579",
@@ -1812,7 +1976,8 @@
   "phone": "+1-718-789-8900",
   "lat": 40.67734,
   "lng": -73.97999,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5550993175",
@@ -1823,7 +1988,8 @@
   "phone": "+1-917-652-4335",
   "lat": 40.701492,
   "lng": -73.914331,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5552776846",
@@ -1834,7 +2000,8 @@
   "phone": null,
   "lat": 40.684349,
   "lng": -73.983977,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/5558007856",
@@ -1845,7 +2012,8 @@
   "phone": null,
   "lat": 40.681247,
   "lng": -73.994037,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/5562952072",
@@ -1856,7 +2024,8 @@
   "phone": null,
   "lat": 40.681399,
   "lng": -73.977254,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5567470398",
@@ -1867,7 +2036,8 @@
   "phone": "+1-718-386-9737",
   "lat": 40.698909,
   "lng": -73.910282,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5571365962",
@@ -1878,7 +2048,8 @@
   "phone": null,
   "lat": 40.694525,
   "lng": -73.906772,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/5593246272",
@@ -1889,7 +2060,8 @@
   "phone": "+1-718-621-9888",
   "lat": 40.617269,
   "lng": -73.99228,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": false
  },
  {
   "osm_id": "node/5594909666",
@@ -1900,7 +2072,8 @@
   "phone": "+1-718-599-1150",
   "lat": 40.711296,
   "lng": -73.945905,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5596262265",
@@ -1911,7 +2084,8 @@
   "phone": "+1-347-365-5852",
   "lat": 40.701599,
   "lng": -73.937663,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5624602914",
@@ -1922,7 +2096,8 @@
   "phone": "+1-718-230-5300",
   "lat": 40.682257,
   "lng": -73.979491,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5627218008",
@@ -1933,7 +2108,8 @@
   "phone": "+1-718-386-8255",
   "lat": 40.70453,
   "lng": -73.919874,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/5627689560",
@@ -1944,7 +2120,8 @@
   "phone": "+1-718-832-8576",
   "lat": 40.672973,
   "lng": -73.98293,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5629134331",
@@ -1955,7 +2132,8 @@
   "phone": "+1 718-573-2268",
   "lat": 40.687122,
   "lng": -73.917564,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/5640353613",
@@ -1966,7 +2144,8 @@
   "phone": "+1-347-774-3004",
   "lat": 40.703842,
   "lng": -73.912752,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/5695227265",
@@ -1977,7 +2156,8 @@
   "phone": "+1 718 638 2699",
   "lat": 40.675044,
   "lng": -73.974618,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5700532148",
@@ -1988,7 +2168,8 @@
   "phone": "+1-718-955-0078",
   "lat": 40.679762,
   "lng": -73.995039,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/5712453221",
@@ -1999,7 +2180,8 @@
   "phone": null,
   "lat": 40.680038,
   "lng": -73.974314,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/5714335363",
@@ -2010,7 +2192,8 @@
   "phone": "+1-718-398-8728",
   "lat": 40.677385,
   "lng": -73.969173,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/5715348581",
@@ -2021,7 +2204,8 @@
   "phone": "+1-718-880-8812",
   "lat": 40.687734,
   "lng": -73.918604,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/5728822229",
@@ -2032,7 +2216,8 @@
   "phone": "+1-718-686-2668",
   "lat": 40.645151,
   "lng": -73.994166,
-  "neighborhood": "Sunset Park (East)-Borough Park (West)"
+  "neighborhood": "Sunset Park (East)-Borough Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5731405478",
@@ -2043,7 +2228,8 @@
   "phone": "+1-347-599-1627",
   "lat": 40.66721,
   "lng": -73.98815,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5734680479",
@@ -2054,7 +2240,8 @@
   "phone": "+1-718-366-1155",
   "lat": 40.704376,
   "lng": -73.93006,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5742155219",
@@ -2065,7 +2252,8 @@
   "phone": null,
   "lat": 40.642934,
   "lng": -73.987629,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/5742156721",
@@ -2076,7 +2264,8 @@
   "phone": null,
   "lat": 40.643926,
   "lng": -73.98853,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/5747281423",
@@ -2087,7 +2276,8 @@
   "phone": null,
   "lat": 40.636126,
   "lng": -73.973994,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/5747287677",
@@ -2098,7 +2288,8 @@
   "phone": null,
   "lat": 40.635401,
   "lng": -73.978254,
-  "neighborhood": "Borough Park"
+  "neighborhood": "Borough Park",
+  "full_service": null
  },
  {
   "osm_id": "node/5747521121",
@@ -2109,7 +2300,8 @@
   "phone": null,
   "lat": 40.695687,
   "lng": -73.908784,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/5747529080",
@@ -2120,7 +2312,8 @@
   "phone": "+1-718-418-0794",
   "lat": 40.695258,
   "lng": -73.908033,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/5747704991",
@@ -2131,7 +2324,8 @@
   "phone": null,
   "lat": 40.672759,
   "lng": -73.962621,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/5751929779",
@@ -2142,7 +2336,8 @@
   "phone": "+1-917-340-1294",
   "lat": 40.703514,
   "lng": -73.931417,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5771336672",
@@ -2153,7 +2348,8 @@
   "phone": "+1-718-788-8688",
   "lat": 40.670764,
   "lng": -73.985203,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5788282987",
@@ -2164,7 +2360,8 @@
   "phone": "+1-347-457-6126",
   "lat": 40.692783,
   "lng": -73.993432,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/5801753784",
@@ -2175,7 +2372,8 @@
   "phone": null,
   "lat": 40.68225,
   "lng": -73.909085,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/5809742299",
@@ -2186,7 +2384,8 @@
   "phone": "+1-718-624-9483",
   "lat": 40.686338,
   "lng": -73.985095,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/5816274212",
@@ -2197,7 +2396,8 @@
   "phone": "+1-718-237-1157",
   "lat": 40.693534,
   "lng": -73.998521,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/5830803203",
@@ -2208,7 +2408,8 @@
   "phone": "+1-718-499-7801",
   "lat": 40.667384,
   "lng": -73.981384,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5837225124",
@@ -2219,7 +2420,8 @@
   "phone": "+1-347-365-6653",
   "lat": 40.679946,
   "lng": -73.968255,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/5838758060",
@@ -2230,7 +2432,8 @@
   "phone": "+1-718-369-1880",
   "lat": 40.665362,
   "lng": -73.982658,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5842501719",
@@ -2241,7 +2444,8 @@
   "phone": "+1-347-294-4140",
   "lat": 40.662477,
   "lng": -73.996255,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/5853859977",
@@ -2252,7 +2456,8 @@
   "phone": "+1 718-256-0418",
   "lat": 40.612773,
   "lng": -74.000308,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/5853969353",
@@ -2263,7 +2468,8 @@
   "phone": "+1-718-232-4523",
   "lat": 40.613556,
   "lng": -73.999905,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/5869731859",
@@ -2274,7 +2480,8 @@
   "phone": "+1-718-788-2321",
   "lat": 40.665731,
   "lng": -73.978772,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/5873943238",
@@ -2285,7 +2492,8 @@
   "phone": null,
   "lat": 40.663664,
   "lng": -73.984077,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5908481637",
@@ -2296,7 +2504,8 @@
   "phone": "+1-718-965-4653",
   "lat": 40.66428,
   "lng": -73.98356,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5910319478",
@@ -2307,7 +2516,8 @@
   "phone": null,
   "lat": 40.661646,
   "lng": -73.985759,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5910448788",
@@ -2318,7 +2528,8 @@
   "phone": "+1-347-938-2190",
   "lat": 40.660448,
   "lng": -73.994562,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5931761585",
@@ -2329,7 +2540,8 @@
   "phone": null,
   "lat": 40.693865,
   "lng": -73.955671,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/5949303611",
@@ -2340,7 +2552,8 @@
   "phone": "+1-718-486-9164",
   "lat": 40.700345,
   "lng": -73.947148,
-  "neighborhood": "South Williamsburg"
+  "neighborhood": "South Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5967865591",
@@ -2351,7 +2564,8 @@
   "phone": "+1-718-875-5579",
   "lat": 40.687077,
   "lng": -73.990069,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": true
  },
  {
   "osm_id": "node/5967865592",
@@ -2362,7 +2576,8 @@
   "phone": null,
   "lat": 40.682122,
   "lng": -73.993724,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/5978556761",
@@ -2373,7 +2588,8 @@
   "phone": null,
   "lat": 40.714198,
   "lng": -73.950124,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/5978558016",
@@ -2384,7 +2600,8 @@
   "phone": null,
   "lat": 40.726947,
   "lng": -73.946769,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/5978792106",
@@ -2395,7 +2612,8 @@
   "phone": null,
   "lat": 40.655041,
   "lng": -73.973581,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/5984018681",
@@ -2406,7 +2624,8 @@
   "phone": null,
   "lat": 40.665232,
   "lng": -73.989394,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/6088650328",
@@ -2417,7 +2636,8 @@
   "phone": "+1-718-783-4669",
   "lat": 40.674294,
   "lng": -73.963272,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/6088775968",
@@ -2428,7 +2648,8 @@
   "phone": "+1-718-783-8888",
   "lat": 40.676443,
   "lng": -73.963688,
-  "neighborhood": "Prospect Heights"
+  "neighborhood": "Prospect Heights",
+  "full_service": true
  },
  {
   "osm_id": "node/6129260343",
@@ -2439,7 +2660,8 @@
   "phone": "+1-347-789-1211",
   "lat": 40.690057,
   "lng": -73.906744,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/6131095126",
@@ -2450,7 +2672,8 @@
   "phone": "+1-718-366-7900",
   "lat": 40.691335,
   "lng": -73.902888,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/6131102183",
@@ -2461,7 +2684,8 @@
   "phone": "+1-718-456-7407",
   "lat": 40.691038,
   "lng": -73.903774,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/6175434117",
@@ -2472,7 +2696,8 @@
   "phone": "+1-718-623-1668",
   "lat": 40.68313,
   "lng": -73.964581,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6221708898",
@@ -2483,7 +2708,8 @@
   "phone": "+1-718-965-4021",
   "lat": 40.663414,
   "lng": -73.991495,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/6238254899",
@@ -2494,7 +2720,8 @@
   "phone": null,
   "lat": 40.676523,
   "lng": -73.983919,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6262516483",
@@ -2505,7 +2732,8 @@
   "phone": "+1-718-236-3777",
   "lat": 40.613003,
   "lng": -73.996585,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/6299824436",
@@ -2516,7 +2744,8 @@
   "phone": "+1-718-499-8677",
   "lat": 40.658642,
   "lng": -73.982093,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/6300062994",
@@ -2527,7 +2756,8 @@
   "phone": null,
   "lat": 40.660047,
   "lng": -73.980462,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": true
  },
  {
   "osm_id": "node/6307037083",
@@ -2538,7 +2768,8 @@
   "phone": "+1-718-855-0608",
   "lat": 40.687575,
   "lng": -73.990038,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6314905331",
@@ -2549,7 +2780,8 @@
   "phone": "+1-718-852-8151",
   "lat": 40.675892,
   "lng": -73.998842,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6327679052",
@@ -2560,7 +2792,8 @@
   "phone": "+1-347-901-9274",
   "lat": 40.672108,
   "lng": -73.9576,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/6341782739",
@@ -2571,7 +2804,8 @@
   "phone": "+1-347-457-5891",
   "lat": 40.683907,
   "lng": -73.989745,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/6341905437",
@@ -2582,7 +2816,8 @@
   "phone": "+1-718-415-3373",
   "lat": 40.686803,
   "lng": -73.990993,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6379855908",
@@ -2593,7 +2828,8 @@
   "phone": "+1-718-855-3600",
   "lat": 40.678138,
   "lng": -73.998089,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6402697497",
@@ -2604,7 +2840,8 @@
   "phone": "+1 347-365-8124",
   "lat": 40.693765,
   "lng": -73.923317,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/6415057482",
@@ -2615,7 +2852,8 @@
   "phone": null,
   "lat": 40.620076,
   "lng": -73.993158,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/6416865316",
@@ -2626,7 +2864,8 @@
   "phone": "+1-718-734-2223",
   "lat": 40.659692,
   "lng": -73.981156,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/6432875812",
@@ -2637,7 +2876,8 @@
   "phone": "+1-718-858-8888",
   "lat": 40.677358,
   "lng": -73.994212,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6432938291",
@@ -2648,7 +2888,8 @@
   "phone": null,
   "lat": 40.676388,
   "lng": -73.998942,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/6446722306",
@@ -2659,7 +2900,8 @@
   "phone": "+1-718-858-4853",
   "lat": 40.684029,
   "lng": -74.002113,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "node/6448401428",
@@ -2670,7 +2912,8 @@
   "phone": "+1-718-522-0001",
   "lat": 40.686349,
   "lng": -73.994146,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6517040646",
@@ -2681,7 +2924,8 @@
   "phone": "+1-347-587-7090",
   "lat": 40.574577,
   "lng": -73.988442,
-  "neighborhood": "Coney Island-Sea Gate"
+  "neighborhood": "Coney Island-Sea Gate",
+  "full_service": null
  },
  {
   "osm_id": "node/6545230131",
@@ -2692,7 +2936,8 @@
   "phone": null,
   "lat": 40.685115,
   "lng": -74.002494,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/6639135309",
@@ -2703,7 +2948,8 @@
   "phone": "+1-718-855-1122",
   "lat": 40.688365,
   "lng": -73.984866,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6680340131",
@@ -2714,7 +2960,8 @@
   "phone": "+1-718-576-3247",
   "lat": 40.687722,
   "lng": -73.984408,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6833276572",
@@ -2725,7 +2972,8 @@
   "phone": "+1-718-622-4271",
   "lat": 40.68152,
   "lng": -73.95822,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/6876080095",
@@ -2736,7 +2984,8 @@
   "phone": null,
   "lat": 40.687524,
   "lng": -73.96657,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": true
  },
  {
   "osm_id": "node/6876080096",
@@ -2747,7 +2996,8 @@
   "phone": "+1-718-789-9737",
   "lat": 40.687603,
   "lng": -73.966584,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/6876131138",
@@ -2758,7 +3008,8 @@
   "phone": "+1-718-622-5762",
   "lat": 40.690628,
   "lng": -73.958935,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/6883693022",
@@ -2769,7 +3020,8 @@
   "phone": "+1-718-403-9300",
   "lat": 40.69128,
   "lng": -73.990844,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/6925470658",
@@ -2780,7 +3032,8 @@
   "phone": null,
   "lat": 40.640936,
   "lng": -74.007253,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/6943222787",
@@ -2791,7 +3044,8 @@
   "phone": "+1-718-771-2023",
   "lat": 40.672855,
   "lng": -73.950383,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/6983738235",
@@ -2802,7 +3056,8 @@
   "phone": "+1-718-768-0606",
   "lat": 40.656562,
   "lng": -74.001764,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/7004691013",
@@ -2813,7 +3068,8 @@
   "phone": null,
   "lat": 40.660881,
   "lng": -73.961606,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/7040469883",
@@ -2824,7 +3080,8 @@
   "phone": null,
   "lat": 40.730379,
   "lng": -73.95446,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/7057069079",
@@ -2835,7 +3092,8 @@
   "phone": null,
   "lat": 40.659753,
   "lng": -73.999078,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/7126269995",
@@ -2846,7 +3104,8 @@
   "phone": null,
   "lat": 40.698748,
   "lng": -73.910307,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/7126797741",
@@ -2857,7 +3116,8 @@
   "phone": "+1-718-567-7085",
   "lat": 40.640081,
   "lng": -74.019546,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/7129629270",
@@ -2868,7 +3128,8 @@
   "phone": "+1-347-889-7800",
   "lat": 40.688012,
   "lng": -73.986982,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": true
  },
  {
   "osm_id": "node/7129638753",
@@ -2879,7 +3140,8 @@
   "phone": "+1-347-355-0656",
   "lat": 40.687489,
   "lng": -73.993264,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/7424179946",
@@ -2890,7 +3152,8 @@
   "phone": null,
   "lat": 40.723044,
   "lng": -73.945547,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/7659102036",
@@ -2901,7 +3164,8 @@
   "phone": null,
   "lat": 40.636233,
   "lng": -74.009482,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/8220518833",
@@ -2912,7 +3176,8 @@
   "phone": "+1-718-857-6018",
   "lat": 40.673284,
   "lng": -73.953936,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/8244029724",
@@ -2923,7 +3188,8 @@
   "phone": "+1-718-675 5656",
   "lat": 40.598872,
   "lng": -73.954792,
-  "neighborhood": "Madison"
+  "neighborhood": "Madison",
+  "full_service": true
  },
  {
   "osm_id": "node/8284985200",
@@ -2934,7 +3200,8 @@
   "phone": null,
   "lat": 40.648128,
   "lng": -73.979771,
-  "neighborhood": "Windsor Terrace-South Slope"
+  "neighborhood": "Windsor Terrace-South Slope",
+  "full_service": null
  },
  {
   "osm_id": "node/8287649391",
@@ -2945,7 +3212,8 @@
   "phone": null,
   "lat": 40.644654,
   "lng": -74.00068,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": true
  },
  {
   "osm_id": "node/8467329874",
@@ -2956,7 +3224,8 @@
   "phone": null,
   "lat": 40.694308,
   "lng": -73.918815,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/8492099516",
@@ -2967,7 +3236,8 @@
   "phone": "+1-718-237-0093",
   "lat": 40.684471,
   "lng": -73.995057,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/8592787179",
@@ -2978,7 +3248,8 @@
   "phone": null,
   "lat": 40.648184,
   "lng": -74.007405,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/8707098287",
@@ -2989,7 +3260,8 @@
   "phone": null,
   "lat": 40.675886,
   "lng": -73.94176,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/8713314335",
@@ -3000,7 +3272,8 @@
   "phone": "+1-718-435-1901",
   "lat": 40.645513,
   "lng": -73.973393,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": true
  },
  {
   "osm_id": "node/8713314336",
@@ -3011,7 +3284,8 @@
   "phone": "+1-718-438-7806",
   "lat": 40.645673,
   "lng": -73.972898,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/8977691934",
@@ -3022,7 +3296,8 @@
   "phone": null,
   "lat": 40.697134,
   "lng": -73.99303,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/8981032232",
@@ -3033,7 +3308,8 @@
   "phone": "+1-718-238-6060",
   "lat": 40.616109,
   "lng": -74.031623,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "node/8983987387",
@@ -3044,7 +3320,8 @@
   "phone": "+1-347-361-1530",
   "lat": 40.650255,
   "lng": -74.005454,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9088704190",
@@ -3055,7 +3332,8 @@
   "phone": "+1-718-256-0092",
   "lat": 40.617811,
   "lng": -74.002604,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/9088714535",
@@ -3066,7 +3344,8 @@
   "phone": "+1-718-331-7979",
   "lat": 40.620911,
   "lng": -74.006594,
-  "neighborhood": "Dyker Heights"
+  "neighborhood": "Dyker Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9123093704",
@@ -3077,7 +3356,8 @@
   "phone": "+1-718-875-1590",
   "lat": 40.694487,
   "lng": -73.993717,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9127978825",
@@ -3088,7 +3368,8 @@
   "phone": "+1-718-439-1272",
   "lat": 40.636427,
   "lng": -74.022555,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/9130653631",
@@ -3099,7 +3380,8 @@
   "phone": "+1-718-751-0303",
   "lat": 40.691511,
   "lng": -73.985456,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/9133633995",
@@ -3110,7 +3392,8 @@
   "phone": "+1-718-238-8600",
   "lat": 40.629961,
   "lng": -74.015532,
-  "neighborhood": "Dyker Heights"
+  "neighborhood": "Dyker Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9133661433",
@@ -3121,7 +3404,8 @@
   "phone": null,
   "lat": 40.6301,
   "lng": -74.014949,
-  "neighborhood": "Dyker Heights"
+  "neighborhood": "Dyker Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9143230748",
@@ -3132,7 +3416,8 @@
   "phone": "+1-347-492-7058",
   "lat": 40.6181,
   "lng": -73.99948,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/9143273047",
@@ -3143,7 +3428,8 @@
   "phone": null,
   "lat": 40.611183,
   "lng": -74.009529,
-  "neighborhood": "Bath Beach"
+  "neighborhood": "Bath Beach",
+  "full_service": true
  },
  {
   "osm_id": "node/9143285638",
@@ -3154,7 +3440,8 @@
   "phone": null,
   "lat": 40.647373,
   "lng": -74.015345,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9163473291",
@@ -3165,7 +3452,8 @@
   "phone": "+1-347-275-7060",
   "lat": 40.610006,
   "lng": -74.00194,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/9163473296",
@@ -3176,7 +3464,8 @@
   "phone": "+1-718-259-8731",
   "lat": 40.60915,
   "lng": -74.001478,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/9212791130",
@@ -3187,7 +3476,8 @@
   "phone": "+1-718-857-9537",
   "lat": 40.690607,
   "lng": -73.959113,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9224567147",
@@ -3198,7 +3488,8 @@
   "phone": null,
   "lat": 40.703989,
   "lng": -73.941371,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/9251781106",
@@ -3209,7 +3500,8 @@
   "phone": null,
   "lat": 40.683709,
   "lng": -73.911575,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/9290899130",
@@ -3220,7 +3512,8 @@
   "phone": "+1-718-735-3545",
   "lat": 40.66818,
   "lng": -73.958709,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/9291191734",
@@ -3231,7 +3524,8 @@
   "phone": null,
   "lat": 40.667715,
   "lng": -73.950862,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/9330613461",
@@ -3242,7 +3536,8 @@
   "phone": "+1-718-624-6518",
   "lat": 40.695134,
   "lng": -73.995053,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9419291804",
@@ -3253,7 +3548,8 @@
   "phone": null,
   "lat": 40.666273,
   "lng": -73.953773,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/9429324278",
@@ -3264,7 +3560,8 @@
   "phone": null,
   "lat": 40.669074,
   "lng": -73.958905,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/9431874768",
@@ -3275,7 +3572,8 @@
   "phone": "+1-917-909-0306",
   "lat": 40.641974,
   "lng": -74.017561,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9431945824",
@@ -3286,7 +3584,8 @@
   "phone": null,
   "lat": 40.642026,
   "lng": -74.016875,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/9432015994",
@@ -3297,7 +3596,8 @@
   "phone": null,
   "lat": 40.643332,
   "lng": -74.015516,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/9432015995",
@@ -3308,7 +3608,8 @@
   "phone": "+1-718-492-2804",
   "lat": 40.643534,
   "lng": -74.015954,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9432106582",
@@ -3319,7 +3620,8 @@
   "phone": null,
   "lat": 40.644647,
   "lng": -74.014794,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9501239471",
@@ -3330,7 +3632,8 @@
   "phone": null,
   "lat": 40.65087,
   "lng": -74.004532,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9511990473",
@@ -3341,7 +3644,8 @@
   "phone": null,
   "lat": 40.68788,
   "lng": -73.954626,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9525654464",
@@ -3352,7 +3656,8 @@
   "phone": null,
   "lat": 40.695196,
   "lng": -73.996285,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/9537753226",
@@ -3363,7 +3668,8 @@
   "phone": "+1-718-576-3522",
   "lat": 40.65093,
   "lng": -74.004037,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/9537836404",
@@ -3374,7 +3680,8 @@
   "phone": "+1-718-916-0620",
   "lat": 40.646527,
   "lng": -74.00943,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9538436274",
@@ -3385,7 +3692,8 @@
   "phone": "+1-718-439-5121",
   "lat": 40.64113,
   "lng": -74.014801,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9543799964",
@@ -3396,7 +3704,8 @@
   "phone": null,
   "lat": 40.654465,
   "lng": -73.956435,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/9553127965",
@@ -3407,7 +3716,8 @@
   "phone": null,
   "lat": 40.581688,
   "lng": -73.962091,
-  "neighborhood": "Brighton Beach"
+  "neighborhood": "Brighton Beach",
+  "full_service": true
  },
  {
   "osm_id": "node/9588431428",
@@ -3418,7 +3728,8 @@
   "phone": "+1-929-255-5958",
   "lat": 40.695788,
   "lng": -73.944543,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9621641143",
@@ -3429,7 +3740,8 @@
   "phone": null,
   "lat": 40.687505,
   "lng": -73.950846,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9622073536",
@@ -3440,7 +3752,8 @@
   "phone": "+1-845-684-3185",
   "lat": 40.691887,
   "lng": -73.942883,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9622409695",
@@ -3451,7 +3764,8 @@
   "phone": null,
   "lat": 40.695416,
   "lng": -73.94067,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/9624847429",
@@ -3462,7 +3776,8 @@
   "phone": null,
   "lat": 40.714197,
   "lng": -73.950275,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/9630360122",
@@ -3473,7 +3788,8 @@
   "phone": null,
   "lat": 40.695119,
   "lng": -73.983063,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/9715918354",
@@ -3484,7 +3800,8 @@
   "phone": "+1-718-439-6257",
   "lat": 40.640894,
   "lng": -74.018056,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/9716735389",
@@ -3495,7 +3812,8 @@
   "phone": "+1 347-254-6020",
   "lat": 40.580323,
   "lng": -73.967087,
-  "neighborhood": "Brighton Beach"
+  "neighborhood": "Brighton Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/9725125212",
@@ -3506,7 +3824,8 @@
   "phone": "+1-718-921-5100",
   "lat": 40.626595,
   "lng": -74.029961,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/9738560325",
@@ -3517,7 +3836,8 @@
   "phone": "+1-718-853-5800",
   "lat": 40.642651,
   "lng": -73.980158,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/9740077036",
@@ -3528,7 +3848,8 @@
   "phone": null,
   "lat": 40.642345,
   "lng": -73.979566,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "node/9756124142",
@@ -3539,7 +3860,8 @@
   "phone": null,
   "lat": 40.660556,
   "lng": -73.912475,
-  "neighborhood": "Brownsville"
+  "neighborhood": "Brownsville",
+  "full_service": null
  },
  {
   "osm_id": "node/9765590690",
@@ -3550,7 +3872,8 @@
   "phone": null,
   "lat": 40.688411,
   "lng": -73.915829,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/9765598828",
@@ -3561,7 +3884,8 @@
   "phone": null,
   "lat": 40.644544,
   "lng": -74.018674,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/9777603035",
@@ -3572,7 +3896,8 @@
   "phone": "+1-718-745-1177",
   "lat": 40.637472,
   "lng": -74.032011,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/9777993190",
@@ -3583,7 +3908,8 @@
   "phone": null,
   "lat": 40.686947,
   "lng": -73.923684,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/9806753192",
@@ -3594,7 +3920,8 @@
   "phone": "+1-929-337-6317",
   "lat": 40.696294,
   "lng": -73.972788,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/9811608359",
@@ -3605,7 +3932,8 @@
   "phone": "+1-718-222-9958",
   "lat": 40.702611,
   "lng": -73.989281,
-  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill"
+  "neighborhood": "Downtown Brooklyn-DUMBO-Boerum Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/9826432414",
@@ -3616,7 +3944,8 @@
   "phone": "+1-718-745-0089",
   "lat": 40.625523,
   "lng": -74.024077,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/9839789956",
@@ -3627,7 +3956,8 @@
   "phone": null,
   "lat": 40.619038,
   "lng": -74.032687,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/9842767181",
@@ -3638,7 +3968,8 @@
   "phone": null,
   "lat": 40.614166,
   "lng": -74.006889,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/9917646831",
@@ -3649,7 +3980,8 @@
   "phone": null,
   "lat": 40.647097,
   "lng": -74.007777,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/9951334350",
@@ -3660,7 +3992,8 @@
   "phone": null,
   "lat": 40.686058,
   "lng": -73.915746,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/10155740439",
@@ -3671,7 +4004,8 @@
   "phone": null,
   "lat": 40.686522,
   "lng": -73.920885,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/10157971501",
@@ -3682,7 +4016,8 @@
   "phone": "+1-718-581-9008",
   "lat": 40.649955,
   "lng": -74.009502,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10157971502",
@@ -3693,7 +4028,8 @@
   "phone": null,
   "lat": 40.651045,
   "lng": -74.007491,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/10163808181",
@@ -3704,7 +4040,8 @@
   "phone": null,
   "lat": 40.646884,
   "lng": -74.012452,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10179186548",
@@ -3715,7 +4052,8 @@
   "phone": "+1-718-604-3165",
   "lat": 40.677795,
   "lng": -73.949912,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/10198298533",
@@ -3726,7 +4064,8 @@
   "phone": null,
   "lat": 40.648465,
   "lng": -74.010193,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10198368954",
@@ -3737,7 +4076,8 @@
   "phone": null,
   "lat": 40.634327,
   "lng": -74.023861,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "node/10200492337",
@@ -3748,7 +4088,8 @@
   "phone": null,
   "lat": 40.686876,
   "lng": -73.913099,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/10200492343",
@@ -3759,7 +4100,8 @@
   "phone": null,
   "lat": 40.684878,
   "lng": -73.914233,
-  "neighborhood": "Ocean Hill"
+  "neighborhood": "Ocean Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/10202100376",
@@ -3770,7 +4112,8 @@
   "phone": "+1 718-443-0610",
   "lat": 40.686264,
   "lng": -73.929566,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/10202924640",
@@ -3781,7 +4124,8 @@
   "phone": "+1-718-836-8383",
   "lat": 40.626146,
   "lng": -74.030147,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "node/10234303002",
@@ -3792,7 +4136,8 @@
   "phone": null,
   "lat": 40.697454,
   "lng": -73.993368,
-  "neighborhood": "Brooklyn Heights"
+  "neighborhood": "Brooklyn Heights",
+  "full_service": null
  },
  {
   "osm_id": "node/10241108401",
@@ -3803,7 +4148,8 @@
   "phone": null,
   "lat": 40.647374,
   "lng": -74.011947,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10241224623",
@@ -3814,7 +4160,8 @@
   "phone": null,
   "lat": 40.684663,
   "lng": -73.926068,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/10245411707",
@@ -3825,7 +4172,8 @@
   "phone": "+1-646-339-4722",
   "lat": 40.649719,
   "lng": -74.006118,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/10247709059",
@@ -3836,7 +4184,8 @@
   "phone": null,
   "lat": 40.656926,
   "lng": -73.959993,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10247709070",
@@ -3847,7 +4196,8 @@
   "phone": null,
   "lat": 40.65974,
   "lng": -73.960767,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10247751968",
@@ -3858,7 +4208,8 @@
   "phone": "+1-718-857-7200",
   "lat": 40.659858,
   "lng": -73.960415,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10294003831",
@@ -3869,7 +4220,8 @@
   "phone": null,
   "lat": 40.649029,
   "lng": -73.963794,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": true
  },
  {
   "osm_id": "node/10294475312",
@@ -3880,7 +4232,8 @@
   "phone": null,
   "lat": 40.65631,
   "lng": -73.959829,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10315606399",
@@ -3891,7 +4244,8 @@
   "phone": "+1-917-637-0849",
   "lat": 40.658514,
   "lng": -73.960306,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10553146806",
@@ -3902,7 +4256,8 @@
   "phone": "+1-718-284-2444",
   "lat": 40.657277,
   "lng": -73.960435,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/10553751075",
@@ -3913,7 +4268,8 @@
   "phone": null,
   "lat": 40.65498,
   "lng": -73.961202,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/10563636926",
@@ -3924,7 +4280,8 @@
   "phone": "+1-718-703-6360",
   "lat": 40.653106,
   "lng": -73.958766,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/10563636936",
@@ -3935,7 +4292,8 @@
   "phone": null,
   "lat": 40.654095,
   "lng": -73.959375,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/10594756152",
@@ -3946,7 +4304,8 @@
   "phone": null,
   "lat": 40.682624,
   "lng": -73.953587,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10611901523",
@@ -3957,7 +4316,8 @@
   "phone": "+1-718-875-0615",
   "lat": 40.693241,
   "lng": -73.969447,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/10617132597",
@@ -3968,7 +4328,8 @@
   "phone": null,
   "lat": 40.685956,
   "lng": -73.944276,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10625160370",
@@ -3979,7 +4340,8 @@
   "phone": "+1-347-761-9797",
   "lat": 40.675405,
   "lng": -73.941483,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": true
  },
  {
   "osm_id": "node/10653350270",
@@ -3990,7 +4352,8 @@
   "phone": "+1-718-377-3132",
   "lat": 40.618223,
   "lng": -73.954768,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": true
  },
  {
   "osm_id": "node/10653350272",
@@ -4001,7 +4364,8 @@
   "phone": "+1-718-951-7366",
   "lat": 40.618328,
   "lng": -73.954788,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": null
  },
  {
   "osm_id": "node/10653350278",
@@ -4012,7 +4376,8 @@
   "phone": "+1-718-253-4540",
   "lat": 40.618592,
   "lng": -73.955883,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": null
  },
  {
   "osm_id": "node/10677077422",
@@ -4023,7 +4388,8 @@
   "phone": null,
   "lat": 40.634672,
   "lng": -74.020705,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10678817689",
@@ -4034,7 +4400,8 @@
   "phone": "+1-347-853-5023",
   "lat": 40.64192,
   "lng": -74.013423,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/10679392997",
@@ -4045,7 +4412,8 @@
   "phone": "+1-718-492-7888",
   "lat": 40.641477,
   "lng": -74.014694,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10712959078",
@@ -4056,7 +4424,8 @@
   "phone": null,
   "lat": 40.640147,
   "lng": -74.015272,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/10712959087",
@@ -4067,7 +4436,8 @@
   "phone": "+1-718-610-9947",
   "lat": 40.643555,
   "lng": -74.01172,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": true
  },
  {
   "osm_id": "node/10713086854",
@@ -4078,7 +4448,8 @@
   "phone": null,
   "lat": 40.637878,
   "lng": -74.017625,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": true
  },
  {
   "osm_id": "node/10713086874",
@@ -4089,7 +4460,8 @@
   "phone": "+1-718-439-5784",
   "lat": 40.638807,
   "lng": -74.017085,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": true
  },
  {
   "osm_id": "node/10771836084",
@@ -4100,7 +4472,8 @@
   "phone": "+1-718-333-5728",
   "lat": 40.632501,
   "lng": -74.021582,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10792957085",
@@ -4111,7 +4484,8 @@
   "phone": "+1 718-484-7388",
   "lat": 40.597638,
   "lng": -73.986338,
-  "neighborhood": "Gravesend (West)"
+  "neighborhood": "Gravesend (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/10797317354",
@@ -4122,7 +4496,8 @@
   "phone": null,
   "lat": 40.631451,
   "lng": -74.021666,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10797371349",
@@ -4133,7 +4508,8 @@
   "phone": null,
   "lat": 40.630556,
   "lng": -74.022366,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10797403544",
@@ -4144,7 +4520,8 @@
   "phone": "+1-347-497-4325",
   "lat": 40.629823,
   "lng": -74.022676,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10799500241",
@@ -4155,7 +4532,8 @@
   "phone": null,
   "lat": 40.623941,
   "lng": -74.025077,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/10803109656",
@@ -4166,7 +4544,8 @@
   "phone": null,
   "lat": 40.698734,
   "lng": -73.935136,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10803242911",
@@ -4177,7 +4556,8 @@
   "phone": null,
   "lat": 40.688802,
   "lng": -73.942268,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/10822653419",
@@ -4188,7 +4568,8 @@
   "phone": null,
   "lat": 40.628392,
   "lng": -74.022919,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "node/10835906435",
@@ -4199,7 +4580,8 @@
   "phone": "+1-718-388-1877",
   "lat": 40.717507,
   "lng": -73.959943,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/10916619470",
@@ -4210,7 +4592,8 @@
   "phone": "+1-929-295-4953",
   "lat": 40.649846,
   "lng": -73.960755,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": false
  },
  {
   "osm_id": "node/10937781627",
@@ -4221,7 +4604,8 @@
   "phone": "+1-718-333-5554",
   "lat": 40.618099,
   "lng": -74.029481,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "node/10998355801",
@@ -4232,7 +4616,8 @@
   "phone": "+1-718-483-3695",
   "lat": 40.677826,
   "lng": -73.949603,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/11003412885",
@@ -4243,7 +4628,8 @@
   "phone": "+1-718-287-8144",
   "lat": 40.649756,
   "lng": -73.96188,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/11003443955",
@@ -4254,7 +4640,8 @@
   "phone": "+1-718-693-6396",
   "lat": 40.649905,
   "lng": -73.963033,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "node/11014267020",
@@ -4265,7 +4652,8 @@
   "phone": "+1 646-637-1663",
   "lat": 40.61737,
   "lng": -73.985179,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/11062098144",
@@ -4276,7 +4664,8 @@
   "phone": null,
   "lat": 40.676256,
   "lng": -74.004847,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": null
  },
  {
   "osm_id": "node/11073197711",
@@ -4287,7 +4676,8 @@
   "phone": null,
   "lat": 40.69211,
   "lng": -73.919717,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/11074051846",
@@ -4298,7 +4688,8 @@
   "phone": "+1 718-743-8639",
   "lat": 40.57733,
   "lng": -73.952785,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/11085622303",
@@ -4309,7 +4700,8 @@
   "phone": null,
   "lat": 40.687235,
   "lng": -73.923737,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/11092999017",
@@ -4320,7 +4712,8 @@
   "phone": null,
   "lat": 40.633415,
   "lng": -73.967293,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "node/11176643089",
@@ -4331,7 +4724,8 @@
   "phone": "+1-718-604-0170",
   "lat": 40.668116,
   "lng": -73.922418,
-  "neighborhood": "Ocean Hill"
+  "neighborhood": "Ocean Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/11359031128",
@@ -4342,7 +4736,8 @@
   "phone": "+1 917-302-3315",
   "lat": 40.598562,
   "lng": -73.957734,
-  "neighborhood": "Gravesend (East)-Homecrest"
+  "neighborhood": "Gravesend (East)-Homecrest",
+  "full_service": null
  },
  {
   "osm_id": "node/11423769877",
@@ -4353,7 +4748,8 @@
   "phone": null,
   "lat": 40.660541,
   "lng": -73.9306,
-  "neighborhood": "East Flatbush-Rugby"
+  "neighborhood": "East Flatbush-Rugby",
+  "full_service": null
  },
  {
   "osm_id": "node/11480676610",
@@ -4364,7 +4760,8 @@
   "phone": "+1-718-680-2948",
   "lat": 40.634551,
   "lng": -74.026354,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/11480683219",
@@ -4375,7 +4772,8 @@
   "phone": "+1-718-333-5728",
   "lat": 40.63413,
   "lng": -74.022205,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/11480683226",
@@ -4386,7 +4784,8 @@
   "phone": "+1-718-921-3343",
   "lat": 40.63422,
   "lng": -74.023471,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/11590098381",
@@ -4397,7 +4796,8 @@
   "phone": "+1-347-768-0838",
   "lat": 40.640039,
   "lng": -73.955398,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/11590098390",
@@ -4408,7 +4808,8 @@
   "phone": "+1-718-856-0791",
   "lat": 40.639787,
   "lng": -73.955145,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/11590098391",
@@ -4419,7 +4820,8 @@
   "phone": null,
   "lat": 40.639959,
   "lng": -73.955319,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/11590105568",
@@ -4430,7 +4832,8 @@
   "phone": "+1-718-676-0829",
   "lat": 40.641928,
   "lng": -73.957262,
-  "neighborhood": "Flatbush"
+  "neighborhood": "Flatbush",
+  "full_service": null
  },
  {
   "osm_id": "node/11602510497",
@@ -4441,7 +4844,8 @@
   "phone": "+1-718-336-3499",
   "lat": 40.594452,
   "lng": -73.957828,
-  "neighborhood": "Gravesend (East)-Homecrest"
+  "neighborhood": "Gravesend (East)-Homecrest",
+  "full_service": true
  },
  {
   "osm_id": "node/11606320858",
@@ -4452,7 +4856,8 @@
   "phone": null,
   "lat": 40.59409,
   "lng": -73.958452,
-  "neighborhood": "Gravesend (East)-Homecrest"
+  "neighborhood": "Gravesend (East)-Homecrest",
+  "full_service": null
  },
  {
   "osm_id": "node/11606320866",
@@ -4463,7 +4868,8 @@
   "phone": null,
   "lat": 40.599526,
   "lng": -73.948926,
-  "neighborhood": "Madison"
+  "neighborhood": "Madison",
+  "full_service": null
  },
  {
   "osm_id": "node/11633139400",
@@ -4474,7 +4880,8 @@
   "phone": "+1-718-647-7346",
   "lat": 40.672404,
   "lng": -73.875381,
-  "neighborhood": "East New York (North)"
+  "neighborhood": "East New York (North)",
+  "full_service": null
  },
  {
   "osm_id": "node/11776251816",
@@ -4485,7 +4892,8 @@
   "phone": null,
   "lat": 40.620931,
   "lng": -74.032268,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/11781504110",
@@ -4496,7 +4904,8 @@
   "phone": null,
   "lat": 40.683933,
   "lng": -73.93241,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/11788072989",
@@ -4507,7 +4916,8 @@
   "phone": "+1-718-342-7155",
   "lat": 40.660463,
   "lng": -73.908131,
-  "neighborhood": "Brownsville"
+  "neighborhood": "Brownsville",
+  "full_service": null
  },
  {
   "osm_id": "node/11847853925",
@@ -4518,7 +4928,8 @@
   "phone": null,
   "lat": 40.684214,
   "lng": -73.926179,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/11861135670",
@@ -4529,7 +4940,8 @@
   "phone": "+1-347-789-6777",
   "lat": 40.687481,
   "lng": -73.906285,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": true
  },
  {
   "osm_id": "node/11867511697",
@@ -4540,7 +4952,8 @@
   "phone": "+1 718-333-1921",
   "lat": 40.591434,
   "lng": -73.992094,
-  "neighborhood": "Gravesend (West)"
+  "neighborhood": "Gravesend (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/11868331284",
@@ -4551,7 +4964,8 @@
   "phone": "+1-718-383-0718",
   "lat": 40.729922,
   "lng": -73.959424,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/11931618255",
@@ -4562,7 +4976,8 @@
   "phone": "+1 718-648-7380",
   "lat": 40.577147,
   "lng": -73.962804,
-  "neighborhood": "Brighton Beach"
+  "neighborhood": "Brighton Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/11943421448",
@@ -4573,7 +4988,8 @@
   "phone": null,
   "lat": 40.681005,
   "lng": -73.922172,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/11984378532",
@@ -4584,7 +5000,8 @@
   "phone": "+1-718-256-1388",
   "lat": 40.621215,
   "lng": -73.988276,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/12069971601",
@@ -4595,7 +5012,8 @@
   "phone": "+1-718-434-6288",
   "lat": 40.629985,
   "lng": -73.960898,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": true
  },
  {
   "osm_id": "node/12070008501",
@@ -4606,7 +5024,8 @@
   "phone": null,
   "lat": 40.629828,
   "lng": -73.962128,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": false
  },
  {
   "osm_id": "node/12077630980",
@@ -4617,7 +5036,8 @@
   "phone": null,
   "lat": 40.689862,
   "lng": -73.914479,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/12120374707",
@@ -4628,7 +5048,8 @@
   "phone": "+1-929-888-6927",
   "lat": 40.686455,
   "lng": -73.975163,
-  "neighborhood": "Fort Greene"
+  "neighborhood": "Fort Greene",
+  "full_service": null
  },
  {
   "osm_id": "node/12194824928",
@@ -4639,7 +5060,8 @@
   "phone": null,
   "lat": 40.665781,
   "lng": -73.953818,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": null
  },
  {
   "osm_id": "node/12251081132",
@@ -4650,7 +5072,8 @@
   "phone": null,
   "lat": 40.623899,
   "lng": -74.030713,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/12327651412",
@@ -4661,7 +5084,8 @@
   "phone": null,
   "lat": 40.690122,
   "lng": -73.930657,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/12360441523",
@@ -4672,7 +5096,8 @@
   "phone": "+1-718-790-0886",
   "lat": 40.65815,
   "lng": -73.950513,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": null
  },
  {
   "osm_id": "node/12360460325",
@@ -4683,7 +5108,8 @@
   "phone": "+1-718-342-6597",
   "lat": 40.673546,
   "lng": -73.910169,
-  "neighborhood": "Ocean Hill"
+  "neighborhood": "Ocean Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/12403502570",
@@ -4694,7 +5120,8 @@
   "phone": "+1-347-689-4340",
   "lat": 40.711065,
   "lng": -73.948662,
-  "neighborhood": "East Williamsburg"
+  "neighborhood": "East Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/12609895279",
@@ -4705,7 +5132,8 @@
   "phone": "+1-718-434-2198",
   "lat": 40.629682,
   "lng": -73.963698,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": null
  },
  {
   "osm_id": "node/12626131756",
@@ -4716,7 +5144,8 @@
   "phone": null,
   "lat": 40.643881,
   "lng": -74.001082,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": true
  },
  {
   "osm_id": "node/12682339485",
@@ -4727,7 +5156,8 @@
   "phone": "+1 347-574-0217",
   "lat": 40.682664,
   "lng": -73.911873,
-  "neighborhood": "Ocean Hill"
+  "neighborhood": "Ocean Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/12682339487",
@@ -4738,7 +5168,8 @@
   "phone": null,
   "lat": 40.681278,
   "lng": -73.911277,
-  "neighborhood": "Ocean Hill"
+  "neighborhood": "Ocean Hill",
+  "full_service": null
  },
  {
   "osm_id": "node/12724672320",
@@ -4749,7 +5180,8 @@
   "phone": "+1-646-270-7639",
   "lat": 40.62286,
   "lng": -74.031129,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "node/12805230313",
@@ -4760,7 +5192,8 @@
   "phone": null,
   "lat": 40.579329,
   "lng": -73.983275,
-  "neighborhood": "Coney Island-Sea Gate"
+  "neighborhood": "Coney Island-Sea Gate",
+  "full_service": null
  },
  {
   "osm_id": "node/12815640794",
@@ -4771,7 +5204,8 @@
   "phone": "+1 718 7149194",
   "lat": 40.598023,
   "lng": -73.996831,
-  "neighborhood": "Gravesend (West)"
+  "neighborhood": "Gravesend (West)",
+  "full_service": true
  },
  {
   "osm_id": "node/12852036957",
@@ -4782,7 +5216,8 @@
   "phone": "+1 347-713-1551",
   "lat": 40.625356,
   "lng": -73.962496,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": null
  },
  {
   "osm_id": "node/12945054403",
@@ -4793,7 +5228,8 @@
   "phone": "+1-347-374-4621",
   "lat": 40.609588,
   "lng": -74.00003,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "node/13012366639",
@@ -4804,7 +5240,8 @@
   "phone": null,
   "lat": 40.592871,
   "lng": -73.947792,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/13101604080",
@@ -4815,7 +5252,8 @@
   "phone": null,
   "lat": 40.713162,
   "lng": -73.95762,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/13110630701",
@@ -4826,7 +5264,8 @@
   "phone": "+13479904694",
   "lat": 40.70858,
   "lng": -73.952893,
-  "neighborhood": "Williamsburg"
+  "neighborhood": "Williamsburg",
+  "full_service": null
  },
  {
   "osm_id": "node/13254107161",
@@ -4837,7 +5276,8 @@
   "phone": null,
   "lat": 40.692738,
   "lng": -73.928621,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/13367794599",
@@ -4848,7 +5288,8 @@
   "phone": null,
   "lat": 40.681301,
   "lng": -73.872041,
-  "neighborhood": "Cypress Hills"
+  "neighborhood": "Cypress Hills",
+  "full_service": true
  },
  {
   "osm_id": "node/13555997003",
@@ -4859,7 +5300,8 @@
   "phone": "+1-718-567-9786",
   "lat": 40.639406,
   "lng": -74.012445,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "node/13588116151",
@@ -4870,7 +5312,8 @@
   "phone": "+1 718-645-7620",
   "lat": 40.590814,
   "lng": -73.9689,
-  "neighborhood": "Gravesend (East)-Homecrest"
+  "neighborhood": "Gravesend (East)-Homecrest",
+  "full_service": null
  },
  {
   "osm_id": "node/13625586351",
@@ -4881,7 +5324,8 @@
   "phone": null,
   "lat": 40.590098,
   "lng": -73.939249,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": null
  },
  {
   "osm_id": "node/13641421301",
@@ -4892,7 +5336,8 @@
   "phone": "+1-718-304-1202",
   "lat": 40.729778,
   "lng": -73.95132,
-  "neighborhood": "Greenpoint"
+  "neighborhood": "Greenpoint",
+  "full_service": null
  },
  {
   "osm_id": "node/13832173901",
@@ -4903,7 +5348,8 @@
   "phone": null,
   "lat": 40.701423,
   "lng": -73.930085,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": null
  },
  {
   "osm_id": "node/13861157101",
@@ -4914,7 +5360,8 @@
   "phone": null,
   "lat": 40.694103,
   "lng": -73.918415,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/13885524001",
@@ -4925,7 +5372,8 @@
   "phone": "+1-718-941-4942",
   "lat": 40.6354,
   "lng": -73.963908,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "node/13936568470",
@@ -4936,7 +5384,8 @@
   "phone": null,
   "lat": 40.698376,
   "lng": -73.917185,
-  "neighborhood": "Bushwick (East)"
+  "neighborhood": "Bushwick (East)",
+  "full_service": null
  },
  {
   "osm_id": "node/13963353288",
@@ -4947,7 +5396,8 @@
   "phone": "+1-718-666-5339",
   "lat": 40.668641,
   "lng": -73.899411,
-  "neighborhood": "East New York (North)"
+  "neighborhood": "East New York (North)",
+  "full_service": null
  },
  {
   "osm_id": "way/241829917",
@@ -4958,7 +5408,8 @@
   "phone": null,
   "lat": 40.642885,
   "lng": -73.970234,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "way/247462746",
@@ -4969,7 +5420,8 @@
   "phone": null,
   "lat": 40.666863,
   "lng": -73.870085,
-  "neighborhood": "East New York-City Line"
+  "neighborhood": "East New York-City Line",
+  "full_service": true
  },
  {
   "osm_id": "way/247923749",
@@ -4980,7 +5432,8 @@
   "phone": null,
   "lat": 40.614593,
   "lng": -73.962784,
-  "neighborhood": "Midwood"
+  "neighborhood": "Midwood",
+  "full_service": null
  },
  {
   "osm_id": "way/247928983",
@@ -4991,7 +5444,8 @@
   "phone": null,
   "lat": 40.663993,
   "lng": -73.993729,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": true
  },
  {
   "osm_id": "way/248166472",
@@ -5002,7 +5456,8 @@
   "phone": null,
   "lat": 40.683209,
   "lng": -73.987084,
-  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook"
+  "neighborhood": "Carroll Gardens-Cobble Hill-Gowanus-Red Hook",
+  "full_service": true
  },
  {
   "osm_id": "way/248456610",
@@ -5013,7 +5468,8 @@
   "phone": "+1-718-238-5000",
   "lat": 40.613914,
   "lng": -74.033042,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": true
  },
  {
   "osm_id": "way/248504600",
@@ -5024,7 +5480,8 @@
   "phone": "+1-347-909-7076",
   "lat": 40.619108,
   "lng": -74.027743,
-  "neighborhood": "Bay Ridge"
+  "neighborhood": "Bay Ridge",
+  "full_service": null
  },
  {
   "osm_id": "way/248554567",
@@ -5035,7 +5492,8 @@
   "phone": "+1 718-332-0100",
   "lat": 40.583103,
   "lng": -73.955894,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": true
  },
  {
   "osm_id": "way/249002264",
@@ -5046,7 +5504,8 @@
   "phone": "+13474925891",
   "lat": 40.618646,
   "lng": -73.998817,
-  "neighborhood": "Bensonhurst"
+  "neighborhood": "Bensonhurst",
+  "full_service": null
  },
  {
   "osm_id": "way/249579827",
@@ -5057,7 +5516,8 @@
   "phone": null,
   "lat": 40.637429,
   "lng": -74.017883,
-  "neighborhood": "Sunset Park (Central)"
+  "neighborhood": "Sunset Park (Central)",
+  "full_service": null
  },
  {
   "osm_id": "way/249606841",
@@ -5068,7 +5528,8 @@
   "phone": null,
   "lat": 40.651638,
   "lng": -74.004949,
-  "neighborhood": "Sunset Park (West)"
+  "neighborhood": "Sunset Park (West)",
+  "full_service": null
  },
  {
   "osm_id": "way/249615313",
@@ -5079,7 +5540,8 @@
   "phone": "+1-347-770-9292",
   "lat": 40.646538,
   "lng": -73.980498,
-  "neighborhood": "Kensington"
+  "neighborhood": "Kensington",
+  "full_service": null
  },
  {
   "osm_id": "way/249733779",
@@ -5090,7 +5552,8 @@
   "phone": "+1 917-583-9569",
   "lat": 40.599217,
   "lng": -73.942036,
-  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach"
+  "neighborhood": "Sheepshead Bay-Manhattan Beach-Gerritsen Beach",
+  "full_service": null
  },
  {
   "osm_id": "way/249924931",
@@ -5101,7 +5564,8 @@
   "phone": null,
   "lat": 40.616335,
   "lng": -73.930323,
-  "neighborhood": "Marine Park-Mill Basin-Bergen Beach"
+  "neighborhood": "Marine Park-Mill Basin-Bergen Beach",
+  "full_service": null
  },
  {
   "osm_id": "way/249985823",
@@ -5112,7 +5576,8 @@
   "phone": null,
   "lat": 40.681627,
   "lng": -73.95692,
-  "neighborhood": "Bedford-Stuyvesant (West)"
+  "neighborhood": "Bedford-Stuyvesant (West)",
+  "full_service": null
  },
  {
   "osm_id": "way/250180918",
@@ -5123,7 +5588,8 @@
   "phone": null,
   "lat": 40.663024,
   "lng": -73.920416,
-  "neighborhood": "East Flatbush-Remsen Village"
+  "neighborhood": "East Flatbush-Remsen Village",
+  "full_service": null
  },
  {
   "osm_id": "way/250185632",
@@ -5134,7 +5600,8 @@
   "phone": null,
   "lat": 40.661496,
   "lng": -73.918722,
-  "neighborhood": "East Flatbush-Remsen Village"
+  "neighborhood": "East Flatbush-Remsen Village",
+  "full_service": null
  },
  {
   "osm_id": "way/250224935",
@@ -5145,7 +5612,8 @@
   "phone": "+1-718-282-2220",
   "lat": 40.663811,
   "lng": -73.958833,
-  "neighborhood": "Prospect Lefferts Gardens-Wingate"
+  "neighborhood": "Prospect Lefferts Gardens-Wingate",
+  "full_service": true
  },
  {
   "osm_id": "way/250227477",
@@ -5156,7 +5624,8 @@
   "phone": "+1-347-384-1173",
   "lat": 40.669072,
   "lng": -73.955984,
-  "neighborhood": "Crown Heights (South)"
+  "neighborhood": "Crown Heights (South)",
+  "full_service": true
  },
  {
   "osm_id": "way/250310495",
@@ -5167,7 +5636,8 @@
   "phone": "+1-718-221-1835",
   "lat": 40.673722,
   "lng": -73.949898,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "way/250317254",
@@ -5178,7 +5648,8 @@
   "phone": null,
   "lat": 40.696483,
   "lng": -73.937461,
-  "neighborhood": "Bedford-Stuyvesant (East)"
+  "neighborhood": "Bedford-Stuyvesant (East)",
+  "full_service": true
  },
  {
   "osm_id": "way/250318929",
@@ -5189,7 +5660,8 @@
   "phone": null,
   "lat": 40.677958,
   "lng": -73.946037,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "way/250352518",
@@ -5200,7 +5672,8 @@
   "phone": null,
   "lat": 40.693681,
   "lng": -73.965825,
-  "neighborhood": "Clinton Hill"
+  "neighborhood": "Clinton Hill",
+  "full_service": null
  },
  {
   "osm_id": "way/250411364",
@@ -5211,7 +5684,8 @@
   "phone": null,
   "lat": 40.697664,
   "lng": -73.927499,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": true
  },
  {
   "osm_id": "way/250411998",
@@ -5222,7 +5696,8 @@
   "phone": "+1-718-443-8888",
   "lat": 40.697508,
   "lng": -73.932157,
-  "neighborhood": "Bushwick (West)"
+  "neighborhood": "Bushwick (West)",
+  "full_service": true
  },
  {
   "osm_id": "way/250457031",
@@ -5233,7 +5708,8 @@
   "phone": "+1-718-398-6800",
   "lat": 40.678896,
   "lng": -73.954823,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  },
  {
   "osm_id": "way/510873280",
@@ -5244,7 +5720,8 @@
   "phone": null,
   "lat": 40.649772,
   "lng": -73.963477,
-  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville"
+  "neighborhood": "Flatbush (West)-Ditmas Park-Parkville",
+  "full_service": null
  },
  {
   "osm_id": "way/575402916",
@@ -5255,7 +5732,8 @@
   "phone": null,
   "lat": 40.67225,
   "lng": -73.97664,
-  "neighborhood": "Park Slope"
+  "neighborhood": "Park Slope",
+  "full_service": null
  },
  {
   "osm_id": "way/1188444776",
@@ -5266,6 +5744,7 @@
   "phone": null,
   "lat": 40.676788,
   "lng": -73.92426,
-  "neighborhood": "Crown Heights (North)"
+  "neighborhood": "Crown Heights (North)",
+  "full_service": null
  }
 ]
