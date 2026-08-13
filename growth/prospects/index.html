@@ -221,7 +221,9 @@ function render() {
 }
 
 function shopRow(r) {
-  const maps = `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`;
+  // ll + q drops a pin at the exact coords labeled with the shop name; a bare
+  // q search near ll could resolve to a different storefront on the block.
+  const maps = `https://maps.apple.com/?ll=${r.lat},${r.lng}&q=${encodeURIComponent(r.name)}`;
   const expanded = ui.expanded === r.id;
   return `
   <div class="shop ${r.visited ? 'visited' : ''}" data-id="${r.id}">
