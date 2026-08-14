@@ -20,4 +20,4 @@ sed -e "s|__SUPABASE_URL__|$URL|" -e "s|__SUPABASE_ANON_KEY__|$ANON|" \
 ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
 scp -q "$STAGE/index.html" "$HOST:/var/www/crease-prospects/index.html"
 
-echo -n "deployed: " && curl -s -o /dev/null -w '%{http_code}\n' https://crease.divinedavis.com/prospects/
+echo -n "deployed: " && curl -s -o /dev/null -w '%{http_code}\n' https://portal.usecreaseapp.com/prospects/

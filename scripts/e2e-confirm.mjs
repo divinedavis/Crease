@@ -136,7 +136,7 @@ const confirmed = await fetch(`https://api.stripe.com/v1/payment_intents/${inten
     authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
     'content-type': 'application/x-www-form-urlencoded',
   },
-  body: new URLSearchParams({ payment_method: 'pm_card_visa', return_url: 'https://crease.divinedavis.com/paid' }),
+  body: new URLSearchParams({ payment_method: 'pm_card_visa', return_url: 'https://usecreaseapp.com/paid' }),
 });
 const pi = await confirmed.json();
 check('stripe intent succeeded', pi.status, 'succeeded');

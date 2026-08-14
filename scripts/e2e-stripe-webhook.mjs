@@ -117,7 +117,7 @@ await fetch(`https://api.stripe.com/v1/payment_intents/${intentId}/confirm`, {
     authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
     'content-type': 'application/x-www-form-urlencoded',
   },
-  body: new URLSearchParams({ payment_method: 'pm_card_visa', return_url: 'https://crease.divinedavis.com/paid' }),
+  body: new URLSearchParams({ payment_method: 'pm_card_visa', return_url: 'https://usecreaseapp.com/paid' }),
 });
 const { data: stranded } = await db.from('orders').select('status').eq('id', order.id).single();
 check('order is stranded', stranded.status, 'draft');
