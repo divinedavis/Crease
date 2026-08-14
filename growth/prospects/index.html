@@ -60,6 +60,8 @@
   .seg button.on { background: var(--accent); color: var(--accent-fg); }
   .filters { display: grid; gap: 8px; margin-bottom: 12px; }
   .filters .row2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  /* Three visit-filter buttons don't share a row with search on a phone. */
+  @media (max-width: 520px) { .filters .row2 { grid-template-columns: 1fr; } }
   .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;
             padding: 0 12px; white-space: nowrap; }
   .toggle input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--accent); }
@@ -120,14 +122,15 @@ let rows = [];
 const ui = {
   kind: localStorage.canvassKind ?? 'dry_cleaner',
   q: '',
-  hideVisited: localStorage.canvassHide === '1',
+  // 'all' | 'unvisited' | 'visited'; migrates the old hide-visited checkbox pref.
+  visit: localStorage.canvassVisit ?? (localStorage.canvassHide === '1' ? 'unvisited' : 'all'),
   fullOnly: localStorage.canvassFull === '1',
   open: new Set(JSON.parse(localStorage.canvassOpen ?? '[]')),
   expanded: null,           // id of the row whose editor is showing
 };
 const persistUi = () => {
   localStorage.canvassKind = ui.kind;
-  localStorage.canvassHide = ui.hideVisited ? '1' : '0';
+  localStorage.canvassVisit = ui.visit;
   localStorage.canvassFull = ui.fullOnly ? '1' : '0';
   localStorage.canvassOpen = JSON.stringify([...ui.open]);
 };
@@ -168,7 +171,7 @@ function renderLogin(err) {
 const visible = () => rows.filter((r) =>
   (ui.kind === 'all' || r.kind === ui.kind) &&
   (!(ui.fullOnly && ui.kind === 'laundromat') || r.full_service === true) &&
-  (!ui.hideVisited || !r.visited) &&
+  (ui.visit === 'all' || (ui.visit === 'visited') === !!r.visited) &&
   (!ui.q || (r.name + ' ' + (r.address ?? '') + ' ' + r.neighborhood).toLowerCase().includes(ui.q)));
 
 function render() {
@@ -198,7 +201,11 @@ function render() {
       </div>
       <div class="row2">
         <input id="q" type="search" placeholder="Search name, street, neighborhood" value="${esc(ui.q)}" />
-        <label class="toggle"><input id="hidev" type="checkbox" ${ui.hideVisited ? 'checked' : ''} /> Hide visited</label>
+        <div class="seg" id="visitseg">
+          <button data-v="all" ${ui.visit === 'all' ? 'class="on"' : ''}>All</button>
+          <button data-v="unvisited" ${ui.visit === 'unvisited' ? 'class="on"' : ''}>To visit</button>
+          <button data-v="visited" ${ui.visit === 'visited' ? 'class="on"' : ''}>Visited</button>
+        </div>
       </div>
       ${ui.kind === 'laundromat' ? `<label class="toggle" style="padding:0 2px">
         <input id="fullonly" type="checkbox" ${ui.fullOnly ? 'checked' : ''} />
@@ -300,7 +307,10 @@ function wire() {
   };
   const q = document.getElementById('q');
   q.oninput = () => { ui.q = q.value.trim().toLowerCase(); render(); refocus(q); };
-  document.getElementById('hidev').onchange = (e) => { ui.hideVisited = e.target.checked; persistUi(); render(); };
+  document.getElementById('visitseg').onclick = (e) => {
+    const v = e.target.dataset?.v;
+    if (v) { ui.visit = v; persistUi(); render(); }
+  };
   const fo = document.getElementById('fullonly');
   if (fo) fo.onchange = (e) => { ui.fullOnly = e.target.checked; persistUi(); render(); };
 
