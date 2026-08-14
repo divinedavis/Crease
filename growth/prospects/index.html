@@ -96,6 +96,7 @@
   .chip.declined { background: var(--danger-bg); color: var(--danger-fg); }
   .chip.fs { background: var(--live-bg); color: var(--live-fg); }
   .chip.ss { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .chip.oa { background: var(--bg); color: var(--warn-fg); border: 1px solid var(--warn-fg); }
   .notes-preview { font-size: 13px; color: var(--muted); font-style: italic; margin-top: 2px;
                    overflow-wrap: anywhere; }
 
@@ -243,6 +244,7 @@ function shopRow(r) {
         ${r.outcome ? `<span class="chip ${r.outcome}">${OUTCOMES.find(([k]) => k === r.outcome)[1]}</span>` : ''}
         ${r.kind === 'laundromat' && r.full_service === true ? '<span class="chip fs">Full service</span>' : ''}
         ${r.kind === 'laundromat' && r.full_service === false ? '<span class="chip ss">Self-serve only</span>' : ''}
+        ${r.own_app === true ? '<span class="chip oa">Own app</span>' : ''}
       </div>
       <div class="meta">${esc(r.address ?? 'No address on file')}${r.zip ? ' · ' + esc(r.zip) : ''}</div>
       ${r.notes && !expanded ? `<div class="notes-preview">${esc(r.notes)}</div>` : ''}
@@ -261,6 +263,9 @@ function shopRow(r) {
         <button data-fs="true" ${r.full_service === true ? 'class="on"' : ''}>Full service</button>
         <button data-fs="false" ${r.full_service === false ? 'class="on"' : ''}>Self-serve only</button>
       </div>` : ''}
+      <div class="seg" data-oaseg>
+        <button data-oa ${r.own_app === true ? 'class="on"' : ''}>Has own app</button>
+      </div>
       <textarea data-notes placeholder="Notes — who you spoke to, pricing, objections…">${esc(r.notes ?? '')}</textarea>
       <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${saveText(r)}</div>
     </div>` : ''}
@@ -354,6 +359,12 @@ function wire() {
       if (v === undefined) return;
       const next = String(r.full_service) === v ? null : v === 'true';
       save(r, { full_service: next }).then(() => render());
+    });
+
+    shopEl.querySelector('[data-oaseg]')?.addEventListener('click', (e) => {
+      if (e.target.dataset?.oa === undefined) return;
+      // Toggle true <-> unknown; a confirmed "no app" is just the default.
+      save(r, { own_app: r.own_app === true ? null : true }).then(() => render());
     });
 
     const notes = shopEl.querySelector('[data-notes]');
