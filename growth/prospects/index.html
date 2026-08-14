@@ -168,10 +168,12 @@ function renderLogin(err) {
   };
 }
 
+// A typed search spans every kind: mid-canvass the question is "do we have
+// this shop at all", and a tab-scoped miss reads as a missing row.
 const visible = () => rows.filter((r) =>
-  (ui.kind === 'all' || r.kind === ui.kind) &&
+  (ui.q || ui.kind === 'all' || r.kind === ui.kind) &&
   (!(ui.fullOnly && ui.kind === 'laundromat') || r.full_service === true) &&
-  (ui.visit === 'all' || (ui.visit === 'visited') === !!r.visited) &&
+  (ui.q || ui.visit === 'all' || (ui.visit === 'visited') === !!r.visited) &&
   (!ui.q || (r.name + ' ' + (r.address ?? '') + ' ' + r.neighborhood).toLowerCase().includes(ui.q)));
 
 function render() {
