@@ -23,8 +23,15 @@ export class ProviderChain {
   }
 
   get(name: string): DeliveryProvider | undefined {
-    return this.providers.find((p) => p.name === name);
+    // The Uber dashboard endpoint is registered as /webhooks/uber, but the
+    // provider names itself uber_direct (and that name is what lands in
+    // delivery_events rows). Resolve the public slug here rather than
+    // renaming the provider under existing data.
+    const target = ProviderChain.WEBHOOK_ALIASES[name] ?? name;
+    return this.providers.find((p) => p.name === target);
   }
+
+  private static readonly WEBHOOK_ALIASES: Record<string, string> = { uber: 'uber_direct' };
 
   /** Cheapest usable quote across the chain, with the provider that gave it. */
   async bestQuote(
