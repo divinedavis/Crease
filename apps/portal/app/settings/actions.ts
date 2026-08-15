@@ -17,11 +17,21 @@ import { parseHoursForm } from '@/lib/hours';
 
 const NOT_YOURS = 'This shop is not linked to your account.';
 
-/** The portal's own public origin, for Stripe to send the shop back to. */
+/**
+ * The portal's own public origin, for Stripe to send the shop back to.
+ *
+ * Derived from a server-set env var, NOT request headers: x-forwarded-host is
+ * attacker-controllable unless every proxy in front strips it, and this value
+ * becomes a Stripe redirect target — a spoofed host would land the shop on an
+ * attacker page after onboarding. Falls back to the request host only when the
+ * env var is unset (local dev).
+ */
 async function portalOrigin(): Promise<string> {
+  const fromEnv = process.env.PORTAL_PUBLIC_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
   const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const host = h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? 'http';
   return `${proto}://${host}`;
 }
 
@@ -126,14 +136,11 @@ export async function saveHours(cleanerId: string, _prev: unknown, formData: For
 export async function startPayoutOnboarding(cleanerId: string) {
   const db = await supabaseServer();
 
-  // The dispatch call below rides the internal key, which does not care whose
-  // shop this is — so membership is checked here through RLS first.
-  const { data: membership } = await db
-    .from('cleaner_staff')
-    .select('cleaner_id')
-    .eq('cleaner_id', cleanerId)
-    .maybeSingle();
-  if (!membership) return { error: NOT_YOURS };
+  // Payouts are an owner/manager operation, not a day-to-day one: gate on the
+  // staff role, not mere membership. (The dispatch call rides the internal key,
+  // which does not check the shop, so this is the only gate.)
+  const { data: isAdmin } = await db.rpc('is_cleaner_admin', { p_cleaner: cleanerId });
+  if (!isAdmin) return { error: 'Only an owner or manager can manage payouts.' };
 
   const origin = await portalOrigin();
   let url: string;
@@ -153,12 +160,8 @@ export async function startPayoutOnboarding(cleanerId: string) {
 /** Re-ask Stripe whether payouts are enabled yet, and cache the answer. */
 export async function refreshPayoutStatus(cleanerId: string) {
   const db = await supabaseServer();
-  const { data: membership } = await db
-    .from('cleaner_staff')
-    .select('cleaner_id')
-    .eq('cleaner_id', cleanerId)
-    .maybeSingle();
-  if (!membership) return { error: NOT_YOURS };
+  const { data: isAdmin } = await db.rpc('is_cleaner_admin', { p_cleaner: cleanerId });
+  if (!isAdmin) return { error: 'Only an owner or manager can manage payouts.' };
 
   try {
     await callDispatch(`/v1/cleaners/${cleanerId}/connect-refresh`);

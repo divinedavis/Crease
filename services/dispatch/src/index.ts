@@ -555,6 +555,14 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
   const rawBody: Buffer = (req as any).rawBody ?? Buffer.from('');
   const result = await provider.handleWebhook({ headers: req.headers as any, rawBody });
 
+  // Verify BEFORE persisting. This route is unauthenticated by design, so
+  // storing the body before the signature check let anyone POST unbounded junk
+  // straight into delivery_events (storage exhaustion / table pollution).
+  if (!result.signatureValid) {
+    req.log.warn({ provider: provider.name, ip: req.ip }, 'webhook signature rejected');
+    return reply.code(401).send({ error: 'bad signature' });
+  }
+
   let payload: unknown = {};
   try {
     payload = JSON.parse(rawBody.toString('utf8'));
@@ -574,11 +582,6 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
     })
     .select('id')
     .maybeSingle();
-
-  if (!result.signatureValid) {
-    req.log.warn({ provider: provider.name, ip: req.ip }, 'webhook signature rejected');
-    return reply.code(401).send({ error: 'bad signature' });
-  }
   // Dedupe: the unique index made the insert a no-op, so we have seen this one.
   if (!landed) {
     return { ok: true, deduped: true };
