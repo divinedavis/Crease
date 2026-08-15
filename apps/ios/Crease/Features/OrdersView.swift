@@ -8,6 +8,7 @@ import SwiftUI
 struct OrdersView: View {
     @EnvironmentObject private var session: Session
     @EnvironmentObject private var store: OrderStore
+    @EnvironmentObject private var lock: AppLock
 
     @State private var flow: BookingStep?
     /// Owned here so a tapped notification can push a screen the customer
@@ -91,6 +92,18 @@ struct OrdersView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        if lock.biometry != .none {
+                            Button {
+                                Task { await lock.setEnabled(!lock.isEnabled) }
+                            } label: {
+                                Label(
+                                    lock.isEnabled
+                                        ? "Turn off \(lock.biometry.label) lock"
+                                        : "Lock with \(lock.biometry.label)",
+                                    systemImage: lock.isEnabled ? "lock.open" : "lock"
+                                )
+                            }
+                        }
                         Button("Sign out", role: .destructive) {
                             Task { await session.signOut() }
                         }

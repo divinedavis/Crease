@@ -60,6 +60,9 @@ targets:
         # ITMS-90683 on static analysis, which passes local validation and
         # passes a launch smoke test, and only surfaces as an email.
         NSCameraUsageDescription: Crease can scan your payment card so you don't have to type it in.
+        # Face ID / Touch ID app lock. Without this string, evaluating the
+        # biometric policy terminates the app.
+        NSFaceIDUsageDescription: Crease uses Face ID to unlock the app so your orders and address stay private.
         # Return address for the Google OAuth sheet. Must match the
         # redirectTo passed to signInWithOAuth exactly.
         CFBundleURLTypes:

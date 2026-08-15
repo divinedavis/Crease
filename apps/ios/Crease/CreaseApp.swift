@@ -6,12 +6,20 @@ struct CreaseApp: App {
     // a notification tapped while the app was not running.
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var session = Session()
+    @StateObject private var lock = AppLock()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(session)
+                .environmentObject(lock)
                 .tint(Theme.accent)
+        }
+        .onChange(of: scenePhase) { phase in
+            // Re-engage the lock as the app leaves the foreground, so returning
+            // requires Face ID again.
+            if phase == .background { lock.lockIfEnabled() }
         }
     }
 }
@@ -21,8 +29,27 @@ struct CreaseApp: App {
 /// a sign-in form flash before their orders appear.
 struct RootView: View {
     @EnvironmentObject private var session: Session
+    @EnvironmentObject private var lock: AppLock
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        ZStack {
+            content
+
+            // Only guard an authenticated session. The lock (Face ID) takes
+            // priority; otherwise, hide contents whenever the app isn't active
+            // so the app-switcher snapshot never shows orders/address/PIN.
+            if case .signedIn = session.state {
+                if lock.isLocked {
+                    LockView()
+                } else if scenePhase != .active {
+                    PrivacyCover()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
         switch session.state {
         case .loading:
             ProgressView()
