@@ -289,6 +289,13 @@ export class PaymentService {
   async settleOrder(
     orderId: string,
   ): Promise<{ captured: number; needsApproval: boolean; nothingToSettle?: boolean }> {
+    // The cleaning subtotal is derived here, from the line items the shop
+    // actually saved, rather than taken from a number a client sent. The
+    // portal used to write orders.subtotal_cents itself; money columns are
+    // service-role-only now, and recomputing is the stronger version of that
+    // rule anyway — the bill always equals the visible lines added up.
+    await this.recomputeSubtotal(orderId);
+
     const order = await this.loadOrder(orderId);
     const cleaning = order.subtotal_cents ?? order.estimate_subtotal_cents ?? 0;
     const total =
@@ -515,6 +522,32 @@ export class PaymentService {
     }
     this.log.info({ orderId, reason, voided, failed: failed.length }, 'order payments voided');
     return { voided, failed };
+  }
+
+  /**
+   * Derive orders.subtotal_cents from the saved line items.
+   *
+   * Each line is rounded before summing, matching what the intake screen and
+   * the receipt show the customer — a total that does not equal the visible
+   * lines added up is the discrepancy that becomes a chargeback.
+   *
+   * No rows means nothing was counted; leave the column alone rather than
+   * writing a zero over an existing figure.
+   */
+  private async recomputeSubtotal(orderId: string): Promise<void> {
+    const { data: items, error } = await this.db
+      .from('order_items')
+      .select('quantity, unit_price_cents')
+      .eq('order_id', orderId);
+    if (error) throw new Error(`could not read line items for order ${orderId}: ${error.message}`);
+    if (!items?.length) return;
+
+    const subtotal = items.reduce(
+      (sum: number, i: { quantity: number | string; unit_price_cents: number }) =>
+        sum + Math.round(Number(i.quantity) * i.unit_price_cents),
+      0,
+    );
+    await this.db.from('orders').update({ subtotal_cents: subtotal }).eq('id', orderId);
   }
 
   private async loadOrder(orderId: string) {

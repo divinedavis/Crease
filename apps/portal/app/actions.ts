@@ -140,7 +140,9 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   const { error } = await db
     .from('orders')
     .update({
-      subtotal_cents: subtotal,
+      // subtotal_cents is written by the dispatcher at settle, derived from the
+      // line items above: money columns are service-role-only, and a total the
+      // server recomputes can't disagree with the lines the customer was shown.
       cleaner_notes: String(formData.get('cleaner_notes') ?? '') || null,
       cleaner_item_count: cleanerItemCount,
       estimated_ready_at: estimatedReadyAt,
