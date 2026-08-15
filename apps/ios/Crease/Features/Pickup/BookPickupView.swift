@@ -57,7 +57,20 @@ struct BookPickupView: View {
     var body: some View {
         ZStack(alignment: .top) {
             map
-            header
+            VStack(spacing: 10) {
+                header
+                // Anchored to the top, not appended to the options sheet: the
+                // payment sheet covers the bottom of the screen by an amount
+                // only Stripe decides (it grows with each wallet row it
+                // offers), so anything bottom-anchored is behind it exactly
+                // when it needs to be read. The top is the one band that
+                // cannot be covered.
+                if submitting, let cleaner {
+                    reviewCard(cleaner: cleaner)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: submitting)
         }
         .safeAreaInset(edge: .bottom) { optionsSheet }
         .sheet(isPresented: $choosingCleaner) {
@@ -145,6 +158,116 @@ struct BookPickupView: View {
         .padding(.horizontal, 16)
     }
 
+    /// What the customer is about to be charged for, shown while the payment
+    /// sheet is up.
+    ///
+    /// Stripe's sheet has no room for it — there is no supported way to put
+    /// custom content inside PaymentSheet — and what showed through behind it
+    /// was the tier list, still offering the two options they had just chosen
+    /// between. So the screen underneath becomes the receipt: the shop, where
+    /// it is going, when a driver arrives, and what the number on the Pay
+    /// button actually buys.
+    private func reviewCard(cleaner: Cleaner) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Review your order")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Image(systemName: "building.2.fill")
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 30, height: 30)
+                    .background(Theme.accentSoft, in: Circle())
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(cleaner.name)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    Text(turnaroundLine(for: cleaner))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            reviewRow(
+                symbol: "mappin.and.ellipse",
+                title: selected.legs == 1 && selected.id == "return_only"
+                    ? "Deliver to \(pickup.line1)"
+                    : "Collect from \(pickup.line1)",
+                detail: etaLine
+            )
+
+            reviewRow(
+                symbol: selected.symbol,
+                title: selected.name,
+                detail: itemCount > 0
+                    ? "\(itemCount) item\(itemCount == 1 ? "" : "s") · \(selected.blurb)"
+                    : selected.blurb
+            )
+
+            Divider()
+
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Courier fee")
+                        .font(.subheadline.weight(.medium))
+                    // Restating this here matters more than anywhere else on
+                    // the screen: it is the last thing seen before a card is
+                    // charged, and the one number people would otherwise
+                    // mistake for the price of the cleaning.
+                    Text("Cleaning billed separately by the shop")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Text(selected.priceCents.asMoney)
+                    .font(.title3.weight(.semibold))
+            }
+        }
+        .padding(14)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func reviewRow(symbol: String, title: String, detail: String?) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func turnaroundLine(for cleaner: Cleaner) -> String {
+        if let miles = cleaner.milesFrom(pickup.coordinate) {
+            return String(format: "%.1f mi away · %dh turnaround", miles, cleaner.turnaroundHours)
+        }
+        return "\(cleaner.turnaroundHours)h turnaround"
+    }
+
+    /// Only the driver's arrival is quotable at booking, and only on the tiers
+    /// that actually send one to the customer — the same rule the tier rows
+    /// follow. Inventing a whole-order ETA here would be the one promise this
+    /// screen has never made.
+    private var etaLine: String? {
+        guard let minutes = selected.pickupEtaMinutes else { return nil }
+        return "Driver arrives in about \(minutes) min"
+    }
+
     private var optionsSheet: some View {
         VStack(spacing: 0) {
             Capsule()
@@ -161,6 +284,35 @@ struct BookPickupView: View {
                     .padding(.bottom, 8)
             }
 
+            if submitting {
+                // The review above is now saying all of this, and the live
+                // controls under a payment sheet are worse than redundant: a
+                // "Change" chevron next to a card being charged offers
+                // something the screen cannot honour.
+                payingPlaceholder
+            } else {
+                bookingControls
+            }
+        }
+        .background(.regularMaterial)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    private var payingPlaceholder: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+            Text("Completing your booking…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+        .padding(.bottom, 28)
+    }
+
+    @ViewBuilder private var bookingControls: some View {
+        Group {
             cleanerRow
                 .padding(.horizontal, 16)
                 .padding(.bottom, 10)
@@ -186,20 +338,19 @@ struct BookPickupView: View {
             Button {
                 Task { await book() }
             } label: {
-                Text(submitting ? "Booking…" : "Book \(selected.name) · \(selected.priceCents.asMoney)")
+                // No "Booking…" state here any more: these controls are
+                // replaced wholesale while a booking is in flight.
+                Text("Book \(selected.name) · \(selected.priceCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent)
             .controlSize(.large)
-            .disabled(submitting || cleaner == nil)
+            .disabled(cleaner == nil)
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 18)
         }
-        .background(.regularMaterial)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
-        .ignoresSafeArea(edges: .bottom)
     }
 
     /// The fee buys couriers, and which couriers depends on the tier. Under

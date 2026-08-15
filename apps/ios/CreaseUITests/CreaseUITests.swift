@@ -345,6 +345,21 @@ final class CreaseUITests: XCTestCase {
             || app.textFields["Card number"].waitForExistence(timeout: 5)
             || app.staticTexts["Card information"].waitForExistence(timeout: 5)
         attach(app, "payment-sheet")
+
+        // Stripe's sheet covers the bottom of the screen, and what shows above
+        // it used to be the tier list — still offering the choice the customer
+        // had just made, and saying nothing about what the Pay button charges
+        // for. The review has to survive there, at the top, where the sheet
+        // cannot reach.
+        XCTAssertTrue(
+            app.staticTexts["Review your order"].waitForExistence(timeout: 10),
+            "the order review must be visible behind the payment sheet"
+        )
+        XCTAssertTrue(
+            app.staticTexts["Courier fee"].exists,
+            "the review must name what the charge actually buys"
+        )
+
         XCTAssertTrue(
             appeared,
             "payment sheet never presented. Buttons: "
