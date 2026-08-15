@@ -127,7 +127,19 @@ final class PushRegistrar {
               ) as? [String: Any],
               let entitlements = profile["Entitlements"] as? [String: Any],
               let environment = entitlements["aps-environment"] as? String
-        else { return "sandbox" }
+        else {
+            // Unreadable profile. Defaulting to sandbox is the expensive
+            // guess: it is exactly what a TestFlight build did, and every push
+            // to that customer was rejected at Apple for a week without one
+            // visible symptom. Follow the build configuration instead — a
+            // Release build is a distribution build is production — and let
+            // the sender correct a wrong guess when APNs answers.
+            #if DEBUG
+            return "sandbox"
+            #else
+            return "production"
+            #endif
+        }
         return environment == "production" ? "production" : "sandbox"
     }
 }

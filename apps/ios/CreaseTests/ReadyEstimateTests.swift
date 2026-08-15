@@ -33,6 +33,8 @@ final class ReadyEstimateTests: XCTestCase {
             readyAt: readyAt,
             customerNotes: nil,
             cleanerNotes: nil,
+            customerItemCount: nil,
+            cleanerItemCount: nil,
             createdAt: Date(),
             cleaner: cleaner,
             address: nil,

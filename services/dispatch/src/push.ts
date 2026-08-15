@@ -224,11 +224,45 @@ export class PushService {
     let sent = 0;
     const stale: string[] = [];
     const errors: string[] = [];
+    const misfiled = new Map<PushEnvironment, string[]>();
     for (const [environment, tokens] of byEnvironment) {
       const result = await this.deliver(environment, tokens, payload, `${kind}-${orderId}`, creds);
-      sent += result.sent;
+      sent += result.delivered.length;
       stale.push(...result.stale);
       errors.push(...result.errors);
+      if (result.wrongEnvironment.length) {
+        const other: PushEnvironment = environment === 'sandbox' ? 'production' : 'sandbox';
+        misfiled.set(other, [...(misfiled.get(other) ?? []), ...result.wrongEnvironment]);
+      }
+    }
+
+    // Only the device knows which APNs it registered against, and it can be
+    // wrong: a TestFlight build that could not read its own provisioning
+    // profile registered as sandbox, so every send was rejected at Apple and
+    // the customer was simply never told their clothes were ready. Nothing
+    // downstream notices, because a push that fails is indistinguishable from
+    // a push nobody looked at. So retry the other host and correct the row —
+    // one wasted request once, instead of silence forever.
+    for (const [environment, tokens] of misfiled) {
+      const retry = await this.deliver(environment, tokens, payload, `${kind}-${orderId}`, creds);
+      sent += retry.delivered.length;
+      stale.push(...retry.stale);
+      errors.push(...retry.errors);
+      // Rejected by both hosts. Record it: an empty error against zero devices
+      // is what made this failure invisible in the first place.
+      if (retry.wrongEnvironment.length) {
+        errors.push(`400 BadDeviceToken on both environments (${retry.wrongEnvironment.length})`);
+      }
+      if (retry.delivered.length) {
+        await this.db
+          .from('device_tokens')
+          .update({ environment })
+          .in('token', retry.delivered);
+        this.log.info(
+          { orderId, environment, count: retry.delivered.length },
+          'device tokens refiled under the environment APNs actually accepts',
+        );
+      }
     }
 
     if (stale.length) {
@@ -258,11 +292,17 @@ export class PushService {
     payload: string,
     collapseId: string,
     creds: { key: KeyObject; keyId: string; teamId: string },
-  ): Promise<{ sent: number; stale: string[]; errors: string[] }> {
+  ): Promise<{
+    delivered: string[];
+    stale: string[];
+    wrongEnvironment: string[];
+    errors: string[];
+  }> {
     const jwt = this.providerToken(creds);
+    const delivered: string[] = [];
     const stale: string[] = [];
+    const wrongEnvironment: string[] = [];
     const errors: string[] = [];
-    let sent = 0;
 
     const client = http2.connect(`https://${APNS_HOST[environment]}`);
     // An unhandled 'error' on an http2 session is thrown at the process, which
@@ -287,14 +327,14 @@ export class PushService {
           }, payload);
 
           if (res.status === 200) {
-            sent++;
+            delivered.push(token);
           } else if (res.status === 410) {
             stale.push(token);
+          } else if (res.status === 400 && res.reason === 'BadDeviceToken') {
+            // The token is well-formed but belongs to the other APNs. The
+            // caller retries it there rather than recording a dead end.
+            wrongEnvironment.push(token);
           } else {
-            // BadDeviceToken is almost always the environment being wrong —
-            // a TestFlight build registered against production and sent to
-            // sandbox, or the reverse — so name it rather than logging a bare
-            // 400 that reads like a payload problem.
             this.log.warn(
               { environment, status: res.status, reason: res.reason },
               'APNs refused a notification',
@@ -309,7 +349,10 @@ export class PushService {
       client.close();
     }
 
-    return { sent, stale, errors };
+    // A token rejected by both hosts stays put: it is recorded as an error and
+    // the next launch re-registers it. Only 410 (Apple: the app is gone) is
+    // grounds for deleting somebody's device.
+    return { delivered, stale, wrongEnvironment, errors };
   }
 
   private providerToken(creds: { key: KeyObject; keyId: string; teamId: string }): string {

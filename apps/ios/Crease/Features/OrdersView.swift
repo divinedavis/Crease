@@ -89,6 +89,17 @@ struct OrdersView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Crease")
             .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
+            // Offered here rather than on the sign-in screen: the account has
+            // to exist on the device before there is anything worth locking.
+            .task { lock.offerOptInIfNeverAsked() }
+            .alert("Lock Crease with \(lock.biometry.label)?", isPresented: $lock.isOfferingOptIn) {
+                Button("Not now", role: .cancel) { lock.declineOptIn() }
+                Button("Turn on") { Task { await lock.acceptOptIn() } }
+            } message: {
+                Text(
+                    "Your orders, home address and courier handoff PIN stay behind \(lock.biometry.label). You can change this any time from the menu."
+                )
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

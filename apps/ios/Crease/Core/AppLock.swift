@@ -16,17 +16,63 @@ final class AppLock: ObservableObject {
     @Published private(set) var isLocked: Bool
     /// Guards against overlapping biometric prompts.
     private var authenticating = false
+    /// Drives the one-time "want to turn this on?" alert after signing in.
+    @Published var isOfferingOptIn = false
 
     /// What this device offers (drives the button label / icon).
     let biometry = BiometricAuth.kind()
 
     private static let key = "app.lock.biometricEnabled"
+    private static let offeredKey = "app.lock.optInOffered"
 
     init() {
+        #if DEBUG
+        // The offer is once per install, which would let the UI test pass on a
+        // fresh simulator and never again. Clearing both keys is what makes
+        // the run repeatable.
+        if ProcessInfo.processInfo.arguments.contains("-uiTestResetLockOptIn") {
+            UserDefaults.standard.removeObject(forKey: Self.offeredKey)
+            UserDefaults.standard.removeObject(forKey: Self.key)
+        }
+        #endif
         let enabled = UserDefaults.standard.bool(forKey: Self.key)
         isEnabled = enabled
         // If the lock is on, a cold launch starts locked.
         isLocked = enabled
+    }
+
+    /// Offer the lock once, just after signing in.
+    ///
+    /// The menu toggle is the only way to discover this today, which means
+    /// nobody does — and the one screen where the offer makes sense is the one
+    /// right after an account appears on the device. Asked once and never
+    /// again: this is a preference, not a permission, so a second ask is
+    /// nagging rather than a second chance. Devices with no enrolled biometry
+    /// are never asked, because the answer could only be no.
+    func offerOptInIfNeverAsked() {
+        guard !UserDefaults.standard.bool(forKey: Self.offeredKey),
+              biometry != .none,
+              !isEnabled
+        else { return }
+        isOfferingOptIn = true
+    }
+
+    /// Customer said yes. `setEnabled` runs the biometric check, so declining
+    /// that check leaves the lock off rather than half-on.
+    func acceptOptIn() async {
+        markOffered()
+        await setEnabled(true)
+    }
+
+    func declineOptIn() {
+        markOffered()
+    }
+
+    /// Recorded when the customer answers, not when the alert appears: an app
+    /// killed mid-prompt should still get its one ask.
+    private func markOffered() {
+        isOfferingOptIn = false
+        UserDefaults.standard.set(true, forKey: Self.offeredKey)
     }
 
     /// Re-engage the lock when the app leaves the foreground.

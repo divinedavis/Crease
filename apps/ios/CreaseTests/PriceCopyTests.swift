@@ -32,6 +32,8 @@ final class PriceCopyTests: XCTestCase {
             readyAt: nil,
             customerNotes: nil,
             cleanerNotes: nil,
+            customerItemCount: nil,
+            cleanerItemCount: nil,
             createdAt: Date(),
             cleaner: nil,
             address: nil,

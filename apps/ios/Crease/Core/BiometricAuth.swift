@@ -15,6 +15,21 @@ enum BiometricAuth {
 
     /// What this device supports and has enrolled right now.
     static func kind() -> Kind {
+        #if DEBUG
+        // A simulator reports no enrolled biometry, and the notifyutil
+        // enrollment trick no longer satisfies LAContext on iOS 26 — so
+        // without this the lock's UI is untestable anywhere the suite can
+        // actually run. Only the availability check is faked; every prompt
+        // still goes through the real LAContext below.
+        if let forced = ProcessInfo.processInfo.arguments
+            .drop(while: { $0 != "-uiTestForceBiometry" }).dropFirst().first {
+            switch forced {
+            case "faceID": return .faceID
+            case "touchID": return .touchID
+            default: return .none
+            }
+        }
+        #endif
         let ctx = LAContext()
         var error: NSError?
         guard ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
