@@ -1,0 +1,21 @@
+-- Restore the unique index every payment upsert depends on.
+--
+-- 0023 dropped `payments_order_kind_idx` (the index 0006 created for
+-- `onConflict: 'order_id,kind'`) and meant to replace it in the same
+-- statement:
+--
+--   create unique index if not exists payments_one_primary_idx
+--     on public.payments (order_id, kind) where kind = 'primary';
+--
+-- That was a no-op. 0005 had already created an index of that NAME on
+-- `(order_id)`, so `if not exists` matched the name and skipped — leaving no
+-- unique index over `(order_id, kind)` at all. ON CONFLICT infers its arbiter
+-- from the column list, and a partial index on `(order_id)` does not match, so
+-- every upsert failed at parse time with 42P10 — including the first one on a
+-- brand-new order. Checkout was down: `createDeliveryPaymentIntent` threw and
+-- the route returned "Could not start payment. Please try again."
+--
+-- New name deliberately: the old one is burnt by the same `if not exists`
+-- trap that caused this.
+create unique index if not exists payments_order_kind_uniq
+  on public.payments (order_id, kind);
