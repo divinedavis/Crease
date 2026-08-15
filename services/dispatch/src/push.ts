@@ -363,6 +363,27 @@ export class PushService {
     return this.jwt.token;
   }
 
+  /**
+   * Whether push could actually be sent right now, for /healthz and a startup
+   * check.
+   *
+   * Worth surfacing because the failure it catches is silent by construction:
+   * a missing or unreadable key makes every send a no-op, and a push nobody
+   * receives looks exactly like a push nobody opened. That is not theoretical
+   * — moving the service off /root left APNS_KEY_PATH pointing at a deleted
+   * file, and notifications stopped for hours with nothing in the logs anyone
+   * was watching. Checking at boot turns a silent regression into a failed
+   * deploy you can see.
+   */
+  status(): { configured: boolean; reason?: string } {
+    const { keyId, teamId, key, keyPath } = config.apns;
+    if (!keyId || !teamId) return { configured: false, reason: 'APNS_KEY_ID/APNS_TEAM_ID not set' };
+    if (!key && !keyPath) return { configured: false, reason: 'no APNS_KEY or APNS_KEY_PATH' };
+    return this.credentials()
+      ? { configured: true }
+      : { configured: false, reason: `key at ${keyPath || '(inline)'} could not be read` };
+  }
+
   /** Null until the key exists, and said out loud exactly once. */
   private credentials(): { key: KeyObject; keyId: string; teamId: string } | null {
     const { keyId, teamId, key, keyPath } = config.apns;

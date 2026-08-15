@@ -81,6 +81,9 @@ app.get('/healthz', async () => ({
   providers: chain.active().map((p) => p.name),
   payments: paymentProvider.name,
   connect: connectProvider.name,
+  // Reported because a broken push config is otherwise invisible: sends become
+  // no-ops and nothing errors. Health is the one place a deploy check looks.
+  push: push.status(),
 }));
 
 /**
@@ -713,7 +716,19 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
 
 app
   .listen({ port: config.port, host: config.host })
-  .then(() => app.log.info({ providers: chain.active().map((p) => p.name) }, 'dispatch up'))
+  .then(() => {
+    // Check the APNs key at boot rather than on the first notification. A key
+    // that cannot be read disables push silently, so the only signal would
+    // otherwise be a customer never hearing their clothes were ready.
+    const apns = push.status();
+    if (!apns.configured) {
+      app.log.error({ reason: apns.reason }, 'APNs is NOT usable — push notifications will not send');
+    }
+    app.log.info(
+      { providers: chain.active().map((p) => p.name), push: apns.configured },
+      'dispatch up',
+    );
+  })
   .catch((err) => {
     app.log.error(err);
     process.exit(1);
