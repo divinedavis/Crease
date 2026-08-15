@@ -4,8 +4,13 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+# Unprivileged: this process holds the service-role, Stripe and Uber keys and
+# terminates public webhooks, so running it as root made any RCE a full-box
+# compromise on a droplet shared with six other sites.
+User=crease
+Group=crease
 Type=simple
-WorkingDirectory=/root/crease/services/dispatch
+WorkingDirectory=/opt/crease/services/dispatch
 ExecStart=/usr/bin/node --enable-source-maps dist/index.js
 Restart=always
 RestartSec=3

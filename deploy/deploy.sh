@@ -11,7 +11,12 @@ set -euo pipefail
 # Set CREASE_HOST=root@<ip>. Not defaulted in a public repo: the box is
 # shared with several unrelated production sites.
 HOST="${CREASE_HOST:?set CREASE_HOST=root@your.server.ip}"
-REMOTE=/root/crease
+# The services run as the unprivileged `crease` user out of /opt (they used to
+# run as root from /root/crease, which meant any RCE in the webhook-facing
+# dispatch process — holder of the service-role, Stripe and Uber keys — was
+# instant root on a box shared with six other sites).
+REMOTE=/opt/crease
+SERVICE_USER=crease
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -74,6 +79,11 @@ ssh "$HOST" "cd $REMOTE/services/dispatch && npm install --omit=dev --no-audit -
 # scripts/ imports @supabase/supabase-js but sits outside the dispatch
 # package, so give the deploy root a resolvable node_modules.
 ssh "$HOST" "ln -sfn $REMOTE/services/dispatch/node_modules $REMOTE/node_modules"
+
+# rsync/npm run over SSH as root, so the tree comes back root-owned. Hand it
+# back or the unprivileged service cannot read its own code and .env.
+echo "==> restoring ownership to $SERVICE_USER"
+ssh "$HOST" "chown -R $SERVICE_USER:$SERVICE_USER $REMOTE && chmod 700 $REMOTE/secrets 2>/dev/null; chmod 600 $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local 2>/dev/null; true"
 
 echo "==> systemd"
 scp -q deploy/crease-dispatch.service deploy/crease-portal.service "$HOST:/etc/systemd/system/"
