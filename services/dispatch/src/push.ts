@@ -374,6 +374,12 @@ export class PushService {
    * file, and notifications stopped for hours with nothing in the logs anyone
    * was watching. Checking at boot turns a silent regression into a failed
    * deploy you can see.
+   *
+   * Boot-time truth, not live: `credentials()` caches both the key and the
+   * unusable flag, so a key repaired under a running process keeps reporting
+   * false until restart. That is deliberate — it keeps this off the disk on
+   * every health check — but it means a green answer here says "the key loaded
+   * when this process started", not "the key is good right now".
    */
   status(): { configured: boolean; reason?: string } {
     const { keyId, teamId, key, keyPath } = config.apns;
