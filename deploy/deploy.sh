@@ -20,6 +20,23 @@ SERVICE_USER=crease
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# What ships must be what was reviewed. This deploy builds from the working
+# tree and installs two root-owned systemd units, so an uncommitted edit — or a
+# stray file from another session working in the same checkout — reaches
+# production without ever having been read by anyone. Refuse, rather than
+# discover it later. CREASE_DEPLOY_DIRTY=1 is the deliberate escape hatch for a
+# genuine hotfix.
+if [ "${CREASE_DEPLOY_DIRTY:-0}" != "1" ]; then
+  DIRTY="$(git status --porcelain -- services packages apps deploy scripts supabase 2>/dev/null || true)"
+  if [ -n "$DIRTY" ]; then
+    echo "refusing to deploy: uncommitted changes in the tree" >&2
+    echo "$DIRTY" >&2
+    echo "commit them, or set CREASE_DEPLOY_DIRTY=1 if this is a deliberate hotfix" >&2
+    exit 1
+  fi
+fi
+echo "==> deploying $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)"
+
 echo "==> building"
 # Build every package, so adding one cannot be silently forgotten here.
 for pkg in packages/*/; do
@@ -85,6 +102,20 @@ ssh "$HOST" "mkdir -p $REMOTE /var/log/crease"
 rsync -az --delete \
   --exclude '.env' --exclude '.env.local' --exclude 'secrets/' \
   "$STAGE/" "$HOST:$REMOTE/"
+
+# The health check below proves the service answers, not that it is running the
+# code we just built — a partial rsync passes it too. Compare a checksum of the
+# built artefacts on both sides before restarting anything.
+echo "==> verifying upload"
+LOCAL_SUM=$(cd "$STAGE" && find services/dispatch/dist packages -type f -name '*.js' -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1)
+REMOTE_SUM=$(ssh "$HOST" "cd $REMOTE && find services/dispatch/dist packages -type f -name '*.js' -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1")
+if [ "$LOCAL_SUM" != "$REMOTE_SUM" ]; then
+  echo "upload verification FAILED — staged and remote trees differ" >&2
+  echo "  local  $LOCAL_SUM" >&2
+  echo "  remote $REMOTE_SUM" >&2
+  exit 1
+fi
+echo "    checksum ok (${LOCAL_SUM:0:12})"
 
 echo "==> installing dispatch runtime deps"
 # ci, not install: install would re-resolve the caret ranges on the box and

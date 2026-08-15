@@ -3,8 +3,11 @@ import {
   DeliveryProviderError,
   TERMINAL_STATUSES,
   type CreateDeliveryRequest,
+  type DeliveryProvider,
   type LegStatus,
   type ProviderChain,
+  type Quote,
+  type QuoteRequest,
   type Waypoint,
 } from './deps.js';
 import { config } from './config.js';
@@ -13,6 +16,24 @@ import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from '.
 import { parseWindow } from './windows.js';
 
 export type LegType = 'pickup' | 'return';
+
+/**
+ * A failure whose message was written for the customer to read.
+ *
+ * Everything else thrown from here is written for us — it quotes short codes,
+ * payment statuses and carrier vocabulary, and the customer routes deliberately
+ * swallow it and answer something generic. That default is right, but it is too
+ * blunt for the handful of refusals that ARE the answer ("this order has run
+ * out of attempts, call support"), which are useless as a generic 502 and send
+ * someone into a retry loop that can never succeed. Marking those explicitly is
+ * how a route can pass one through without having to guess from the text.
+ */
+export class CustomerFacingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CustomerFacingError';
+  }
+}
 
 /**
  * Leg status -> order status, per leg.
@@ -178,21 +199,61 @@ export class OrderService {
       throw new Error(`order ${order.short_code} cannot be dispatched — ${dispatchWindow.error}`);
     }
 
+    // The row number. It only ever goes up, it orders the legs, and it is how a
+    // retry is recognised — it is NOT the retry budget. See below.
     const attempt = (priorLegs?.[0]?.attempt ?? 0) + 1;
+
     // Cap re-dispatch. A returned delivery resets the order to 'ready', and the
     // return route is customer-triggerable — without a cap a customer who is
     // repeatedly "unavailable" (or who scripts the endpoint) books a fresh
     // courier at Crease's cost on every loop for a single paid fee. Past the
     // cap, fail the leg (moving the order to a needs-attention state) and
     // refuse rather than dispatch yet another courier.
+    //
+    // Counted over the legs that actually reached a carrier, not over the row
+    // numbers, because those two are not the same thing. A claim released
+    // because the quote never came back (Uber 5xx, a timeout, our own write
+    // losing) engaged nobody and cost the customer nothing — and counting it
+    // meant three bad minutes at the carrier retired an order for good: the
+    // third blip hit the cap, the order went to 'failed', and the retry button
+    // the customer was left staring at could only ever burn attempt five. What
+    // is worth rationing is couriers we asked to drive.
     const MAX_ATTEMPTS = 3;
-    if (attempt > MAX_ATTEMPTS) {
-      this.log.warn({ orderId, leg, attempt }, 'refusing dispatch — max attempts reached');
+    const engaged = (priorLegs ?? []).filter(reachedCarrier).length;
+    if (engaged >= MAX_ATTEMPTS) {
+      this.log.warn({ orderId, leg, attempt, engaged }, 'refusing dispatch — max attempts reached');
       await this.recordLegFailure(orderId, leg, `max ${leg} attempts reached (${MAX_ATTEMPTS})`);
-      throw new Error(`This order has reached the maximum number of ${leg} attempts — please contact support.`);
+      throw new CustomerFacingError(
+        `This order has reached the maximum number of ${leg} attempts — please contact support.`,
+      );
     }
+
+    // A released claim is cheap, not free: each one bought a quote before it
+    // was let go, and the return route is customer-triggerable, so cheap times
+    // an unbounded retry loop is still a bill. The cap above no longer bounds
+    // that — deliberately — so bound the rows themselves instead. Set far
+    // enough out that no ordinary carrier outage reaches it, near enough that a
+    // phone with a stuck retry loop cannot run up quotes all afternoon.
+    const MAX_CLAIMS = 10;
+    if ((priorLegs?.length ?? 0) >= MAX_CLAIMS) {
+      this.log.warn({ orderId, leg, claims: priorLegs?.length }, 'refusing dispatch — too many claims');
+      // Straight to the order, without recording another leg: ten rows already
+      // say this, each with the carrier's own words on it, and an eleventh
+      // written by the refusal itself adds nothing but a row per retry.
+      await this.db
+        .from('orders')
+        .update({
+          status: 'failed',
+          cancelled_reason: `${priorLegs?.length} ${leg} dispatch attempts without reaching a courier`,
+        })
+        .eq('id', orderId);
+      throw new CustomerFacingError(
+        'We could not reach a courier for this order — please contact support.',
+      );
+    }
+
     if (attempt > 1) {
-      this.log.warn({ orderId, leg, attempt }, 're-dispatching after failed attempt');
+      this.log.warn({ orderId, leg, attempt, engaged }, 're-dispatching after failed attempt');
     }
 
     const { pickup, dropoff } = this.waypoints(order, leg);
@@ -263,7 +324,7 @@ export class OrderService {
     }
 
     // The claim is ours, so exactly one quote gets bought for this leg.
-    const quoteReq = {
+    const quoteReq: QuoteRequest = {
       pickup,
       dropoff,
       manifest: {
@@ -281,43 +342,31 @@ export class OrderService {
       pickupDeadlineAt: dispatchWindow.end,
     };
 
-    let best: Awaited<ReturnType<ProviderChain['bestQuote']>>;
-    try {
-      best = await this.chain.bestQuote(quoteReq);
-    } catch (err) {
-      // Every path out of here has to let go of the claim. A carrier having a
-      // bad minute must not leave a 'pending' row sitting in the mutex, because
-      // that row would refuse every future dispatch of this leg — the outage
-      // would outlive itself and the order could never be sent again.
-      await this.releaseClaim(claim.id, (err as Error).message);
-      throw err;
-    }
+    let { best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq);
 
-    if (!best) {
-      await this.recordLegFailure(orderId, leg, 'no courier coverage for this route', claim.id);
-      throw new Error('no courier coverage for this route');
+    // A quote is a price with a clock on it, and until now nothing read that
+    // clock: `quote_expires_at` was written on the row and never looked at
+    // again. Creating a delivery against a lapsed quote is either rejected by
+    // the carrier — which lands in the catch below and marks a leg failed when
+    // nothing was wrong with it — or honoured at whatever the carrier decides
+    // the price is now, which is a fee nobody agreed to.
+    //
+    // The gap between quoting and creating is normally milliseconds. It is not
+    // always: bestQuote waits on every carrier in the chain, so one of them
+    // hanging spends the whole window before the winner is even known.
+    //
+    // Only a real timestamp that is genuinely nearly up buys a second quote. A
+    // missing or unparseable one means the carrier published no clock, and
+    // inventing one would re-quote every leg forever. Once, not in a loop: a
+    // quote that arrives already expiring means the two clocks disagree, and
+    // spinning on that just buys quotes.
+    if (expiringWithin(legRow.quote_expires_at, QUOTE_MIN_REMAINING_MS)) {
+      this.log.info(
+        { orderId, leg, expiresAt: legRow.quote_expires_at },
+        'quote is about to expire — re-quoting before dispatch',
+      );
+      ({ best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq));
     }
-
-    const { data: quoted, error: quoteWriteErr } = await this.db
-      .from('delivery_legs')
-      .update({
-        provider: best.provider.name,
-        fee_cents: best.quote.feeCents,
-        quoted_at: new Date().toISOString(),
-        quote_expires_at: best.quote.expiresAt,
-      })
-      .eq('id', claim.id)
-      .select()
-      .single();
-
-    // Losing this write is not cosmetic: `provider` is how a cancellation and
-    // an inbound webhook find the carrier that holds the delivery. Stop before
-    // dispatching one we would not be able to call off.
-    if (quoteWriteErr || !quoted) {
-      await this.releaseClaim(claim.id, `could not record quote: ${quoteWriteErr?.message}`);
-      throw new Error(`could not record quote: ${quoteWriteErr?.message}`);
-    }
-    const legRow = quoted;
 
     const createReq: CreateDeliveryRequest = {
       ...quoteReq,
@@ -365,6 +414,58 @@ export class OrderService {
     }
   }
 
+  /**
+   * Buy the price for a claimed leg and record it on the row.
+   *
+   * Split out because it is run twice on the legs whose first quote is about to
+   * lapse, and both runs have to obey the same rule: every path out of here
+   * that does not return a usable quote lets go of the claim. A carrier having
+   * a bad minute must not leave a 'pending' row sitting in the mutex, because
+   * that row would refuse every future dispatch of this leg — the outage would
+   * outlive itself and the order could never be sent again.
+   */
+  private async quoteLeg(
+    orderId: string,
+    leg: LegType,
+    claimId: string,
+    quoteReq: QuoteRequest,
+  ): Promise<{ best: { provider: DeliveryProvider; quote: Quote }; legRow: any }> {
+    let best: { provider: DeliveryProvider; quote: Quote } | undefined;
+    try {
+      best = await this.chain.bestQuote(quoteReq);
+    } catch (err) {
+      await this.releaseClaim(claimId, (err as Error).message);
+      throw err;
+    }
+
+    if (!best) {
+      await this.recordLegFailure(orderId, leg, 'no courier coverage for this route', claimId);
+      throw new Error('no courier coverage for this route');
+    }
+
+    const { data: quoted, error: quoteWriteErr } = await this.db
+      .from('delivery_legs')
+      .update({
+        provider: best.provider.name,
+        fee_cents: best.quote.feeCents,
+        quoted_at: new Date().toISOString(),
+        quote_expires_at: best.quote.expiresAt,
+      })
+      .eq('id', claimId)
+      .select()
+      .single();
+
+    // Losing this write is not cosmetic: `provider` is how a cancellation and
+    // an inbound webhook find the carrier that holds the delivery. Stop before
+    // dispatching one we would not be able to call off.
+    if (quoteWriteErr || !quoted) {
+      await this.releaseClaim(claimId, `could not record quote: ${quoteWriteErr?.message}`);
+      throw new Error(`could not record quote: ${quoteWriteErr?.message}`);
+    }
+
+    return { best, legRow: quoted };
+  }
+
   /** Apply a normalized provider event to a leg and cascade to the order. */
   async applyEvent(legId: string, event: {
     status: LegStatus;
@@ -377,61 +478,90 @@ export class OrderService {
     completedAt?: string;
     error?: string;
   }) {
-    const { data: leg } = await this.db
-      .from('delivery_legs')
-      .select('id, order_id, leg, status')
-      .eq('id', legId)
-      .single();
-    if (!leg) return;
+    // Read, guard, write — with the write conditional on the row still being
+    // where the read left it, and another go round when it is not.
+    //
+    // The guards below are only worth as much as the write they protect. Two
+    // webhooks landing together both read 'at_dropoff', both decide their own
+    // event is legal, and the slower one's unconditional UPDATE then lands
+    // after the faster one's — walking the leg backwards off 'delivered',
+    // re-stamping the ready estimate and re-opening the payout gate on an order
+    // that had finished. Carriers batch and retry their callbacks, so this is
+    // ordinary traffic, not a thought experiment. Pinning the UPDATE to the
+    // status we read turns the loser into zero rows instead, and it re-decides
+    // against whatever is actually on the row now. Bounded: a leg being
+    // rewritten this hard is a fault to report, not a spin to sit in.
+    for (let pass = 0; pass < 3; pass++) {
+      const { data: leg } = await this.db
+        .from('delivery_legs')
+        .select('id, order_id, leg, status')
+        .eq('id', legId)
+        .single();
+      if (!leg) return;
 
-    // Webhooks arrive out of order. Never walk a leg backwards, and never
-    // move it off a terminal state — a late 'en_route' after 'delivered'
-    // would otherwise un-complete a finished order.
-    if (TERMINAL_STATUSES.includes(leg.status)) {
-      this.log.info({ legId, from: leg.status, to: event.status }, 'ignoring event on terminal leg');
+      // Webhooks arrive out of order. Never walk a leg backwards, and never
+      // move it off a terminal state — a late 'en_route' after 'delivered'
+      // would otherwise un-complete a finished order.
+      if (TERMINAL_STATUSES.includes(leg.status)) {
+        this.log.info({ legId, from: leg.status, to: event.status }, 'ignoring event on terminal leg');
+        return;
+      }
+      if (rank(event.status) < rank(leg.status) && !TERMINAL_STATUSES.includes(event.status)) {
+        this.log.info({ legId, from: leg.status, to: event.status }, 'ignoring out-of-order event');
+        return;
+      }
+
+      // A bag cannot reach the dropoff side without first being picked up. The
+      // rank guard above only stops backward moves, not a single event that
+      // vaults a still-'pending' leg straight to delivered/returned — which,
+      // cascaded, marks the order complete (or resets a return) and can release
+      // the next leg. Reject any dropoff-side status on a leg that never reached
+      // 'picked_up'. (Tolerates dropped intermediate en_route/at_* webhooks;
+      // only the pickup itself is required.)
+      const DROPOFF_SIDE: LegStatus[] = ['en_route_to_dropoff', 'at_dropoff', 'delivered', 'returned'];
+      if (DROPOFF_SIDE.includes(event.status) && rank(leg.status) < rank('picked_up')) {
+        this.log.warn(
+          { legId, from: leg.status, to: event.status },
+          'ignoring illegal transition: dropoff-side event before pickup',
+        );
+        return;
+      }
+
+      const { data: written } = await this.db
+        .from('delivery_legs')
+        .update({
+          status: event.status,
+          provider_status: event.providerStatus,
+          tracking_url: event.trackingUrl,
+          fee_cents: event.feeCents,
+          dropoff_pincode: event.dropoffPincode,
+          courier_name: event.courier?.name,
+          courier_phone: event.courier?.phone,
+          courier_vehicle: event.courier?.vehicle,
+          courier_lat: event.courier?.lat,
+          courier_lng: event.courier?.lng,
+          picked_up_at: event.pickedUpAt,
+          completed_at: event.completedAt,
+          last_error: event.error,
+        })
+        .eq('id', legId)
+        // The guard, made real. Without this the checks above are advisory.
+        .eq('status', leg.status)
+        .select('id');
+
+      if (!written?.length) {
+        this.log.info(
+          { legId, expected: leg.status, to: event.status },
+          'leg moved while the event was being applied — re-reading',
+        );
+        continue;
+      }
+
+      await this.applyOrderStatus(leg.order_id, leg.leg as LegType, event.status, event.completedAt);
       return;
     }
-    if (rank(event.status) < rank(leg.status) && !TERMINAL_STATUSES.includes(event.status)) {
-      this.log.info({ legId, from: leg.status, to: event.status }, 'ignoring out-of-order event');
-      return;
-    }
 
-    // A bag cannot reach the dropoff side without first being picked up. The
-    // rank guard above only stops backward moves, not a single event that
-    // vaults a still-'pending' leg straight to delivered/returned — which,
-    // cascaded, marks the order complete (or resets a return) and can release
-    // the next leg. Reject any dropoff-side status on a leg that never reached
-    // 'picked_up'. (Tolerates dropped intermediate en_route/at_* webhooks;
-    // only the pickup itself is required.)
-    const DROPOFF_SIDE: LegStatus[] = ['en_route_to_dropoff', 'at_dropoff', 'delivered', 'returned'];
-    if (DROPOFF_SIDE.includes(event.status) && rank(leg.status) < rank('picked_up')) {
-      this.log.warn(
-        { legId, from: leg.status, to: event.status },
-        'ignoring illegal transition: dropoff-side event before pickup',
-      );
-      return;
-    }
-
-    await this.db
-      .from('delivery_legs')
-      .update({
-        status: event.status,
-        provider_status: event.providerStatus,
-        tracking_url: event.trackingUrl,
-        fee_cents: event.feeCents,
-        dropoff_pincode: event.dropoffPincode,
-        courier_name: event.courier?.name,
-        courier_phone: event.courier?.phone,
-        courier_vehicle: event.courier?.vehicle,
-        courier_lat: event.courier?.lat,
-        courier_lng: event.courier?.lng,
-        picked_up_at: event.pickedUpAt,
-        completed_at: event.completedAt,
-        last_error: event.error,
-      })
-      .eq('id', legId);
-
-    await this.applyOrderStatus(leg.order_id, leg.leg as LegType, event.status, event.completedAt);
+    this.log.warn({ legId, to: event.status }, 'gave up applying event — the leg kept moving underneath it');
   }
 
   private async applyOrderStatus(
@@ -443,26 +573,55 @@ export class OrderService {
     const next = ORDER_STATUS_BY_LEG[leg][legStatus];
     if (!next) return;
 
-    const { data: order } = await this.db
-      .from('orders')
-      .select('status')
-      .eq('id', orderId)
-      .single();
-    if (!order) return;
+    // Same read-guard-write shape as applyEvent, and for the same reason: these
+    // two guards are the only thing standing between a straggling webhook and a
+    // finished order, and an unconditional write makes them advisory. A cancel
+    // committing between the read and the write, or a second event cascading
+    // from the other leg, would be silently overwritten by a decision made
+    // against a status that no longer exists — and 'at_cleaner' landing twice
+    // re-stamps a ready estimate the shop has already beaten.
+    for (let pass = 0; pass < 3; pass++) {
+      const { data: order } = await this.db
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+      if (!order) return;
 
-    // Never resurrect a finished order from a straggling event.
-    if (['delivered', 'cancelled'].includes(order.status)) return;
+      // Never resurrect a finished order from a straggling event.
+      if (['delivered', 'cancelled'].includes(order.status)) return;
 
-    // Pickup completing means the bag is at the cleaner, awaiting intake —
-    // don't stomp a cleaner who has already started counting.
-    if (next === 'at_cleaner' && ['awaiting_approval', 'cleaning', 'ready'].includes(order.status)) {
+      // Pickup completing means the bag is at the cleaner, awaiting intake —
+      // don't stomp a cleaner who has already started counting.
+      if (next === 'at_cleaner' && ['awaiting_approval', 'cleaning', 'ready'].includes(order.status)) {
+        return;
+      }
+
+      const { data: written } = await this.db
+        .from('orders')
+        .update({ status: next })
+        .eq('id', orderId)
+        .eq('status', order.status)
+        .select('id');
+
+      if (!written?.length) {
+        this.log.info(
+          { orderId, expected: order.status, to: next },
+          'order moved while its status was being advanced — re-checking',
+        );
+        continue;
+      }
+
+      this.log.info({ orderId, leg, legStatus, orderStatus: next }, 'order status advanced');
+
+      if (next === 'at_cleaner') await this.stampReadyEstimate(orderId, completedAt);
       return;
     }
 
-    await this.db.from('orders').update({ status: next }).eq('id', orderId);
-    this.log.info({ orderId, leg, legStatus, orderStatus: next }, 'order status advanced');
-
-    if (next === 'at_cleaner') await this.stampReadyEstimate(orderId, completedAt);
+    this.log.warn(
+      { orderId, leg, legStatus, to: next },
+      'gave up advancing the order — its status kept moving underneath',
+    );
   }
 
   /**
@@ -657,6 +816,36 @@ export class OrderService {
 
 function formatAddress(a: any): string {
   return [a.line1, a.line2, a.city, `${a.state} ${a.postal_code}`].filter(Boolean).join(', ');
+}
+
+/**
+ * Did this leg ever become somebody's job?
+ *
+ * 'pending' is the placeholder a claim carries until a quote comes back, and
+ * 'none' is what a refusal made before any claim records — a row with either of
+ * those was never dispatched to anyone and must not spend the retry budget.
+ * provider_delivery_id is the belt to that braces: a create whose response we
+ * lost may still have put a courier on the road, and a half-written row like
+ * that has to count even though the carrier never got named on it.
+ */
+function reachedCarrier(l: { provider?: string | null; provider_delivery_id?: string | null }): boolean {
+  if (l.provider_delivery_id) return true;
+  return Boolean(l.provider) && l.provider !== 'pending' && l.provider !== 'none';
+}
+
+/**
+ * How much life a quote needs left before we dare create against it.
+ *
+ * Generous, because what is being avoided is not a near miss but a carrier
+ * rejection that fails an otherwise healthy leg. A wasted re-quote costs an API
+ * call; a lapsed one costs the order.
+ */
+const QUOTE_MIN_REMAINING_MS = 30_000;
+
+/** True only for a timestamp we can read that is genuinely nearly up. */
+function expiringWithin(expiresAt: string | null | undefined, withinMs: number): boolean {
+  const at = Date.parse(expiresAt ?? '');
+  return Number.isFinite(at) && at - Date.now() < withinMs;
 }
 
 /** Progress ordering for out-of-order webhook suppression. */

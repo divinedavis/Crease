@@ -10,7 +10,7 @@
  *
  *   node scripts/rls-check.mjs
  */
-import { makeClient, readEnv } from './lib/client.mjs';
+import { assertLocalTarget, makeClient, readEnv } from './lib/client.mjs';
 
 // Test-account password comes from the environment. This repo is public,
 // and the Supabase project it points at is live — a known password in a
@@ -24,7 +24,12 @@ if (!TEST_PASSWORD) {
 const svcEnv = readEnv('services/dispatch/.env');
 const webEnv = readEnv('apps/portal/.env.local');
 const URL = svcEnv.SUPABASE_URL;
+// This writes rows with the service-role key, so it gets the same refusal the
+// other operational scripts get: localhost, or CREASE_ALLOW_PROD=1 said aloud.
+assertLocalTarget(svcEnv);
 const admin = await makeClient(svcEnv.SUPABASE_SERVICE_ROLE_KEY, URL);
+
+const TEST_EMAIL = 'testcustomer@crease.local';
 
 let failures = 0;
 const check = (label, ok, detail = '') => {
@@ -55,20 +60,26 @@ if (!rival) {
   rival = data;
 }
 
-// Start from an address, not from a profile: staff accounts have profiles too
-// (the auth trigger makes one for every user) and no address, so picking an
-// arbitrary profile lands on a shop employee about half the time.
+// The order below is a fixture, so it hangs off the fixture account. Picking
+// the first row out of `addresses` used to work by accident and is a real
+// customer's home address roughly always — this script then wrote a live order
+// against their account and deleted it again. Named account, own address.
+const { data: users } = await admin.auth.admin.listUsers();
+const customer = users?.users?.find((u) => u.email === TEST_EMAIL);
+if (!customer) throw new Error(`no ${TEST_EMAIL} — run scripts/seed.mjs first`);
+
 const { data: address } = await admin
   .from('addresses')
-  .select('id, user_id')
+  .select('id')
+  .eq('user_id', customer.id)
   .limit(1)
-  .single();
-if (!address) throw new Error('no seeded address — run scripts/seed.mjs first');
+  .maybeSingle();
+if (!address) throw new Error('the test customer has no address — run scripts/seed.mjs first');
 
 const { data: rivalOrder } = await admin
   .from('orders')
   .insert({
-    customer_id: address.user_id,
+    customer_id: customer.id,
     cleaner_id: rival.id,
     address_id: address.id,
     status: 'at_cleaner',

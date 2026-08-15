@@ -16,6 +16,22 @@ function required(key: string): string {
 // its webhook secret must be a real value, never a shipped default.
 const mockCourierEnabled = /^(1|true|yes|on)$/i.test(process.env.ENABLE_MOCK_COURIER ?? '');
 
+// A Stripe key with no webhook secret is a box that takes payments and refuses
+// every callback Stripe makes about them (the route 503s with nothing to verify
+// against). That backstop is the only thing that catches a customer who pays and
+// then loses their connection before the app can tell us, so a deploy missing it
+// quietly drops orders — and STRIPE_WEBHOOK_SECRET was absent from .env.example,
+// one provisioning step away from exactly that.
+//
+// Fatal in production only. A dev box legitimately runs a test key with no
+// webhook tunnel, and refusing to start there would just be in the way.
+if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_WEBHOOK_SECRET) {
+  const message =
+    'STRIPE_SECRET_KEY is set but STRIPE_WEBHOOK_SECRET is not — Stripe webhooks will be refused';
+  if (process.env.NODE_ENV === 'production') throw new Error(message);
+  console.warn(`warning: ${message}`);
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 8080),
   // Bind loopback by default; the service holds the service-role key and is

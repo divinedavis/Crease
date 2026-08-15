@@ -25,6 +25,19 @@ if (!TEST_PASSWORD) {
 }
 
 const { env, db } = await adminClient();
+
+// This script does not simulate a payment — it mints a PaymentIntent and
+// confirms it against Stripe with the account's own secret key. On a live key
+// that is a real charge on a real card, made by a test run, and pm_card_visa
+// below is not even accepted there. Test keys only.
+if (!(env.STRIPE_SECRET_KEY ?? '').startsWith('sk_test_')) {
+  console.error(
+    'refusing to run: STRIPE_SECRET_KEY is not a test key. This mints and confirms ' +
+      'real PaymentIntents, so it only runs against sk_test_… .',
+  );
+  process.exit(1);
+}
+
 const anon = readEnv('apps/ios/Secrets.xcconfig');
 const BASE = process.env.CREASE_BASE ?? env.PUBLIC_URL ?? 'http://localhost:8080';
 

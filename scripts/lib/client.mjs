@@ -40,6 +40,47 @@ async function transport() {
   }
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '0.0.0.0']);
+
+/** Whether a URL points at this machine. An absent value points nowhere. */
+function isLocalTarget(value) {
+  if (!value) return true;
+  try {
+    // IPv6 hostnames come back bracketed, and '[::1]' is not '::1'.
+    return LOCAL_HOSTS.has(new URL(value).hostname.replace(/^\[|\]$/g, ''));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Refuse to aim a service-role credential at a live stack by accident.
+ *
+ * The deploy rsyncs this whole repo onto the droplet, where
+ * services/dispatch/.env is *production* — so `node scripts/e2e-money.mjs`
+ * typed in that directory books couriers, moves money and rewrites real
+ * customers' orders with the production service-role key, and nothing on the
+ * command line hints at it. Localhost is the only target that needs no
+ * thought; anything else has to be asked for out loud.
+ */
+export function assertLocalTarget(env) {
+  if (process.env.CREASE_ALLOW_PROD === '1') return;
+  // CREASE_BASE is what the e2e scripts actually fetch when it is set, so it
+  // is the value worth checking rather than the PUBLIC_URL it overrides.
+  const remote = [
+    ['SUPABASE_URL', env.SUPABASE_URL],
+    ['PUBLIC_URL', process.env.CREASE_BASE ?? env.PUBLIC_URL],
+  ].filter(([, value]) => !isLocalTarget(value));
+  if (remote.length === 0) return;
+
+  throw new Error(
+    `refusing to build a service-role client: ${remote
+      .map(([name, value]) => `${name}=${value}`)
+      .join(', ')} is not localhost. ` +
+      'Set CREASE_ALLOW_PROD=1 to run this against a non-local stack on purpose.',
+  );
+}
+
 export async function makeClient(key, url) {
   const ws = await transport();
   return createClient(url, key, {
@@ -51,5 +92,6 @@ export async function makeClient(key, url) {
 /** Service-role client from the dispatch service's own .env. */
 export async function adminClient() {
   const env = readEnv('services/dispatch/.env');
+  assertLocalTarget(env);
   return { env, db: await makeClient(env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_URL) };
 }

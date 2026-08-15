@@ -115,6 +115,55 @@ export class PushService {
       { onConflict: 'token' },
     );
     if (error) throw new Error(`could not register device token: ${error.message}`);
+
+    await this.evictSurplusDevices(userId);
+  }
+
+  /**
+   * Keep a customer's device list to a plausible number of phones.
+   *
+   * Nothing about the shape check on the route stops a caller inventing tokens:
+   * 64 random hex characters passes, and each one is a row this user's every
+   * order event then fans out to. Left uncapped that is an amplifier pointed at
+   * APNs — one order transition becoming thousands of HTTP/2 requests, all of
+   * them serial, all of them inside the window a dispatch or a settle is
+   * waiting on — and the account gets rate-limited for the customers who are
+   * real.
+   *
+   * Oldest by last_seen_at goes first, which is the same ordering a genuine
+   * user would want: the phone they still open survives, the one they traded in
+   * two years ago does not. The row just written carries this moment as its
+   * last_seen_at, so a real re-registration can never evict itself.
+   *
+   * A prune that fails is logged, not thrown. The registration itself succeeded
+   * and the device can now be reached; failing the request over the tidy-up
+   * would tell a working phone it is not registered.
+   */
+  private async evictSurplusDevices(userId: string) {
+    const MAX_DEVICES_PER_USER = 10;
+
+    const { data: devices, error } = await this.db
+      .from('device_tokens')
+      .select('id, last_seen_at')
+      .eq('user_id', userId)
+      .order('last_seen_at', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (error) {
+      this.log.warn({ err: error, userId }, 'could not read device tokens to cap them');
+      return;
+    }
+    if (!devices || devices.length <= MAX_DEVICES_PER_USER) return;
+
+    const surplus = devices.slice(MAX_DEVICES_PER_USER).map((d: { id: string }) => d.id);
+    const { error: deleteError } = await this.db.from('device_tokens').delete().in('id', surplus);
+    if (deleteError) {
+      this.log.warn({ err: deleteError, userId, count: surplus.length }, 'could not evict old devices');
+      return;
+    }
+    this.log.info(
+      { userId, evicted: surplus.length, kept: MAX_DEVICES_PER_USER },
+      'evicted the least recently seen devices over the per-user cap',
+    );
   }
 
   /**

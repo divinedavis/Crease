@@ -17,7 +17,9 @@ echo "==> minting a session for the test customer"
 : "${CREASE_TEST_PASSWORD:?set CREASE_TEST_PASSWORD (keychain: crease-test-password)}"
 # ios-session.mjs prints exports; if it failed, eval silently produces nothing
 # and the script dies later on an unbound variable instead of saying why.
-SESSION_ENV="$(node "$ROOT/scripts/ios-session.mjs")" || {
+# --with-refresh because Session.swift only injects a test session when both
+# halves are present; the flag exists so nothing else prints the refresh token.
+SESSION_ENV="$(node "$ROOT/scripts/ios-session.mjs" --with-refresh)" || {
   echo "could not mint a session — is CREASE_TEST_PASSWORD correct?" >&2
   exit 1
 }

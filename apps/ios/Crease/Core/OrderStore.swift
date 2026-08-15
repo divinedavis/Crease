@@ -19,6 +19,9 @@ final class OrderStore: ObservableObject {
 
     private let client: SupabaseClient
     private var channel: RealtimeChannelV2?
+    /// The one task listening to both tables, and the refetch it has queued.
+    private var watcher: Task<Void, Never>?
+    private var pendingReload: Task<Void, Never>?
 
     init(client: SupabaseClient) {
         self.client = client
@@ -50,14 +53,43 @@ final class OrderStore: ObservableObject {
         _ = await (o, c, a)
     }
 
+    /// The statuses that put an order in the past — the mirror of
+    /// `OrderStatus.isActive`, which is what OrdersView splits the list on.
+    private static let closedStatuses = OrderStatus.allCases
+        .filter { !$0.isActive }
+        .map(\.rawValue)
+
+    /// How far back "Past orders" goes. A regular customer accumulates
+    /// hundreds, every one of them dragging its cleaner, address, items and
+    /// legs along, and the screen shows them as one-line rows nobody scrolls
+    /// to the bottom of.
+    private static let historyLimit = 25
+
+    /// Two queries rather than one, because they want opposite things.
+    ///
+    /// Everything still in flight has to be here whatever its age — an order
+    /// stuck at the shop for a month is the one the customer opens the app for,
+    /// and a plain `.limit()` on a single query is exactly what would drop it.
+    /// Finished orders are history, so they get a ceiling.
     func loadOrders() async {
         do {
-            orders = try await client
+            async let open: [Order] = client
                 .from("orders")
                 .select(Self.orderSelect)
+                .notIn("status", values: Self.closedStatuses)
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            async let history: [Order] = client
+                .from("orders")
+                .select(Self.orderSelect)
+                .in("status", values: Self.closedStatuses)
+                .order("created_at", ascending: false)
+                .limit(Self.historyLimit)
+                .execute()
+                .value
+            let (active, past) = try await (open, history)
+            orders = (active + past).sorted { $0.createdAt > $1.createdAt }
         } catch {
             errorMessage = "Couldn't load your orders."
         }
@@ -256,6 +288,82 @@ final class OrderStore: ObservableObject {
         }
     }
 
+    /// Abandon a draft the customer has replaced with a different choice.
+    ///
+    /// Routed through the same cancel call they could make by hand, because
+    /// that is what releases the PaymentIntent the old draft already minted.
+    /// Marking the row cancelled from here would leave a live intent on Stripe
+    /// with nothing pointing at it. Failure is not worth a message: the draft
+    /// stays visible and cancellable on the list, which is where they would go
+    /// to deal with it anyway.
+    func discardDraft(orderId: UUID) async {
+        _ = try? await DispatchAPI(accessToken: try await accessToken()).post(
+            "/v1/me/orders/\(orderId.uuidString.lowercased())/cancel",
+            as: DispatchAPI.Ack.self
+        )
+    }
+
+    /// Everything this account holds, as a JSON file the customer can keep.
+    ///
+    /// Read through their own session, so RLS is what decides what "their
+    /// data" means and this cannot become a way to read anybody else's — the
+    /// same rows the app already renders, without the shaping. `*` is
+    /// deliberately not used on delivery_legs: that table also carries the
+    /// courier's phone and live GPS, which the customer role is not granted,
+    /// and asking for a column you cannot read fails the whole query.
+    func exportAccountData() async throws -> URL {
+        let profileRows = try await rawRows(client.from("profiles").select())
+        let addressRows = try await rawRows(client.from("addresses").select().order("created_at"))
+        let orderRows = try await rawRows(
+            client.from("orders").select(Self.exportSelect).order("created_at", ascending: false)
+        )
+
+        let export: [String: Any] = [
+            "exported_at": ISO8601DateFormatter().string(from: Date()),
+            "source": "Crease for iOS",
+            // One row, so hand it over as an object rather than a list of one.
+            "profile": (profileRows as? [Any])?.first ?? NSNull(),
+            "addresses": addressRows,
+            "orders": orderRows,
+        ]
+
+        let data = try JSONSerialization.data(
+            withJSONObject: export, options: [.prettyPrinted, .sortedKeys]
+        )
+        // A named file, because the share sheet passes the filename on: what
+        // lands in Files or in an email is "crease-data-2026-08-15.json"
+        // rather than an untitled blob of text.
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("crease-data-\(Self.fileStamp.string(from: Date())).json")
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+
+    private static let exportSelect = """
+    *, order_items(*),
+    cleaner:cleaners(id, name, phone, line1, city, state, postal_code),
+    address:addresses(*),
+    payments(id, kind, status, authorized_cents, captured_cents, refunded_cents, created_at),
+    delivery_legs(id, leg, attempt, status, provider, tracking_url, fee_cents,
+                  courier_name, courier_vehicle, dropoff_pincode,
+                  dispatched_at, picked_up_at, completed_at, created_at)
+    """
+
+    private static let fileStamp: DateFormatter = {
+        let f = DateFormatter()
+        // Fixed locale: a filename is not a place for the reader's calendar.
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    /// The response body as parsed JSON, not as a model. An export should
+    /// carry what the database holds, not the subset the screens decode.
+    private func rawRows(_ builder: PostgrestBuilder) async throws -> Any {
+        let data = try await builder.execute().data
+        return (try? JSONSerialization.jsonObject(with: data)) ?? []
+    }
+
     /// Push updates for this customer's orders.
     ///
     /// A tracking screen that only refreshes on pull is a tracking screen
@@ -268,19 +376,41 @@ final class OrderStore: ObservableObject {
         await ch.subscribe()
         channel = ch
 
-        Task { [weak self] in
-            for await _ in changes {
-                await self?.loadOrders()
-            }
-        }
-        Task { [weak self] in
-            for await _ in legChanges {
-                await self?.loadOrders()
+        // One task over both streams, so the pair can be cancelled together
+        // and neither can outlive the channel it reads from.
+        watcher = Task { [weak self] in
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { for await _ in changes { await self?.reloadSoon() } }
+                group.addTask { for await _ in legChanges { await self?.reloadSoon() } }
             }
         }
     }
 
+    /// Collapse a burst of row changes into one refetch.
+    ///
+    /// A single pickup writes the order row and its leg over and over as the
+    /// courier moves — a dozen events inside two seconds, each of which used
+    /// to run the whole history query from its own task, racing itself for the
+    /// list it assigns. The window is short enough that the screen still moves
+    /// with the driver, and events arriving inside it are absorbed rather than
+    /// queued: the reload that is already coming will see them.
+    private func reloadSoon() {
+        guard pendingReload == nil else { return }
+        pendingReload = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard let self, !Task.isCancelled else { return }
+            // Cleared first, so a change landing during the fetch schedules
+            // the next one instead of being dropped.
+            pendingReload = nil
+            await loadOrders()
+        }
+    }
+
     func stopWatching() async {
+        watcher?.cancel()
+        watcher = nil
+        pendingReload?.cancel()
+        pendingReload = nil
         if let channel { await client.realtimeV2.removeChannel(channel) }
         channel = nil
     }

@@ -20,6 +20,17 @@ struct OrdersView: View {
     @State private var deleting = false
     @State private var deleteError: String?
 
+    @State private var exporting = false
+    @State private var exportFile: ExportFile?
+    @State private var exportError: String?
+
+    /// The finished export, identified by where it was written so the sheet
+    /// presents once per file rather than once per tap.
+    private struct ExportFile: Identifiable {
+        let url: URL
+        var id: String { url.path }
+    }
+
     /// The booking flow, one step at a time. Modelled as an enum rather than a
     /// pile of booleans so two sheets can never be presented at once — the
     /// failure that produces a half-dismissed screen with no way back.
@@ -108,6 +119,18 @@ struct OrdersView: View {
                                 )
                             }
                         }
+                        // The other half of "delete my account": people are
+                        // entitled to a copy of what we hold on them, and it
+                        // is all readable under their own session anyway.
+                        Button {
+                            Task { await performExport() }
+                        } label: {
+                            Label(
+                                exporting ? "Preparing…" : "Download my data",
+                                systemImage: "square.and.arrow.down"
+                            )
+                        }
+                        .disabled(exporting)
                         Button("Sign out", role: .destructive) {
                             Task { await session.signOut() }
                         }
@@ -148,6 +171,17 @@ struct OrdersView: View {
                 Button("OK", role: .cancel) { deleteError = nil }
             } message: {
                 Text(deleteError ?? "")
+            }
+            .sheet(item: $exportFile) { file in
+                ShareSheet(url: file.url)
+            }
+            .alert(
+                "Couldn't prepare your data",
+                isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+            ) {
+                Button("OK", role: .cancel) { exportError = nil }
+            } message: {
+                Text(exportError ?? "")
             }
             .refreshable { await store.loadAll() }
             .fullScreenCover(item: $flow) { step in
@@ -196,6 +230,17 @@ struct OrdersView: View {
             try await session.deleteAccount()
         } catch {
             deleteError = error.localizedDescription
+        }
+    }
+
+    /// Gather the account's data and hand it to the share sheet.
+    private func performExport() async {
+        exporting = true
+        defer { exporting = false }
+        do {
+            exportFile = ExportFile(url: try await store.exportAccountData())
+        } catch {
+            exportError = "We couldn't put your data together just now. Please try again."
         }
     }
 
@@ -263,6 +308,18 @@ struct OrdersView: View {
         .accessibilityLabel("Book a pickup")
         .padding(.bottom, 4)
     }
+}
+
+/// UIKit's share sheet, because `ShareLink` needs its item before the tap and
+/// this one only exists after a round trip to the database.
+private struct ShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_: UIActivityViewController, context: Context) {}
 }
 
 private struct ApprovalBanner: View {

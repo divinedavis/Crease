@@ -5,7 +5,8 @@ import type { PaymentService } from './payments.js';
 import type { PushEnvironment, PushService } from './push.js';
 import { confirmAndDispatch } from './confirm.js';
 import { config } from './config.js';
-import { TERMINAL_STATUSES } from './deps.js';
+import { DeliveryProviderError, TERMINAL_STATUSES } from './deps.js';
+import { CustomerFacingError } from './orders.js';
 import { RETAIN_ALL } from './payments.js';
 import { CANCELLATION_FEE_CENTS } from './pricing.js';
 import { parseWindow } from './windows.js';
@@ -37,6 +38,34 @@ const COURIER_ENGAGED_STATUSES = [
   'delivered',
   'returned',
 ];
+
+/**
+ * A carrier saying "there is no such delivery", as opposed to "we could not
+ * cancel it".
+ *
+ * The two answers look alike and mean opposite things. Nothing is on the road
+ * for a delivery the provider has never heard of, so there is nothing to call
+ * off and the cancellation can proceed; a delivery it knows about but will not
+ * cancel is a courier holding real garments and has to block.
+ *
+ * This is not hypothetical. The simulator keeps its deliveries in memory, so
+ * every in-flight order dispatched before a deploy answers 404 here for the
+ * rest of its life — and the rollback below then refuses the customer their own
+ * cancellation, permanently, on an order with no courier behind it at all.
+ *
+ * 404 is the signal the carriers and the simulator both send. The code and
+ * message checks are for a provider that answers 400-with-a-body instead, and
+ * they are deliberately narrow: a 409 'cannot cancel after pickup' must not
+ * match.
+ */
+function isUnknownDelivery(err: unknown): boolean {
+  if (err instanceof DeliveryProviderError) {
+    if (err.opts.status === 404) return true;
+    if (err.opts.providerCode && /not_?found|unknown/i.test(err.opts.providerCode)) return true;
+  }
+  const message = err instanceof Error ? err.message : '';
+  return /(not found|unknown (mock )?delivery|no such delivery)/i.test(message);
+}
 
 /**
  * Endpoints the customer app is allowed to call.
@@ -94,7 +123,10 @@ export function registerCustomerRoutes(
     }
     const { data: order } = await db
       .from('orders')
-      .select('id, customer_id, status, delivery_fee_cents, return_window_start')
+      // cancelled_reason comes along because the cancel route may have to put
+      // it back: it is the only record of why a leg died, and it is read here,
+      // before anything overwrites it.
+      .select('id, customer_id, status, cancelled_reason, delivery_fee_cents, return_window_start')
       .eq('id', req.params.id)
       .maybeSingle();
 
@@ -190,8 +222,17 @@ export function registerCustomerRoutes(
     try {
       result = await confirmAndDispatch(db, orders, payments, req.params.id, req.log);
     } catch (err) {
+      // Generic on the wire, detailed in the log — the same rule the
+      // payment-intent route above states, and for the same reason. What throws
+      // out of here is written for us: it quotes the order's short code, the
+      // payment status verbatim ("has no held funds (payment status
+      // 'requires_payment_method')") and whatever Stripe said, none of which
+      // means anything to a customer and all of which describes our internals
+      // to anyone holding a token.
       req.log.error({ err, orderId: req.params.id }, 'confirm payment failed');
-      return reply.code(502).send({ ok: false, error: (err as Error).message });
+      return reply
+        .code(502)
+        .send({ ok: false, error: 'We could not confirm your payment just now. Please try again.' });
     }
 
     if (result.outcome === 'no_intent') {
@@ -284,6 +325,17 @@ export function registerCustomerRoutes(
       try {
         await provider.cancelDelivery(leg.provider_delivery_id);
       } catch (err) {
+        // A delivery the carrier cannot find is not a courier we failed to
+        // stop — it is one that does not exist. Treat it as already called off
+        // rather than as a reason to refuse the customer their cancellation
+        // forever.
+        if (isUnknownDelivery(err)) {
+          req.log.warn(
+            { orderId: req.params.id, legId: leg.id, provider: leg.provider, err },
+            'carrier does not know this delivery — nothing to call off',
+          );
+          continue;
+        }
         errors.push((err as Error).message);
       }
     }
@@ -291,9 +343,16 @@ export function registerCustomerRoutes(
       // A courier we could not call off is still on the way. Put the order back
       // where the claim found it rather than leaving a cancelled row with a live
       // delivery against it, and refund nothing.
+      //
+      // With the reason it arrived with, not with a null. The claim overwrote
+      // cancelled_reason with 'cancelled by customer' a few lines up, and
+      // rolling that back to nothing destroyed the message recordLegFailure had
+      // written there — which on a 'failed' order is the entire explanation of
+      // why it failed, and the only thing support has to go on when the
+      // customer rings about the cancel that would not take.
       await db
         .from('orders')
-        .update({ status: order.status, cancelled_reason: null })
+        .update({ status: order.status, cancelled_reason: order.cancelled_reason ?? null })
         .eq('id', req.params.id);
       return reply.code(409).send({ ok: false, errors });
     }
@@ -398,7 +457,17 @@ export function registerCustomerRoutes(
         return { ok: true, leg };
       } catch (err) {
         req.log.error({ err, orderId: req.params.id }, 'customer return dispatch failed');
-        return reply.code(502).send({ ok: false, error: (err as Error).message });
+        // Same rule as the payment routes: the dispatcher's own failures name
+        // short codes, tiers, cent amounts and carrier internals, and none of
+        // that belongs in a reply to a phone. The exception is the refusal that
+        // was written FOR the customer — "this order is out of attempts, call
+        // support" — which is the answer rather than a leak, and which as a
+        // generic 502 just sends someone back into a retry that cannot work.
+        const message =
+          err instanceof CustomerFacingError
+            ? err.message
+            : 'We could not book your delivery just now. Please try again.';
+        return reply.code(502).send({ ok: false, error: message });
       }
     },
   );

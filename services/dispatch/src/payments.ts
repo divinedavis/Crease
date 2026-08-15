@@ -17,6 +17,22 @@ import { deliveryFeeCents } from './pricing.js';
  */
 export const RETAIN_ALL = Number.POSITIVE_INFINITY;
 
+/** Charges with money still sitting on them, which come back as a refund. */
+const REFUNDABLE_STATUSES = ['captured', 'partially_refunded'];
+
+/**
+ * Payment rows a dying order still has something to do to.
+ *
+ * Everything not listed — 'refunded', 'cancelled' — is money that has already
+ * been dealt with, and the provider rejects a second attempt on it.
+ */
+const VOIDABLE_STATUSES = [
+  'requires_payment_method',
+  'authorized',
+  'failed',
+  ...REFUNDABLE_STATUSES,
+];
+
 /**
  * Money for an order whose price is not known at checkout.
  *
@@ -411,77 +427,133 @@ export class PaymentService {
       return { total: order.total_cents ?? order.subtotal_cents ?? 0, remainder: 0, alreadyHandled: true };
     }
 
-    const { data: primary } = await this.db
-      .from('payments')
-      .select('*')
-      .eq('order_id', orderId)
-      .eq('kind', 'primary')
-      .single();
-
-    const total = order.total_cents ?? order.subtotal_cents;
-    const held = primary.authorized_cents ?? 0;
-
-    if (primary.status !== 'captured') {
-      const state = await this.provider.capture({
-        paymentIntentRef: primary.provider_intent_ref,
-        amountCents: Math.min(total, held),
-      });
-      await this.db
+    // Everything past this line spends money, and the claim above has already
+    // moved the order out of 'awaiting_approval' — which is what makes the
+    // charge safe, and exactly what makes a failure dangerous. A declined card,
+    // a dropped connection, a difference row that will not insert: any of them
+    // used to leave the order sitting at 'cleaning', unpaid, with the shop's
+    // approval banner gone from the portal and the app's retry answering
+    // `alreadyHandled: true` — success-shaped, about money nobody ever took.
+    // The balance is silently forfeited and nothing anywhere says so.
+    //
+    // So the claim is put back on the way out. Rolling back rather than
+    // claiming into an intermediate status because order_status is a Postgres
+    // enum with no value between 'awaiting_approval' and 'cleaning': an
+    // in-between state would need a migration, and every reader — the portal's
+    // banner, the app's approval screen, the RLS policy that only lets a
+    // customer touch a draft or an awaiting_approval order — would need
+    // teaching about a status they have never seen. The rollback needs none of
+    // that. It restores precisely the state all of them were already built for,
+    // and the retry that follows is safe because it re-reads the payment rows:
+    // a primary already captured is skipped rather than captured twice.
+    try {
+      const { data: primary } = await this.db
         .from('payments')
-        .update({
-          status: state.status,
-          captured_cents: state.capturedCents,
-          charge_ref: state.chargeRef,
-        })
-        .eq('id', primary.id);
-    }
-
-    const remainder = total - held;
-    if (remainder > 0) {
-      // Check the insert error instead of blindly dereferencing row.id — a
-      // failed insert used to throw a confusing "cannot read id of undefined"
-      // mid-charge. (Multiple difference rows per order are legal now that the
-      // contradictory (order_id,kind) unique index is dropped; the approval
-      // gate above is what makes this run at most once per approval cycle.)
-      const { data: row, error: rowErr } = await this.db
-        .from('payments')
-        .insert({
-          order_id: orderId,
-          kind: 'difference',
-          provider: this.provider.name,
-          status: 'requires_payment_method',
-          authorized_cents: remainder,
-        })
-        .select()
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('kind', 'primary')
         .single();
-      if (rowErr || !row) {
-        throw new Error(`could not create difference payment: ${rowErr?.message ?? 'no row returned'}`);
+
+      const total = order.total_cents ?? order.subtotal_cents;
+      const held = primary.authorized_cents ?? 0;
+
+      if (primary.status !== 'captured') {
+        const state = await this.provider.capture({
+          paymentIntentRef: primary.provider_intent_ref,
+          amountCents: Math.min(total, held),
+        });
+        await this.db
+          .from('payments')
+          .update({
+            status: state.status,
+            captured_cents: state.capturedCents,
+            charge_ref: state.chargeRef,
+          })
+          .eq('id', primary.id);
       }
 
-      const state = await this.provider.chargeDifference({
-        orderId,
-        externalId: row.id,
-        customerRef: order.customer?.payment_customer_ref ?? undefined,
-        paymentMethodRef: order.customer?.default_payment_method_ref ?? undefined,
-        amountCents: remainder,
-        currency: 'usd',
-        description: `Crease order ${order.short_code} — additional garments`,
-      });
+      const remainder = total - held;
+      if (remainder > 0) {
+        // Check the insert error instead of blindly dereferencing row.id — a
+        // failed insert used to throw a confusing "cannot read id of undefined"
+        // mid-charge. (Multiple difference rows per order are legal now that the
+        // contradictory (order_id,kind) unique index is dropped; the approval
+        // gate above is what makes this run at most once per approval cycle.)
+        const { data: row, error: rowErr } = await this.db
+          .from('payments')
+          .insert({
+            order_id: orderId,
+            kind: 'difference',
+            provider: this.provider.name,
+            status: 'requires_payment_method',
+            authorized_cents: remainder,
+          })
+          .select()
+          .single();
+        if (rowErr || !row) {
+          throw new Error(`could not create difference payment: ${rowErr?.message ?? 'no row returned'}`);
+        }
 
-      await this.db
-        .from('payments')
-        .update({
-          status: state.status,
-          provider_intent_ref: state.paymentIntentRef,
-          captured_cents: state.capturedCents,
-          charge_ref: state.chargeRef,
-        })
-        .eq('id', row.id);
+        const state = await this.provider.chargeDifference({
+          orderId,
+          externalId: row.id,
+          customerRef: order.customer?.payment_customer_ref ?? undefined,
+          paymentMethodRef: order.customer?.default_payment_method_ref ?? undefined,
+          amountCents: remainder,
+          currency: 'usd',
+          description: `Crease order ${order.short_code} — additional garments`,
+        });
+
+        await this.db
+          .from('payments')
+          .update({
+            status: state.status,
+            provider_intent_ref: state.paymentIntentRef,
+            captured_cents: state.capturedCents,
+            charge_ref: state.chargeRef,
+          })
+          .eq('id', row.id);
+      }
+
+      // status + approved_at were already set atomically by the claim above.
+      this.log.info({ orderId, total, remainder }, 'customer approved higher total');
+      return { total, remainder };
+    } catch (err) {
+      await this.releaseApproval(orderId, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Hand the approval back, so a charge that did not happen can be tried again.
+   *
+   * Conditional on the claim still being ours. If something else has moved the
+   * order since — a cancellation, a webhook — dragging it back into the
+   * approval queue would be a second bug on top of the first, so the mismatch
+   * is logged loudly instead: an order that took an approval, failed the
+   * charge, and can no longer be put back is precisely the case that needs a
+   * person, and it is invisible unless it is said here.
+   */
+  private async releaseApproval(orderId: string, err: unknown) {
+    const { data: restored, error: rollbackErr } = await this.db
+      .from('orders')
+      .update({ status: 'awaiting_approval', approved_at: null })
+      .eq('id', orderId)
+      .eq('status', 'cleaning')
+      .select('id');
+
+    if (rollbackErr || !restored?.length) {
+      this.log.error(
+        { orderId, err, rollbackErr },
+        'approval charge failed and the claim could not be handed back — order may be unpaid at cleaning',
+      );
+      return;
     }
 
-    // status + approved_at were already set atomically by the claim above.
-    this.log.info({ orderId, total, remainder }, 'customer approved higher total');
-    return { total, remainder };
+    this.log.warn(
+      { orderId, err: (err as Error).message },
+      'approval charge failed — order returned to awaiting_approval so it can be retried',
+    );
   }
 
   /**
@@ -507,7 +579,19 @@ export class PaymentService {
       .from('payments')
       .select('*')
       .eq('order_id', orderId)
-      .not('provider_intent_ref', 'is', null);
+      .not('provider_intent_ref', 'is', null)
+      // Only intents there is still something to do to. A refunded or cancelled
+      // one is money already handled, and asking the provider to cancel it
+      // again throws — which lands in `failed` and makes the caller tell a
+      // customer their "refund could not be completed automatically" about a
+      // refund that completed days ago. That message is the whole reason this
+      // filter exists.
+      //
+      // 'failed' stays in: a capture that failed leaves the row saying failed
+      // while the hold is still very much live at the provider, and dropping
+      // those would strand a customer's credit line for the week it takes the
+      // authorization to lapse on its own. Those intents cancel cleanly.
+      .in('status', VOIDABLE_STATUSES);
 
     const failed: string[] = [];
     let voided = 0;
@@ -517,10 +601,16 @@ export class PaymentService {
     for (const p of payments ?? []) {
       try {
         let state: PaymentState;
-        if (p.status === 'captured') {
+        if (REFUNDABLE_STATUSES.includes(p.status)) {
+          // Money already given back is not money we can give back again, so a
+          // partially refunded charge is settled against what is left of it —
+          // and a retention is taken out of that remainder, not out of the
+          // original charge it has already been taken out of once.
           const captured = p.captured_cents ?? p.authorized_cents ?? 0;
-          const keep = Math.min(retain, captured);
-          const giveBack = captured - keep;
+          const alreadyBack = p.refunded_cents ?? 0;
+          const remaining = Math.max(0, captured - alreadyBack);
+          const keep = Math.min(retain, remaining);
+          const giveBack = remaining - keep;
           retain -= keep;
           retainedCents += keep;
 

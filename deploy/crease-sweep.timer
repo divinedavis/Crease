@@ -1,0 +1,19 @@
+[Unit]
+Description=Run the Crease reconciler every 5 minutes
+# Without this timer nothing in the system ever revisits a failed dispatch: a
+# paid order whose courier was never booked stays that way indefinitely, and
+# the app reports success the whole time.
+
+[Timer]
+# Five minutes is the ceiling on how long a stranded paid order stays invisible.
+OnBootSec=3min
+OnUnitActiveSec=5min
+# Spread the firing slightly so it never lines up with the dispatcher's own
+# restart on a deploy.
+RandomizedDelaySec=30
+AccuracySec=30s
+Persistent=true
+Unit=crease-sweep.service
+
+[Install]
+WantedBy=timers.target

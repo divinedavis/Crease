@@ -57,6 +57,15 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
   }
 });
 
+/**
+ * When an order may still be called off.
+ *
+ * Duplicated from customer.ts rather than imported: the two cancel routes have
+ * to agree, so a change to one list is a change to both. Worth hoisting into a
+ * shared module next time either route is opened.
+ */
+const CANCELLABLE_STATUSES = ['draft', 'scheduled', 'pickup_dispatched', 'failed'];
+
 /** Constant-time compare so the shared secret can't be recovered by timing.
  *  Both sides are hashed to a fixed 32-byte digest first, so the comparison
  *  never returns early on a length mismatch (which would leak the length). */
@@ -220,14 +229,32 @@ app.post<{ Params: { id: string } }>(
     // is never rewritten by a repeat call.
     let readyAt: string | null = order.ready_at ?? null;
     if (order.status !== 'ready') {
-      readyAt = new Date().toISOString();
-      const { error } = await db
+      const stamp = new Date().toISOString();
+      // Conditional on the status we read, so two simultaneous presses cannot
+      // both write: the loser matches zero rows and keeps the winner's stamp.
+      // Without it the second write silently replaced ready_at, contradicting
+      // the guarantee above.
+      const { data: marked, error } = await db
         .from('orders')
-        .update({ status: 'ready', ready_at: readyAt })
-        .eq('id', req.params.id);
+        .update({ status: 'ready', ready_at: stamp })
+        .eq('id', req.params.id)
+        .in('status', ['cleaning', 'awaiting_approval'])
+        .select('ready_at')
+        .maybeSingle();
       if (error) {
         req.log.error({ err: error, orderId: req.params.id }, 'could not mark ready');
         return reply.code(502).send({ ok: false, error: error.message });
+      }
+      if (marked) {
+        readyAt = marked.ready_at ?? stamp;
+      } else {
+        // Someone else got there first. Report their stamp, not ours.
+        const { data: current } = await db
+          .from('orders')
+          .select('ready_at')
+          .eq('id', req.params.id)
+          .maybeSingle();
+        readyAt = current?.ready_at ?? null;
       }
     }
 
@@ -420,6 +447,33 @@ app.post<{ Params: { id: string } }>(
   '/v1/orders/:id/cancel',
   { preHandler: requireInternalKey },
   async (req, reply) => {
+    // Claim before touching a carrier or Stripe, for the same reason the
+    // customer route does: refunding first and writing 'cancelled' last left a
+    // window the width of a Stripe round-trip in which confirm-payment could
+    // read a live order and dispatch a courier against money already given
+    // back. It also stopped this route "cancelling" an order that was already
+    // delivered, which it would previously have tried to refund.
+    const { data: prior } = await db
+      .from('orders')
+      .select('status, cancelled_reason')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (!prior) return reply.code(404).send({ ok: false, error: 'order not found' });
+
+    const { data: claimed } = await db
+      .from('orders')
+      .update({ status: 'cancelled', cancelled_reason: 'cancelled by request' })
+      .eq('id', req.params.id)
+      .in('status', CANCELLABLE_STATUSES)
+      .select('id')
+      .maybeSingle();
+
+    if (!claimed) {
+      return reply
+        .code(409)
+        .send({ ok: false, error: `cannot cancel from status '${prior.status}'` });
+    }
+
     const { data: legs } = await db
       .from('delivery_legs')
       .select('id, provider, provider_delivery_id, status')
@@ -438,17 +492,20 @@ app.post<{ Params: { id: string } }>(
         errors.push(`${leg.id}: ${(err as Error).message}`);
       }
     }
-    if (errors.length) return reply.code(409).send({ ok: false, errors });
+    if (errors.length) {
+      // A courier still on the way outranks the claim: put the order back
+      // exactly where it was, reason included, and refund nothing.
+      await db
+        .from('orders')
+        .update({ status: prior.status, cancelled_reason: prior.cancelled_reason })
+        .eq('id', req.params.id);
+      return reply.code(409).send({ ok: false, errors });
+    }
 
     // Release or refund the money too. Cancelling the couriers but leaving a
     // customer's money on a dead order is the complaint that ends a young
     // marketplace.
     const money = await payments.voidOrder(req.params.id, 'order cancelled');
-
-    await db
-      .from('orders')
-      .update({ status: 'cancelled', cancelled_reason: 'cancelled by request' })
-      .eq('id', req.params.id);
 
     // The couriers are stopped either way, so the cancellation itself stands.
     // But a failed refund must not be reported as a clean cancellation — the
@@ -492,30 +549,64 @@ app.post('/webhooks/stripe', async (req, reply) => {
 
   const event = (req.body ?? {}) as any;
 
-  // If the same signing secret ever leaks into test mode, a test-mode
-  // 'payment_intent.succeeded' must not dispatch a real courier. Reject
-  // test-mode events once this box is marked production.
-  if (process.env.NODE_ENV === 'production' && event.livemode === false) {
-    req.log.warn({ id: event.id, type: event.type }, 'stripe webhook rejected: test-mode event in production');
-    return reply.code(202).send({ ok: true, ignored: 'test-mode event' });
+  // A test-mode event must never dispatch a real courier — but the mode that
+  // matters is the KEY's, not NODE_ENV's. Gating on NODE_ENV meant a box
+  // deployed as production while still holding an sk_test_ key rejected every
+  // event it was capable of receiving, and 202'd it so Stripe never retried:
+  // the whole backstop silently became a no-op. Compare like with like.
+  const keyIsLive = (config.payments.STRIPE_SECRET_KEY ?? '').startsWith('sk_live_');
+  if (typeof event.livemode === 'boolean' && event.livemode !== keyIsLive) {
+    req.log.error(
+      { id: event.id, type: event.type, eventLivemode: event.livemode, keyIsLive },
+      'stripe webhook rejected: event mode does not match the configured key',
+    );
+    return reply.code(400).send({ ok: false, error: 'event/key mode mismatch' });
   }
 
-  // Idempotency ledger: a replayed (validly-signed) event would otherwise
-  // re-run dispatch/reconciliation. Record the id; a unique-violation means
-  // we've already handled it.
+  // Idempotency ledger, claimed in two phases.
+  //
+  // Recording the id and then doing the work meant any mid-flight failure was
+  // unrecoverable: the route returns 500 to ask for a retry, but the retry hit
+  // the unique violation and was told `deduped`, so Stripe retired an event
+  // whose work never happened. `processed_at` is what separates "already done"
+  // from "started and died" — claim the row now, stamp it only when the work
+  // is finished.
+  let ledgerId: string | undefined;
   if (event.id) {
-    const { error: dedupErr } = await db
+    const { data: claimed, error: dedupErr } = await db
       .from('stripe_events')
-      .insert({ event_id: event.id, type: event.type, livemode: event.livemode ?? null });
+      .insert({ event_id: event.id, type: event.type, livemode: event.livemode ?? null })
+      .select('event_id')
+      .maybeSingle();
+
     if (dedupErr) {
       if ((dedupErr as { code?: string }).code === '23505') {
-        return { ok: true, deduped: true };
+        const { data: prior } = await db
+          .from('stripe_events')
+          .select('processed_at')
+          .eq('event_id', event.id)
+          .maybeSingle();
+        // Finished before: genuinely a duplicate.
+        if (prior?.processed_at) return { ok: true, deduped: true };
+        // Claimed but never completed — a previous attempt died. Take it again.
+        req.log.warn({ id: event.id }, 'reprocessing a stripe event whose prior attempt did not finish');
+      } else {
+        // Don't silently drop the event on a write failure — let Stripe retry.
+        req.log.error({ err: dedupErr, id: event.id }, 'stripe_events insert failed');
+        return reply.code(500).send({ ok: false });
       }
-      // Don't silently drop the event on a write failure — let Stripe retry.
-      req.log.error({ err: dedupErr, id: event.id }, 'stripe_events insert failed');
-      return reply.code(500).send({ ok: false });
     }
+    ledgerId = claimed?.event_id ?? event.id;
   }
+
+  /** Close out the ledger row. Only a stamped row may be deduped away. */
+  const settleLedger = async (error?: string) => {
+    if (!ledgerId) return;
+    await db
+      .from('stripe_events')
+      .update({ processed_at: new Date().toISOString(), error: error ?? null })
+      .eq('event_id', ledgerId);
+  };
 
   // Reconcile money that moved backwards, so the DB stops reporting captured
   // funds that were refunded/disputed (which would otherwise let a payout go
@@ -532,6 +623,7 @@ app.post('/webhooks/stripe', async (req, reply) => {
         .eq('provider', paymentProvider.name)
         .eq('provider_intent_ref', intentRef);
     }
+    await settleLedger();
     return { ok: true, reconciled: event.type };
   }
   if (event.type === 'charge.refunded') {
@@ -548,6 +640,7 @@ app.post('/webhooks/stripe', async (req, reply) => {
         .eq('provider', paymentProvider.name)
         .eq('provider_intent_ref', intentRef);
     }
+    await settleLedger();
     return { ok: true, reconciled: event.type };
   }
   if (event.type === 'charge.dispute.created') {
@@ -559,10 +652,12 @@ app.post('/webhooks/stripe', async (req, reply) => {
         .eq('provider', paymentProvider.name)
         .eq('charge_ref', dispute.charge);
     }
+    await settleLedger();
     return { ok: true, reconciled: event.type };
   }
 
   if (event.type !== 'payment_intent.succeeded') {
+    await settleLedger();
     return { ok: true, ignored: event.type };
   }
 
@@ -575,7 +670,9 @@ app.post('/webhooks/stripe', async (req, reply) => {
     .maybeSingle();
 
   // A lookup that failed is not an intent we do not know, and the 200 below
-  // would retire this event at Stripe for good. 500 so it comes back.
+  // would retire this event at Stripe for good. 500 so it comes back — and
+  // deliberately WITHOUT settling the ledger, so the retry re-claims the row
+  // instead of being deduped away.
   if (lookupError) {
     req.log.error({ err: lookupError, intentRef }, 'stripe webhook lookup failed');
     return reply.code(500).send({ ok: false });
@@ -585,6 +682,7 @@ app.post('/webhooks/stripe', async (req, reply) => {
   // signing for something else. Acknowledge it so Stripe stops retrying.
   if (!payment?.order_id) {
     req.log.warn({ intentRef }, 'stripe webhook for an unknown intent');
+    await settleLedger('no matching payment');
     return { ok: true, ignored: 'no matching payment' };
   }
 
@@ -594,7 +692,8 @@ app.post('/webhooks/stripe', async (req, reply) => {
     // Stripe is telling us this intent succeeded. If our own read of it says
     // there is no intent, or that it is not paid, the two disagree about real
     // money — and answering 200 is how Stripe is told to stop mentioning it.
-    // There is no reconciler behind this, so the retry is the only thing left.
+    // The sweep (scripts/sweep.mjs) is the long-stop, but the retry is the
+    // fast path — so leave the ledger unsettled and let Stripe come back.
     if (['no_intent', 'unpaid', 'processing'].includes(result.outcome)) {
       req.log.error(
         { orderId: payment.order_id, outcome: result.outcome },
@@ -605,11 +704,14 @@ app.post('/webhooks/stripe', async (req, reply) => {
 
     // 'dispatch_failed' stays a 200: the payment records agree with Stripe, and
     // no amount of redelivery conjures courier coverage. It is the customer's
-    // to cancel and the portal's to retry.
+    // to cancel and the portal's to retry. Settled so a replay is a no-op —
+    // the sweep, not Stripe, is what re-attempts the dispatch.
     req.log.info({ orderId: payment.order_id, result: result.outcome }, 'stripe webhook applied');
+    await settleLedger(result.outcome === 'dispatch_failed' ? 'dispatch_failed' : undefined);
     return { ok: true, ...result };
   } catch (err) {
     // 500 so Stripe retries: a paid order with no courier is worth another go.
+    // Ledger left unsettled on purpose — that is what makes the retry work.
     req.log.error({ err, orderId: payment.order_id }, 'stripe webhook could not be applied');
     return reply.code(500).send({ ok: false });
   }
@@ -653,7 +755,7 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
     /* keep {} — the raw bytes are what matter for replay */
   }
 
-  const { data: landed } = await db
+  const { data: inserted } = await db
     .from('delivery_events')
     .insert({
       provider: provider.name,
@@ -665,9 +767,28 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
     })
     .select('id')
     .maybeSingle();
-  // Dedupe: the unique index made the insert a no-op, so we have seen this one.
+
+  // The unique index turning the insert into a no-op means we have SEEN this
+  // event — not that we finished it. Treating those as the same thing made the
+  // 500 below unreachable in practice: the provider retried, the retry was
+  // deduped, and a leg stayed frozen wherever the failed attempt left it.
+  // processed_at is the difference, so consult it before dropping a redelivery.
+  let landed = inserted;
   if (!landed) {
-    return { ok: true, deduped: true };
+    const { data: prior } = await db
+      .from('delivery_events')
+      .select('id, processed_at')
+      .eq('provider', provider.name)
+      .eq('event_id', result.event?.eventId ?? '')
+      .maybeSingle();
+    if (!prior || prior.processed_at) {
+      return { ok: true, deduped: true };
+    }
+    req.log.warn(
+      { provider: provider.name, eventId: result.event?.eventId },
+      'reprocessing a carrier event whose prior attempt did not finish',
+    );
+    landed = { id: prior.id };
   }
   if (!result.event) {
     await db

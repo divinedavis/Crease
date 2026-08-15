@@ -1,0 +1,29 @@
+[Unit]
+Description=Crease reconciler (re-dispatch stranded paid orders, release abandoned leg claims)
+After=network-online.target crease-dispatch.service
+Wants=network-online.target
+
+[Service]
+# Same unprivileged user as the dispatcher: this reads the service-role key out
+# of the dispatch .env, so it must not be anything more privileged than the
+# process that already holds it.
+User=crease
+Group=crease
+Type=oneshot
+WorkingDirectory=/opt/crease/services/dispatch
+ExecStart=/usr/bin/node /opt/crease/scripts/sweep.mjs
+
+# The box is shared with five other sites. A reconciler is not worth an OOM.
+Environment=NODE_OPTIONS=--max-old-space-size=128
+MemoryMax=192M
+
+# Bounded so a hung carrier call can never overlap the next timer firing.
+TimeoutStartSec=240
+
+StandardOutput=append:/var/log/crease/sweep.log
+StandardError=append:/var/log/crease/sweep.log
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true

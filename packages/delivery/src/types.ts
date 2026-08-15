@@ -152,6 +152,16 @@ export class DeliveryProviderError extends Error {
 
 export interface DeliveryProvider {
   readonly name: string;
+  /**
+   * True when no real courier is ever dispatched — the provider only pretends.
+   *
+   * Selection has to be able to tell a simulator apart from a carrier without
+   * matching on `name`, because a name is a label anyone can change and the
+   * consequence of getting it wrong is a live order handed to something that
+   * will never pick up the clothes. Real providers leave this false/unset;
+   * a simulator must set it true.
+   */
+  readonly simulated?: boolean;
   /** True when credentials are present and the provider can be dispatched to. */
   isConfigured(): boolean;
   quote(req: QuoteRequest): Promise<Quote>;

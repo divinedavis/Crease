@@ -357,6 +357,18 @@ struct BookPickupView: View {
             return
         }
 
+        // The choice changed, so the draft on this screen is superseded — and
+        // it may already own a live PaymentIntent from an abandoned sheet.
+        // Cancel it before booking the replacement: the row cannot be reused
+        // at a new price (the intent is minted once per order and Stripe
+        // returns the original amount on a retry), so left alone it is an
+        // uncollected hold on the customer's card next to an order they are
+        // no longer buying.
+        if let superseded = draft {
+            await store.discardDraft(orderId: superseded.id)
+            draft = nil
+        }
+
         // Reuse a saved address when it is the same place. Inserting on every
         // booking piled up near-identical rows and made the saved list useless
         // after a handful of orders.

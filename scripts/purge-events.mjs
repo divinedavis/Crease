@@ -32,11 +32,16 @@ const jobs = [
   ['purge_delivery_events', 'delivery_events purged'],
   ['scrub_finished_leg_pii', 'finished legs scrubbed'],
   ['purge_notifications_sent', 'notifications purged'],
+  // Abandoned drafts are nobody's record — no payment, no shop ever saw the
+  // bag — and they used to accumulate until a customer hit the draft cap and
+  // could not order at all. Kept on a longer clock than the event tables.
+  ['purge_abandoned_drafts', 'abandoned drafts purged', 30],
+  ['scrub_old_order_notes', 'old order notes scrubbed', 365],
 ];
 
 let failed = false;
-for (const [fn, label] of jobs) {
-  const { data, error } = await db.rpc(fn, { p_days: days });
+for (const [fn, label, overrideDays] of jobs) {
+  const { data, error } = await db.rpc(fn, { p_days: overrideDays ?? days });
   const stamp = new Date().toISOString();
   if (error) {
     console.error(`${stamp} ${fn} failed: ${error.message}`);

@@ -7,8 +7,16 @@
  * path under RLS — which is the part worth testing.
  *
  *   eval "$(node scripts/ios-session.mjs)"
+ *   eval "$(node scripts/ios-session.mjs --with-refresh)"
  */
 import { readEnv } from './lib/client.mjs';
+
+// The refresh token is the long-lived half of the session: an access token
+// expires within the hour, a refresh token mints new ones until it is revoked.
+// Printing it unasked put it in shell history and in CI logs on every run, so
+// it now costs a flag — which only the UI test runner (Session.swift needs
+// both halves to inject a session) has a reason to pass.
+const WITH_REFRESH = process.argv.includes('--with-refresh');
 
 // Test-account password comes from the environment. This repo is public,
 // and the Supabase project it points at is live — a known password in a
@@ -37,4 +45,4 @@ if (!res.ok) {
 }
 const json = await res.json();
 console.log(`export UITEST_ACCESS_TOKEN='${json.access_token}'`);
-console.log(`export UITEST_REFRESH_TOKEN='${json.refresh_token}'`);
+if (WITH_REFRESH) console.log(`export UITEST_REFRESH_TOKEN='${json.refresh_token}'`);

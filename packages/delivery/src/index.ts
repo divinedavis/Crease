@@ -7,10 +7,11 @@ import { UberDirectProvider } from './uberDirect.js';
 import type { DeliveryProvider, Quote, QuoteRequest } from './types.js';
 
 /**
- * Ordered provider chain.
+ * Provider chain.
  *
- * Dispatch tries each configured provider in turn and uses the first that
- * returns a usable quote. Courier networks have real coverage holes — a
+ * Dispatch quotes every configured provider in parallel and takes the cheapest
+ * usable answer — except that a simulated provider can only ever be a last
+ * resort (see bestQuote). Courier networks have real coverage holes — a
  * cleaner three blocks outside Uber's radius is a normal Tuesday — so the
  * fallback is not a nicety, it is how orders get served at the edges.
  */
@@ -33,7 +34,10 @@ export class ProviderChain {
 
   private static readonly WEBHOOK_ALIASES: Record<string, string> = { uber: 'uber_direct' };
 
-  /** Cheapest usable quote across the chain, with the provider that gave it. */
+  /**
+   * Cheapest usable quote among REAL carriers, with the provider that gave it.
+   * The simulator is only ever returned when nothing real answered.
+   */
   async bestQuote(
     req: QuoteRequest,
   ): Promise<{ provider: DeliveryProvider; quote: Quote } | undefined> {
@@ -49,7 +53,20 @@ export class ProviderChain {
       .map((r) => r.value);
 
     if (usable.length === 0) return undefined;
-    return usable.reduce((a, b) => (b.quote.feeCents < a.quote.feeCents ? b : a));
+
+    // A simulator must never win on price. The mock quotes ~$6-12 by design,
+    // which undercuts any real courier network, so a pure cheapest-wins rule
+    // means the day Uber credentials land every order silently routes to a
+    // simulated driver — real order rows advancing, real Stripe payouts, no
+    // one ever collecting the clothes.
+    //
+    // Disabling the mock is not the fix either: production runs it with no
+    // Uber credentials, so an empty chain fails every booking into
+    // charge-then-refund. So real carriers compete on price among themselves
+    // and the mock is selected only when it is the last thing standing.
+    const real = usable.filter((u) => !u.provider.simulated);
+    const pool = real.length > 0 ? real : usable;
+    return pool.reduce((a, b) => (b.quote.feeCents < a.quote.feeCents ? b : a));
   }
 }
 
@@ -67,8 +84,10 @@ export interface BuildChainEnv {
 }
 
 /**
- * Uber first when credentials exist, mock last. In development the mock is
- * the only active provider, so the whole two-leg flow runs end to end today.
+ * Uber when credentials exist, plus the mock when explicitly enabled. Today
+ * the mock is the only active provider in every environment, which is how the
+ * whole two-leg flow runs end to end before Uber approves us — but it is
+ * selected because nothing real answered, never because it quoted less.
  */
 export function buildChain(env: BuildChainEnv): ProviderChain {
   const providers: DeliveryProvider[] = [

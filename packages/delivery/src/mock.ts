@@ -32,6 +32,10 @@ const SEQUENCE: { status: LegStatus; afterMs: number }[] = [
   { status: 'delivered', afterMs: 38_000 },
 ];
 
+/** Simulated webhooks go to our own dispatcher; anything slower than this is
+ *  a wedged endpoint, not a slow one. */
+const WEBHOOK_TIMEOUT_MS = 10_000;
+
 const COURIERS = [
   { name: 'Marcus T.', vehicle: 'Toyota Camry', phone: '+15550100' },
   { name: 'Aisha R.', vehicle: 'Honda CR-V', phone: '+15550101' },
@@ -58,6 +62,9 @@ interface MockRecord extends DeliveryState {
 
 export class MockProvider implements DeliveryProvider {
   readonly name = 'mock';
+  /** No courier exists behind this. Selection uses it to keep the simulator
+   *  from ever outbidding a real carrier — see ProviderChain.bestQuote. */
+  readonly simulated = true;
   private readonly store = new Map<string, MockRecord>();
   private readonly speed: number;
   private readonly failureRate: number;
@@ -154,10 +161,18 @@ export class MockProvider implements DeliveryProvider {
   async cancelDelivery(providerDeliveryId: string): Promise<DeliveryState> {
     const rec = this.store.get(providerDeliveryId);
     if (!rec) {
-      throw new DeliveryProviderError('unknown mock delivery', {
-        retryable: false,
-        status: 404,
-      });
+      // This store is process-local, so a deploy erases every in-flight
+      // simulated delivery. Throwing 404 here made cancellation permanently
+      // impossible for those legs — the caller could never close them out.
+      // A delivery the provider has no record of cannot be en route, so
+      // cancelling it is a no-op that already succeeded. Report the outcome
+      // the caller asked for rather than an error it cannot act on.
+      return {
+        providerDeliveryId,
+        status: 'cancelled',
+        providerStatus: 'unknown_to_provider',
+        completedAt: new Date().toISOString(),
+      };
     }
     if (rec.status === 'picked_up' || rec.status === 'en_route_to_dropoff') {
       // Matches real carriers: once the goods are aboard you cannot cancel,
@@ -231,6 +246,9 @@ export class MockProvider implements DeliveryProvider {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-crease-signature': signature },
         body,
+        // Bounded so a hung webhook endpoint cannot pin a timer callback open
+        // for the OS default (~2 min) while the simulation marches on.
+        signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
       });
     } catch {
       // A dropped simulated webhook is fine — the reconciler will poll.
