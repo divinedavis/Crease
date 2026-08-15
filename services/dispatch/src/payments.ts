@@ -74,7 +74,9 @@ export class PaymentService {
       // sheet refuses to present a live one anyway — so return the same intent
       // and let the client skip to confirmation.
       if (['authorized', 'captured'].includes(status) || paid.state.providerStatus === 'processing') {
-        return { clientSecret: paid.state.clientSecret, amountCents: amount, alreadyPaid: true };
+        // Don't hand back a live client secret for an already-settled intent —
+        // the app only needs the alreadyPaid flag to skip to confirmation.
+        return { clientSecret: '', amountCents: amount, alreadyPaid: true };
       }
       // Money that was taken and given back leaves a row whose refs point at a
       // real charge. Past the provider's idempotency window the upsert below

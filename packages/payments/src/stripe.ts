@@ -56,7 +56,20 @@ export class StripeProvider implements PaymentProvider {
     return Boolean(this.opts.secretKey);
   }
 
+  /** A charge must be a positive whole number of cents under a sane ceiling.
+   *  Rejects NaN / negative / float / overflow before it reaches Stripe. */
+  private static readonly MAX_CENTS = 2_000_00; // $2,000 — well above any real order
+  private assertAmount(cents: number): void {
+    if (!Number.isInteger(cents) || cents <= 0 || cents > StripeProvider.MAX_CENTS) {
+      throw new PaymentProviderError(`invalid charge amount: ${cents}`, {
+        retryable: false,
+        code: 'invalid_amount',
+      });
+    }
+  }
+
   async authorize(req: AuthorizeRequest): Promise<PaymentState> {
+    this.assertAmount(req.amountCents);
     const body: Record<string, string> = {
       amount: String(req.amountCents),
       currency: req.currency,
@@ -82,6 +95,7 @@ export class StripeProvider implements PaymentProvider {
   }
 
   async capture(req: CaptureRequest): Promise<PaymentState> {
+    this.assertAmount(req.amountCents);
     const current = await this.get(req.paymentIntentRef);
     const authorized = current.authorizedCents ?? 0;
 
@@ -107,6 +121,7 @@ export class StripeProvider implements PaymentProvider {
    * customer has by then explicitly approved the higher total.
    */
   async chargeDifference(req: AuthorizeRequest): Promise<PaymentState> {
+    this.assertAmount(req.amountCents);
     const body: Record<string, string> = {
       amount: String(req.amountCents),
       currency: req.currency,

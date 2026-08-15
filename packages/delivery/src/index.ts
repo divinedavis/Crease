@@ -81,11 +81,20 @@ export function buildChain(env: BuildChainEnv): ProviderChain {
     }),
   ];
 
-  if (env.ENABLE_MOCK_COURIER !== 'false') {
+  // Explicit opt-in only. A missing/typo'd flag must NOT silently activate the
+  // mock — that shipped a simulated courier (with a forgeable, empty-secret
+  // webhook) into production and, being the cheapest quote, let it win over
+  // real Uber. And no insecure default secret: if the mock is on, its webhook
+  // secret is required so its events can't be forged.
+  const enableMock = /^(1|true|yes|on)$/i.test(env.ENABLE_MOCK_COURIER ?? '');
+  if (enableMock) {
+    if (!env.MOCK_WEBHOOK_SECRET) {
+      throw new Error('ENABLE_MOCK_COURIER is on but MOCK_WEBHOOK_SECRET is not set');
+    }
     providers.push(
       new MockProvider({
         webhookUrl: env.MOCK_WEBHOOK_URL,
-        webhookSecret: env.MOCK_WEBHOOK_SECRET ?? 'dev-mock-secret',
+        webhookSecret: env.MOCK_WEBHOOK_SECRET,
         speedFactor: Number(env.MOCK_SPEED_FACTOR ?? 10),
         failureRate: Number(env.MOCK_FAILURE_RATE ?? 0),
       }),

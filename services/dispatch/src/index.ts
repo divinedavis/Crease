@@ -563,6 +563,14 @@ app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, re
     return reply.code(401).send({ error: 'bad signature' });
   }
 
+  // A handled status event with no id can't be deduped — the (provider,
+  // event_id) unique index is partial on event_id IS NOT NULL, so a null id
+  // never collides and would replay forever. Reject it.
+  if (result.event && (result.event.eventId === undefined || result.event.eventId === null)) {
+    req.log.warn({ provider: provider.name }, 'webhook event missing id; rejecting to prevent replay');
+    return reply.code(400).send({ error: 'missing event id' });
+  }
+
   let payload: unknown = {};
   try {
     payload = JSON.parse(rawBody.toString('utf8'));

@@ -178,8 +178,10 @@ export function registerCustomerRoutes(
       const result = await payments.createDeliveryPaymentIntent(req.params.id);
       return { ok: true, ...result, publishableKey: config.stripePublishableKey };
     } catch (err) {
+      // Log the raw provider message server-side; never return it to the
+      // customer — it leaks Stripe intent/charge ids and config internals.
       req.log.error({ err, orderId: req.params.id }, 'customer payment intent failed');
-      return reply.code(402).send({ ok: false, error: (err as Error).message });
+      return reply.code(402).send({ ok: false, error: 'Could not start payment. Please try again.' });
     }
   });
 

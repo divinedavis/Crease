@@ -190,7 +190,28 @@ export class OrderService {
       .select()
       .single();
 
-    if (insertErr) throw new Error(`could not create leg: ${insertErr.message}`);
+    if (insertErr) {
+      // A unique-violation here means a concurrent dispatch (the app's
+      // confirm-payment racing the Stripe webhook, seconds apart) already
+      // created the live leg. That is success, not failure — returning the
+      // winner's leg instead of throwing stops the loser's path from telling
+      // the customer "we couldn't book a courier, cancel for a refund" about an
+      // order that IS booked and en route.
+      if ((insertErr as { code?: string }).code === '23505') {
+        const { data: legs } = await this.db
+          .from('delivery_legs')
+          .select('*')
+          .eq('order_id', orderId)
+          .eq('leg', leg)
+          .order('attempt', { ascending: false });
+        const live = legs?.find((l: { status: LegStatus }) => !TERMINAL_STATUSES.includes(l.status));
+        if (live) {
+          this.log.info({ orderId, leg, legId: live.id }, 'concurrent dispatch won; returning live leg');
+          return live;
+        }
+      }
+      throw new Error(`could not create leg: ${insertErr.message}`);
+    }
 
     const createReq: CreateDeliveryRequest = {
       ...quoteReq,
