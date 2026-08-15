@@ -44,7 +44,7 @@ echo "==> repointing dispatch PUBLIC_URL"
 ssh "$HOST" "sed -i \
   -e 's|^PUBLIC_URL=.*|PUBLIC_URL=https://api.usecreaseapp.com|' \
   -e 's|^MOCK_WEBHOOK_URL=.*|MOCK_WEBHOOK_URL=https://api.usecreaseapp.com/webhooks/mock|' \
-  /root/crease/services/dispatch/.env && systemctl restart crease-dispatch"
+  /opt/crease/services/dispatch/.env && systemctl restart crease-dispatch"
 
 echo "==> verifying"
 sleep 2
