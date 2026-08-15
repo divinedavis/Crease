@@ -378,8 +378,21 @@ export class PaymentService {
    */
   async approveAndCharge(orderId: string) {
     const order = await this.loadOrder(orderId);
-    if (order.status !== 'awaiting_approval') {
-      throw new Error(`order is not awaiting approval (status '${order.status}')`);
+
+    // Concurrency gate. Two approves arriving together (a double-tap, or the
+    // app racing a retry) would both pass a plain status check and race the
+    // capture, charging the customer twice. Claim the approval by atomically
+    // moving the order out of 'awaiting_approval'; the winner proceeds, the
+    // loser gets zero rows back and returns without moving any money.
+    const { data: claimed } = await this.db
+      .from('orders')
+      .update({ status: 'cleaning', approved_at: new Date().toISOString() })
+      .eq('id', orderId)
+      .eq('status', 'awaiting_approval')
+      .select('id');
+    if (!claimed || claimed.length === 0) {
+      this.log.info({ orderId }, 'approve ignored — order not awaiting approval (already handled)');
+      return { total: order.total_cents ?? order.subtotal_cents ?? 0, remainder: 0, alreadyHandled: true };
     }
 
     const { data: primary } = await this.db
@@ -409,7 +422,12 @@ export class PaymentService {
 
     const remainder = total - held;
     if (remainder > 0) {
-      const { data: row } = await this.db
+      // Check the insert error instead of blindly dereferencing row.id — a
+      // failed insert used to throw a confusing "cannot read id of undefined"
+      // mid-charge. (Multiple difference rows per order are legal now that the
+      // contradictory (order_id,kind) unique index is dropped; the approval
+      // gate above is what makes this run at most once per approval cycle.)
+      const { data: row, error: rowErr } = await this.db
         .from('payments')
         .insert({
           order_id: orderId,
@@ -420,6 +438,9 @@ export class PaymentService {
         })
         .select()
         .single();
+      if (rowErr || !row) {
+        throw new Error(`could not create difference payment: ${rowErr?.message ?? 'no row returned'}`);
+      }
 
       const state = await this.provider.chargeDifference({
         orderId,
@@ -442,11 +463,7 @@ export class PaymentService {
         .eq('id', row.id);
     }
 
-    await this.db
-      .from('orders')
-      .update({ status: 'cleaning', approved_at: new Date().toISOString() })
-      .eq('id', orderId);
-
+    // status + approved_at were already set atomically by the claim above.
     this.log.info({ orderId, total, remainder }, 'customer approved higher total');
     return { total, remainder };
   }

@@ -129,6 +129,18 @@ export class OrderService {
     }
 
     const attempt = (priorLegs?.[0]?.attempt ?? 0) + 1;
+    // Cap re-dispatch. A returned delivery resets the order to 'ready', and the
+    // return route is customer-triggerable — without a cap a customer who is
+    // repeatedly "unavailable" (or who scripts the endpoint) books a fresh
+    // courier at Crease's cost on every loop for a single paid fee. Past the
+    // cap, fail the leg (moving the order to a needs-attention state) and
+    // refuse rather than dispatch yet another courier.
+    const MAX_ATTEMPTS = 3;
+    if (attempt > MAX_ATTEMPTS) {
+      this.log.warn({ orderId, leg, attempt }, 'refusing dispatch — max attempts reached');
+      await this.recordLegFailure(orderId, leg, `max ${leg} attempts reached (${MAX_ATTEMPTS})`);
+      throw new Error(`This order has reached the maximum number of ${leg} attempts — please contact support.`);
+    }
     if (attempt > 1) {
       this.log.warn({ orderId, leg, attempt }, 're-dispatching after failed attempt');
     }
@@ -287,6 +299,22 @@ export class OrderService {
     }
     if (rank(event.status) < rank(leg.status) && !TERMINAL_STATUSES.includes(event.status)) {
       this.log.info({ legId, from: leg.status, to: event.status }, 'ignoring out-of-order event');
+      return;
+    }
+
+    // A bag cannot reach the dropoff side without first being picked up. The
+    // rank guard above only stops backward moves, not a single event that
+    // vaults a still-'pending' leg straight to delivered/returned — which,
+    // cascaded, marks the order complete (or resets a return) and can release
+    // the next leg. Reject any dropoff-side status on a leg that never reached
+    // 'picked_up'. (Tolerates dropped intermediate en_route/at_* webhooks;
+    // only the pickup itself is required.)
+    const DROPOFF_SIDE: LegStatus[] = ['en_route_to_dropoff', 'at_dropoff', 'delivered', 'returned'];
+    if (DROPOFF_SIDE.includes(event.status) && rank(leg.status) < rank('picked_up')) {
+      this.log.warn(
+        { legId, from: leg.status, to: event.status },
+        'ignoring illegal transition: dropoff-side event before pickup',
+      );
       return;
     }
 

@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import WebSocketTransport from 'ws';
 import { config } from './config.js';
@@ -57,12 +57,13 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
   }
 });
 
-/** Constant-time compare so the shared secret can't be recovered by timing. */
+/** Constant-time compare so the shared secret can't be recovered by timing.
+ *  Both sides are hashed to a fixed 32-byte digest first, so the comparison
+ *  never returns early on a length mismatch (which would leak the length). */
 function secretEquals(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length) return false;
-  return timingSafeEqual(ab, bb);
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
 }
 
 /** Shared-secret guard for the portal and the iOS app. */
@@ -487,6 +488,77 @@ app.post('/webhooks/stripe', async (req, reply) => {
   }
 
   const event = (req.body ?? {}) as any;
+
+  // If the same signing secret ever leaks into test mode, a test-mode
+  // 'payment_intent.succeeded' must not dispatch a real courier. Reject
+  // test-mode events once this box is marked production.
+  if (process.env.NODE_ENV === 'production' && event.livemode === false) {
+    req.log.warn({ id: event.id, type: event.type }, 'stripe webhook rejected: test-mode event in production');
+    return reply.code(202).send({ ok: true, ignored: 'test-mode event' });
+  }
+
+  // Idempotency ledger: a replayed (validly-signed) event would otherwise
+  // re-run dispatch/reconciliation. Record the id; a unique-violation means
+  // we've already handled it.
+  if (event.id) {
+    const { error: dedupErr } = await db
+      .from('stripe_events')
+      .insert({ event_id: event.id, type: event.type, livemode: event.livemode ?? null });
+    if (dedupErr) {
+      if ((dedupErr as { code?: string }).code === '23505') {
+        return { ok: true, deduped: true };
+      }
+      // Don't silently drop the event on a write failure — let Stripe retry.
+      req.log.error({ err: dedupErr, id: event.id }, 'stripe_events insert failed');
+      return reply.code(500).send({ ok: false });
+    }
+  }
+
+  // Reconcile money that moved backwards, so the DB stops reporting captured
+  // funds that were refunded/disputed (which would otherwise let a payout go
+  // out on money we no longer hold).
+  if (event.type === 'payment_intent.payment_failed') {
+    const intentRef = event.data?.object?.id;
+    if (intentRef) {
+      await db
+        .from('payments')
+        .update({
+          status: 'failed',
+          last_error: event.data?.object?.last_payment_error?.message ?? 'payment failed',
+        })
+        .eq('provider', paymentProvider.name)
+        .eq('provider_intent_ref', intentRef);
+    }
+    return { ok: true, reconciled: event.type };
+  }
+  if (event.type === 'charge.refunded') {
+    const charge = event.data?.object ?? {};
+    const intentRef = charge.payment_intent;
+    if (intentRef) {
+      const fully = (charge.amount_refunded ?? 0) >= (charge.amount ?? 0);
+      await db
+        .from('payments')
+        .update({
+          status: fully ? 'refunded' : 'partially_refunded',
+          refunded_cents: charge.amount_refunded ?? 0,
+        })
+        .eq('provider', paymentProvider.name)
+        .eq('provider_intent_ref', intentRef);
+    }
+    return { ok: true, reconciled: event.type };
+  }
+  if (event.type === 'charge.dispute.created') {
+    const dispute = event.data?.object ?? {};
+    if (dispute.charge) {
+      await db
+        .from('payments')
+        .update({ last_error: `dispute ${dispute.id} (${dispute.reason ?? 'unknown'})` })
+        .eq('provider', paymentProvider.name)
+        .eq('charge_ref', dispute.charge);
+    }
+    return { ok: true, reconciled: event.type };
+  }
+
   if (event.type !== 'payment_intent.succeeded') {
     return { ok: true, ignored: event.type };
   }

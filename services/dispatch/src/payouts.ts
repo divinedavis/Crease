@@ -147,13 +147,36 @@ export class PayoutService {
       return { ...row, status: 'skipped' };
     }
 
+    // Never transfer more than we actually captured, and never let a missing
+    // source charge fund the transfer from the platform balance — Stripe does
+    // exactly that when source_transaction is omitted. Either case holds the
+    // payout as pending for the sweep/a human rather than paying out money we
+    // cannot trace to this order's charge.
+    const primary = (payments ?? []).find((p) => p.kind === 'primary');
+    const sourceChargeRef: string | undefined = (primary as any)?.charge_ref ?? undefined;
+    if (amount > capturedTotal) {
+      await this.db
+        .from('payouts')
+        .update({ status: 'pending', last_error: `payout ${amount} exceeds captured ${capturedTotal}` })
+        .eq('id', row.id);
+      this.log.warn({ orderId, amount, capturedTotal }, 'payout held — exceeds captured funds');
+      return { ...row, status: 'pending' };
+    }
+    if (!sourceChargeRef) {
+      await this.db
+        .from('payouts')
+        .update({ status: 'pending', last_error: 'no source charge to fund the transfer' })
+        .eq('id', row.id);
+      this.log.warn({ orderId }, 'payout held — no source charge (would draw the platform balance)');
+      return { ...row, status: 'pending' };
+    }
+
     try {
-      const primary = (payments ?? []).find((p) => p.kind === 'primary');
       const transfer = await this.connect.transfer({
         accountRef: cleaner.stripe_account_id,
         amountCents: amount,
         transferGroup: `order_${order.short_code}`,
-        sourceChargeRef: (primary as any)?.charge_ref ?? undefined,
+        sourceChargeRef,
         idempotencyKey: row.id,
       });
 
