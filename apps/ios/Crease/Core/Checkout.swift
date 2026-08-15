@@ -149,8 +149,8 @@ final class Checkout: ObservableObject {
             // their money and assumes either nothing happened or that tapping
             // again pays twice. Neither is true.
             state = .failed(charged
-                ? "Your card was charged. We couldn't finish booking the driver: \(error.localizedDescription) Tap again to finish — you won't be charged twice."
-                : error.localizedDescription)
+                ? "Your card was charged. We couldn't finish booking the driver. Tap again to finish — you won't be charged twice."
+                : "Something went wrong. Please try again.")
             return nil
         }
     }

@@ -1,3 +1,4 @@
+import CryptoKit
 import OSLog
 import SwiftUI
 import UserNotifications
@@ -84,7 +85,13 @@ final class PushRegistrar {
     private func send(_ deviceToken: String) async {
         guard let session, let userId else { return }
         let registration = "\(userId.uuidString.lowercased()):\(Self.apsEnvironment):\(deviceToken)"
-        guard registration != UserDefaults.standard.string(forKey: Self.acceptedKey) else { return }
+        // Store only a hash of the registration tuple, not the plaintext
+        // userId:env:token — UserDefaults is an unencrypted plist included in
+        // device backups, and the hash is all the "already registered" check
+        // needs.
+        let registrationHash = SHA256.hash(data: Data(registration.utf8))
+            .map { String(format: "%02x", $0) }.joined()
+        guard registrationHash != UserDefaults.standard.string(forKey: Self.acceptedKey) else { return }
         guard let accessToken = try? await session.client.auth.session.accessToken else { return }
 
         do {
@@ -93,13 +100,13 @@ final class PushRegistrar {
                 body: Registration(token: deviceToken, environment: Self.apsEnvironment),
                 as: DispatchAPI.Ack.self
             )
-            UserDefaults.standard.set(registration, forKey: Self.acceptedKey)
+            UserDefaults.standard.set(registrationHash, forKey: Self.acceptedKey)
         } catch {
             // Deliberately not recorded, so every later registration retries
             // it. The route can be absent in an environment that has not been
             // deployed yet, and a device that quietly stopped being registered
             // is a customer who stops being told anything.
-            log.error("device token not registered: \(error.localizedDescription, privacy: .public)")
+            log.error("device token not registered: \(error.localizedDescription)")
         }
     }
 
@@ -180,7 +187,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Expected on a simulator and on any build whose profile carries no
         // aps-environment. Fatal to the feature everywhere else, and there is
         // nothing on screen that would ever show it.
-        log.error("APNs refused registration: \(error.localizedDescription, privacy: .public)")
+        log.error("APNs refused registration: \(error.localizedDescription)")
     }
 
     /// A notification that lands while the customer is looking at the app is

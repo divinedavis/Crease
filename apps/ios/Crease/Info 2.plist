@@ -39,8 +39,6 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Crease can scan your payment card so you don't have to type it in.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Crease uses Face ID to unlock the app so your orders and address stay private.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.</string>
 	<key>SUPABASE_ANON_KEY</key>

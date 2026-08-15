@@ -74,11 +74,15 @@ struct DispatchAPI {
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            // A proxy error page decodes as nothing and surfaces as "the data
-            // couldn't be read", which tells the customer nothing and sent me
-            // looking in the app rather than at the gateway. Say what arrived.
+            // A proxy error page decodes as nothing. Don't surface the raw
+            // gateway body to the customer (it can leak infrastructure detail);
+            // keep it only in a debug build for diagnosis.
+            #if DEBUG
             let body = String(data: data.prefix(200), encoding: .utf8) ?? ""
             throw Failure(message: "Unexpected response from Crease (\(status)). \(body)")
+            #else
+            throw Failure(message: "Something went wrong. Please try again.")
+            #endif
         }
     }
 

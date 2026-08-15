@@ -205,7 +205,7 @@ final class OrderStore: ObservableObject {
             return nil
         } catch {
             await loadOrders()
-            return error.localizedDescription
+            return "We couldn't schedule your delivery. Please try again."
         }
     }
 
@@ -232,7 +232,7 @@ final class OrderStore: ObservableObject {
             }
             return nil
         } catch {
-            return error.localizedDescription
+            return "We couldn't cancel your order. Please try again or contact support."
         }
     }
 

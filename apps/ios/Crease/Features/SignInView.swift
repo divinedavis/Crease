@@ -127,7 +127,7 @@ struct SignInView: View {
     /// Apple requires the raw nonce at token exchange and its SHA-256 in the
     /// request; sending the same value for both defeats the replay protection.
     private static func randomNonce(length: Int = 32) -> String {
-        let chars = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        let chars = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
         return String((0..<length).map { _ in chars[Int.random(in: 0..<chars.count)] })
     }
 

@@ -1,6 +1,9 @@
 import Foundation
+import OSLog
 import Supabase
 import SwiftUI
+
+private let log = Logger(subsystem: "com.divinedavis.crease", category: "auth")
 
 /// Supabase client + auth state.
 ///
@@ -52,7 +55,14 @@ final class Session: ObservableObject {
         }
         #endif
 
-        client = SupabaseClient(supabaseURL: url, supabaseKey: key)
+        client = SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: key,
+            // Pin the session to this device: the SDK's default keychain
+            // accessibility can let the token migrate to another device via an
+            // encrypted backup restore.
+            options: .init(auth: .init(storage: KeychainAuthStorage()))
+        )
         Task { await restore() }
     }
 
@@ -154,10 +164,11 @@ final class Session: ObservableObject {
         if raw.contains("offline") || raw.contains("network") {
             return "You appear to be offline."
         }
-        // Anything else is shown verbatim rather than softened. A provider
-        // misconfiguration reads as an ordinary sign-in failure otherwise, and
-        // the one detail that identifies it is the part being thrown away.
-        return raw
+        // Anything else: a generic message. The raw provider text can carry
+        // backend/config detail, so it is logged (redacted by OSLog) for
+        // diagnosis rather than shown to the customer.
+        log.error("sign-in failed: \(raw)")
+        return "Something went wrong signing in. Please try again."
     }
 }
 

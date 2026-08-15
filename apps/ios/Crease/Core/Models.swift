@@ -277,8 +277,14 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     /// does not resolve — offering it is a browser error page dressed up as
     /// tracking, and it looks like the feature is broken rather than absent.
     var trackingURL: URL? {
-        guard provider != "mock", let trackingUrl else { return nil }
-        return URL(string: trackingUrl)
+        // Only surface a real https tracking link. The value comes from the
+        // courier-provider integration (external data); anything non-https is
+        // dropped so a bad row can't render a phishing or non-web link.
+        guard provider != "mock", let trackingUrl,
+              let url = URL(string: trackingUrl),
+              url.scheme?.lowercased() == "https"
+        else { return nil }
+        return url
     }
 }
 
