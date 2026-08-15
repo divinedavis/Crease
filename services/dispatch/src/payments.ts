@@ -474,20 +474,30 @@ export class PaymentService {
 
       const remainder = total - held;
       if (remainder > 0) {
-        // Check the insert error instead of blindly dereferencing row.id — a
+        // Check the write error instead of blindly dereferencing row.id — a
         // failed insert used to throw a confusing "cannot read id of undefined"
-        // mid-charge. (Multiple difference rows per order are legal now that the
-        // contradictory (order_id,kind) unique index is dropped; the approval
-        // gate above is what makes this run at most once per approval cycle.)
+        // mid-charge.
+        //
+        // Upsert rather than insert, because (order_id, kind) is unique again
+        // as of 0026 and the rollback above makes a second pass through here
+        // reachable: an approval whose difference charge was declined comes
+        // back to 'awaiting_approval' to be tried again, and a plain insert
+        // would then hit the unique index and fail the retry forever on a
+        // constraint rather than on the card. Re-using the row is also the
+        // honest shape — there is one difference owed on this order, and this
+        // is it.
         const { data: row, error: rowErr } = await this.db
           .from('payments')
-          .insert({
-            order_id: orderId,
-            kind: 'difference',
-            provider: this.provider.name,
-            status: 'requires_payment_method',
-            authorized_cents: remainder,
-          })
+          .upsert(
+            {
+              order_id: orderId,
+              kind: 'difference',
+              provider: this.provider.name,
+              status: 'requires_payment_method',
+              authorized_cents: remainder,
+            },
+            { onConflict: 'order_id,kind' },
+          )
           .select()
           .single();
         if (rowErr || !row) {
@@ -620,8 +630,12 @@ export class PaymentService {
             this.log.info({ orderId, paymentId: p.id, keep }, 'charge retained, nothing to refund');
             continue;
           }
+          // An amount, unless this really is "give all of it back". Asking for
+          // a full refund of a charge that has already had part of it returned
+          // is rejected by the provider, so anything already refunded makes
+          // this an explicit-amount refund too.
           state =
-            keep > 0
+            keep > 0 || alreadyBack > 0
               ? await this.provider.refund(p.provider_intent_ref, giveBack)
               : await this.provider.refund(p.provider_intent_ref);
         } else {
