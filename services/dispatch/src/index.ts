@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import WebSocketTransport from 'ws';
 import { config } from './config.js';
@@ -56,10 +57,20 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
   }
 });
 
+/** Constant-time compare so the shared secret can't be recovered by timing. */
+function secretEquals(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
+
 /** Shared-secret guard for the portal and the iOS app. */
 async function requireInternalKey(req: any, reply: any) {
-  const key = req.headers['x-crease-key'];
-  if (key !== config.internalApiKey) {
+  // A header can arrive as string | string[]; normalize before comparing.
+  const raw = req.headers['x-crease-key'];
+  const key = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
+  if (!secretEquals(key, config.internalApiKey)) {
     return reply.code(401).send({ error: 'unauthorized' });
   }
 }

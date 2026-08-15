@@ -12,9 +12,15 @@ function required(key: string): string {
   return v;
 }
 
+// The mock courier runs in-process and signs its own callbacks; if it's on,
+// its webhook secret must be a real value, never a shipped default.
+const mockCourierEnabled = /^(1|true|yes|on)$/i.test(process.env.ENABLE_MOCK_COURIER ?? '');
+
 export const config = {
   port: Number(process.env.PORT ?? 8080),
-  host: process.env.HOST ?? '0.0.0.0',
+  // Bind loopback by default; the service holds the service-role key and is
+  // meant to sit behind nginx. Set HOST=0.0.0.0 explicitly to expose it.
+  host: process.env.HOST ?? '127.0.0.1',
   logLevel: process.env.LOG_LEVEL ?? 'info',
   publicUrl: process.env.PUBLIC_URL ?? 'http://localhost:8080',
 
@@ -74,7 +80,11 @@ export const config = {
     MOCK_WEBHOOK_URL:
       process.env.MOCK_WEBHOOK_URL ??
       `http://127.0.0.1:${process.env.PORT ?? 8080}/webhooks/mock`,
-    MOCK_WEBHOOK_SECRET: process.env.MOCK_WEBHOOK_SECRET ?? 'dev-mock-secret',
+    // No insecure default: if the mock courier is enabled its secret is
+    // required, so an unsigned/default-signed mock event can never be forged.
+    MOCK_WEBHOOK_SECRET: mockCourierEnabled
+      ? required('MOCK_WEBHOOK_SECRET')
+      : (process.env.MOCK_WEBHOOK_SECRET ?? ''),
     MOCK_SPEED_FACTOR: process.env.MOCK_SPEED_FACTOR,
     MOCK_FAILURE_RATE: process.env.MOCK_FAILURE_RATE,
   },
