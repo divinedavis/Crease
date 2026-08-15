@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { SESSION_COOKIE_OPTIONS } from '@/lib/session-cookie';
 
 /**
  * Refreshes the Supabase session cookie on every request and bounces
@@ -13,6 +14,10 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // The same options the server client writes with. This is the call that
+      // rewrites the cookie on every request, so a mismatch here would undo
+      // the flags on the very next page load. See lib/session-cookie.ts.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet: { name: string; value: string; options: CookieOptions }[]) => {

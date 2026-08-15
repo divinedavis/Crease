@@ -28,18 +28,8 @@ final class CreaseUITests: XCTestCase {
         }
     }
 
-    private func launch(
-        signedIn: Bool,
-        resetLockOptIn: Bool = false,
-        forceBiometry: String? = nil
-    ) -> XCUIApplication {
+    private func launch(signedIn: Bool) -> XCUIApplication {
         let app = XCUIApplication()
-        if resetLockOptIn {
-            app.launchArguments += ["-uiTestResetLockOptIn"]
-        }
-        if let forceBiometry {
-            app.launchArguments += ["-uiTestForceBiometry", forceBiometry]
-        }
         if !signedIn {
             // Explicit, because the keychain session survives reinstall and
             // would otherwise carry over from a signed-in test.
@@ -99,39 +89,20 @@ final class CreaseUITests: XCTestCase {
         attach(app, "sign-in")
     }
 
-    /// The lock is offered once, right after an account lands on the device,
-    /// and taking "Not now" for an answer is the whole point — an offer that
-    /// reappears every launch is a nag, and the menu toggle already exists for
-    /// anyone who changes their mind.
-    func testTheBiometricLockIsOfferedOnceAfterSigningIn() throws {
-        let app = launch(signedIn: true, resetLockOptIn: true, forceBiometry: "faceID")
+    /// Nothing may interrupt the order list on arrival. The Face ID lock was
+    /// briefly offered here in an alert and pulled the same day; this is the
+    /// regression test for its absence, and it guards the next prompt anyone
+    /// is tempted to put between opening the app and booking a pickup.
+    func testNothingIsPromptedOnArrivingAtTheOrderList() {
+        let app = launch(signedIn: true)
         XCTAssertTrue(
             app.navigationBars["Crease"].waitForExistence(timeout: 20),
             "signed-in customer should land on the order list"
         )
-
-        let offer = app.alerts.element(boundBy: 0)
-        XCTAssertTrue(offer.waitForExistence(timeout: 8),
-                      "signing in should offer the lock")
-        XCTAssertTrue(
-            offer.label.contains("Lock Crease"),
-            "the alert after signing in should be the lock offer, got \(offer.label)"
+        XCTAssertFalse(
+            app.alerts.element(boundBy: 0).waitForExistence(timeout: 5),
+            "arriving at the order list must not raise an alert, got \(app.alerts.element(boundBy: 0).label)"
         )
-        attach(app, "lock-opt-in")
-
-        guard let notNow = button("Not now", in: app) else {
-            return XCTFail("the offer must be declinable")
-        }
-        notNow.tap()
-        XCTAssertFalse(app.alerts.element(boundBy: 0).waitForExistence(timeout: 2),
-                       "declining should dismiss the offer")
-
-        // Relaunched without the reset: the answer has to stick.
-        app.terminate()
-        let again = launch(signedIn: true, forceBiometry: "faceID")
-        XCTAssertTrue(again.navigationBars["Crease"].waitForExistence(timeout: 20))
-        XCTAssertFalse(again.alerts.element(boundBy: 0).waitForExistence(timeout: 5),
-                       "a declined offer must not be asked again on the next launch")
     }
 
     func testSignedInCustomerSeesTheirOrders() {

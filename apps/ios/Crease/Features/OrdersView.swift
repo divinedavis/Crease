@@ -16,6 +16,10 @@ struct OrdersView: View {
     @State private var path: [Order] = []
     @ObservedObject private var router = PushRouter.shared
 
+    @State private var confirmingDelete = false
+    @State private var deleting = false
+    @State private var deleteError: String?
+
     /// The booking flow, one step at a time. Modelled as an enum rather than a
     /// pile of booleans so two sheets can never be presented at once — the
     /// failure that produces a half-dismissed screen with no way back.
@@ -89,17 +93,6 @@ struct OrdersView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Crease")
             .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
-            // Offered here rather than on the sign-in screen: the account has
-            // to exist on the device before there is anything worth locking.
-            .task { lock.offerOptInIfNeverAsked() }
-            .alert("Lock Crease with \(lock.biometry.label)?", isPresented: $lock.isOfferingOptIn) {
-                Button("Not now", role: .cancel) { lock.declineOptIn() }
-                Button("Turn on") { Task { await lock.acceptOptIn() } }
-            } message: {
-                Text(
-                    "Your orders, home address and courier handoff PIN stay behind \(lock.biometry.label). You can change this any time from the menu."
-                )
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -118,11 +111,43 @@ struct OrdersView: View {
                         Button("Sign out", role: .destructive) {
                             Task { await session.signOut() }
                         }
+                        Button(role: .destructive) {
+                            confirmingDelete = true
+                        } label: {
+                            Label(deleting ? "Deleting…" : "Delete account", systemImage: "trash")
+                        }
+                        .disabled(deleting)
                     } label: {
                         Image(systemName: "person.crop.circle")
                     }
                     .accessibilityLabel("Account")
                 }
+            }
+            // Deleting is irreversible and takes the order history with it, so
+            // it is asked for twice: once to open this, once to confirm. Apple
+            // requires the confirmation, and so does anyone who has fat-fingered
+            // a menu.
+            .confirmationDialog(
+                "Delete your account?",
+                isPresented: $confirmingDelete,
+                titleVisibility: .visible
+            ) {
+                Button("Delete account", role: .destructive) {
+                    Task { await performDelete() }
+                }
+                Button("Keep my account", role: .cancel) {}
+            } message: {
+                Text(
+                    "This permanently deletes your orders, saved addresses and account details. It cannot be undone."
+                )
+            }
+            .alert(
+                "Account not deleted",
+                isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })
+            ) {
+                Button("OK", role: .cancel) { deleteError = nil }
+            } message: {
+                Text(deleteError ?? "")
             }
             .refreshable { await store.loadAll() }
             .fullScreenCover(item: $flow) { step in
@@ -159,6 +184,19 @@ struct OrdersView: View {
             await store.startWatching()
         }
         .task(id: router.pendingOrderId) { await openTappedOrder() }
+    }
+
+    /// Success needs no message: the account is gone and `Session` has already
+    /// flipped to signed-out, so this view is replaced by the sign-in screen
+    /// while the dialog is still dismissing.
+    private func performDelete() async {
+        deleting = true
+        defer { deleting = false }
+        do {
+            try await session.deleteAccount()
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 
     /// A tapped notification names an order id; this screen needs the order.

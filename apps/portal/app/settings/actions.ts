@@ -13,6 +13,13 @@ import { parseHoursForm } from '@/lib/hours';
  * rows updated, not as an error — this codebase has already shipped a write
  * that "succeeded" against nothing — so every update selects back what it
  * wrote and treats an empty answer as the refusal it is.
+ *
+ * What the database says about a failure stays on the server. Postgrest quotes
+ * constraint names, column names and policy names back at the caller, and the
+ * dispatcher relays Stripe's wording; none of it is actionable at a shop
+ * counter, and all of it describes the schema to anyone calling these actions
+ * directly. Real error to console.error with the cleaner id, plain sentence to
+ * the browser. Messages already written for the shop are kept verbatim.
  */
 
 const NOT_YOURS = 'This shop is not linked to your account.';
@@ -98,7 +105,10 @@ export async function saveShopDetails(cleanerId: string, _prev: unknown, formDat
     .update(updates)
     .eq('id', cleanerId)
     .select('id');
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('[portal] saveShopDetails: cleaners update failed', { cleanerId }, error);
+    return { error: 'Could not save the shop details. Try again.' };
+  }
   if (!saved?.length) return { error: NOT_YOURS };
 
   revalidatePath('/settings');
@@ -121,7 +131,10 @@ export async function saveHours(cleanerId: string, _prev: unknown, formData: For
     .update({ hours: parsed.hours })
     .eq('id', cleanerId)
     .select('id');
-  if (error) return { error: error.message };
+  if (error) {
+    console.error('[portal] saveHours: cleaners update failed', { cleanerId }, error);
+    return { error: 'Could not save the opening hours. Try again.' };
+  }
   if (!saved?.length) return { error: NOT_YOURS };
 
   revalidatePath('/settings');
@@ -151,7 +164,8 @@ export async function startPayoutOnboarding(cleanerId: string) {
     });
     url = res.url;
   } catch (err) {
-    return { error: (err as Error).message };
+    console.error('[portal] startPayoutOnboarding: dispatch call failed', { cleanerId }, err);
+    return { error: 'Could not start payout setup right now. Try again in a moment.' };
   }
   if (!url) return { error: 'Stripe did not return an onboarding link. Try again.' };
   redirect(url);
@@ -166,7 +180,8 @@ export async function refreshPayoutStatus(cleanerId: string) {
   try {
     await callDispatch(`/v1/cleaners/${cleanerId}/connect-refresh`);
   } catch (err) {
-    return { error: (err as Error).message };
+    console.error('[portal] refreshPayoutStatus: dispatch call failed', { cleanerId }, err);
+    return { error: 'Could not check the payout status right now. Try again in a moment.' };
   }
   revalidatePath('/settings');
   return { ok: true };

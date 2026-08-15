@@ -10,6 +10,7 @@ import {
 import { config } from './config.js';
 import { deliveryFeeCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
+import { parseWindow } from './windows.js';
 
 export type LegType = 'pickup' | 'return';
 
@@ -144,6 +145,39 @@ export class OrderService {
       return live;
     }
 
+    // The window this leg hands the carrier as its dispatch time. The return
+    // window is checked by the route that writes it; the pickup window is
+    // INSERTed by the app straight into `orders` and reaches this line having
+    // been looked at by nothing at all — a window years out buys a quote that
+    // expires long before anyone drives.
+    //
+    // One asymmetry, and it is deliberate: an EXPIRED pickup window is not an
+    // error. The app stamps `now -> now + 2h` when the draft is created, and a
+    // customer who books, puts the phone down and pays three hours later has
+    // done nothing wrong. That order is on-demand — "as soon as possible" is
+    // what the window meant when it was written and it is still what the
+    // customer wants — so it is re-anchored to now rather than refused. The
+    // return leg keeps the strict rule, because there the customer picked a
+    // specific time and a courier arriving at some other hour is a broken
+    // promise rather than a prompt one.
+    const isPickup = leg === 'pickup';
+    let dispatchWindow = parseWindow(
+      isPickup ? order.pickup_window_start : order.return_window_start,
+      isPickup ? order.pickup_window_end : order.return_window_end,
+      isPickup ? 'pickup' : 'delivery',
+    );
+    if ('error' in dispatchWindow && isPickup && Date.parse(order.pickup_window_end) < Date.now()) {
+      const now = new Date();
+      dispatchWindow = {
+        start: now.toISOString(),
+        end: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      };
+      this.log.info({ orderId, leg }, 'pickup window had lapsed; dispatching as on-demand');
+    }
+    if ('error' in dispatchWindow) {
+      throw new Error(`order ${order.short_code} cannot be dispatched — ${dispatchWindow.error}`);
+    }
+
     const attempt = (priorLegs?.[0]?.attempt ?? 0) + 1;
     // Cap re-dispatch. A returned delivery resets the order to 'ready', and the
     // return route is customer-triggerable — without a cap a customer who is
@@ -164,41 +198,31 @@ export class OrderService {
     const { pickup, dropoff } = this.waypoints(order, leg);
     const itemCount = order.order_items?.reduce((n: number, i: any) => n + i.quantity, 0) ?? 1;
 
-    const quoteReq = {
-      pickup,
-      dropoff,
-      manifest: {
-        description: `Dry cleaning — order ${order.short_code}`,
-        // Carriers cap liability far below this; the declared value drives
-        // their quote and their (small) coverage, not our actual exposure.
-        declaredValueCents: Math.min(
-          Math.max(order.subtotal_cents ?? order.estimate_subtotal_cents, config.declaredValueDefaultCents),
-          config.declaredValueMaxCents,
-        ),
-        itemCount: Math.max(itemCount, 1),
-        requiresCar: true,
-      },
-      pickupReadyAt: leg === 'pickup' ? order.pickup_window_start : order.return_window_start,
-      pickupDeadlineAt: leg === 'pickup' ? order.pickup_window_end : order.return_window_end,
-    };
-
-    const best = await this.chain.bestQuote(quoteReq);
-    if (!best) {
-      await this.recordLegFailure(orderId, leg, 'no courier coverage for this route');
-      throw new Error('no courier coverage for this route');
-    }
-
-    // Insert first so we own an id to use as the provider's idempotency key.
-    // If the provider call then times out, a retry replays the same key and
-    // Uber returns the original delivery rather than dispatching a second.
-    const { data: legRow, error: insertErr } = await this.db
+    // Claim the leg before spending a penny on it.
+    //
+    // The row goes in first and the quote happens second, because the partial
+    // unique index on (order_id, leg) is the only real mutex here — the
+    // live-leg check above is a read, and every concurrent caller passes it.
+    // Quoting first meant N simultaneous requests all asked Uber for a price
+    // and all paid for the privilege, while N-1 of their inserts then lost to
+    // the index and threw the quote away. The return route is
+    // customer-triggerable, so "N" is whatever a phone with a stuck retry
+    // loop decides it is.
+    //
+    // The claim doubles as the idempotency key it always was: the row's id is
+    // the provider's external_id, so a create that times out replays the same
+    // key and Uber hands back the original delivery instead of dispatching a
+    // second courier. The provider is unknown until the quote comes back, so
+    // it lands in the update below; 'pending' is a placeholder no chain entry
+    // matches, which is exactly right for a leg no carrier has yet.
+    const { data: claim, error: insertErr } = await this.db
       .from('delivery_legs')
       .insert({
         order_id: orderId,
         leg,
         attempt,
         status: 'pending',
-        provider: best.provider.name,
+        provider: 'pending',
         pickup_name: pickup.name,
         pickup_phone: pickup.phone,
         pickup_address: pickup.address,
@@ -211,9 +235,6 @@ export class OrderService {
         dropoff_lng: dropoff.lng,
         pickup_verification: pickup.verification,
         dropoff_verification: dropoff.verification,
-        fee_cents: best.quote.feeCents,
-        quoted_at: new Date().toISOString(),
-        quote_expires_at: best.quote.expiresAt,
       })
       .select()
       .single();
@@ -240,6 +261,63 @@ export class OrderService {
       }
       throw new Error(`could not create leg: ${insertErr.message}`);
     }
+
+    // The claim is ours, so exactly one quote gets bought for this leg.
+    const quoteReq = {
+      pickup,
+      dropoff,
+      manifest: {
+        description: `Dry cleaning — order ${order.short_code}`,
+        // Carriers cap liability far below this; the declared value drives
+        // their quote and their (small) coverage, not our actual exposure.
+        declaredValueCents: Math.min(
+          Math.max(order.subtotal_cents ?? order.estimate_subtotal_cents, config.declaredValueDefaultCents),
+          config.declaredValueMaxCents,
+        ),
+        itemCount: Math.max(itemCount, 1),
+        requiresCar: true,
+      },
+      pickupReadyAt: dispatchWindow.start,
+      pickupDeadlineAt: dispatchWindow.end,
+    };
+
+    let best: Awaited<ReturnType<ProviderChain['bestQuote']>>;
+    try {
+      best = await this.chain.bestQuote(quoteReq);
+    } catch (err) {
+      // Every path out of here has to let go of the claim. A carrier having a
+      // bad minute must not leave a 'pending' row sitting in the mutex, because
+      // that row would refuse every future dispatch of this leg — the outage
+      // would outlive itself and the order could never be sent again.
+      await this.releaseClaim(claim.id, (err as Error).message);
+      throw err;
+    }
+
+    if (!best) {
+      await this.recordLegFailure(orderId, leg, 'no courier coverage for this route', claim.id);
+      throw new Error('no courier coverage for this route');
+    }
+
+    const { data: quoted, error: quoteWriteErr } = await this.db
+      .from('delivery_legs')
+      .update({
+        provider: best.provider.name,
+        fee_cents: best.quote.feeCents,
+        quoted_at: new Date().toISOString(),
+        quote_expires_at: best.quote.expiresAt,
+      })
+      .eq('id', claim.id)
+      .select()
+      .single();
+
+    // Losing this write is not cosmetic: `provider` is how a cancellation and
+    // an inbound webhook find the carrier that holds the delivery. Stop before
+    // dispatching one we would not be able to call off.
+    if (quoteWriteErr || !quoted) {
+      await this.releaseClaim(claim.id, `could not record quote: ${quoteWriteErr?.message}`);
+      throw new Error(`could not record quote: ${quoteWriteErr?.message}`);
+    }
+    const legRow = quoted;
 
     const createReq: CreateDeliveryRequest = {
       ...quoteReq,
@@ -485,18 +563,50 @@ export class OrderService {
     return leg?.completed_at ?? leg?.updated_at ?? new Date().toISOString();
   }
 
-  private async recordLegFailure(orderId: string, leg: LegType, message: string) {
-    await this.db.from('delivery_legs').insert({
-      order_id: orderId,
-      leg,
-      status: 'failed',
-      provider: 'none',
-      pickup_name: '-',
-      pickup_address: '-',
-      dropoff_name: '-',
-      dropoff_address: '-',
-      last_error: message,
-    });
+  /**
+   * Let go of a claimed leg that never reached a carrier.
+   *
+   * A claim sits at 'pending', which the partial unique index reads as live, so
+   * an abandoned one locks this leg out of dispatch permanently. Cancelled, not
+   * failed: no courier was booked and no money moved, so the order itself is
+   * still perfectly good and a retry may follow. That retry gets a fresh
+   * attempt number — the burnt one is the point, since it is what bounds how
+   * many billable quotes a customer hammering the endpoint can run up.
+   */
+  private async releaseClaim(legId: string, message: string) {
+    await this.db
+      .from('delivery_legs')
+      .update({ status: 'cancelled', last_error: message })
+      .eq('id', legId);
+  }
+
+  /**
+   * Record a leg that cannot be dispatched at all, and stop the order.
+   *
+   * Called with a claim id once dispatchLeg holds one — the claim row IS this
+   * leg, and marking it terminal both writes the failure and frees the mutex.
+   * Called without one from the paths that refuse before claiming, where there
+   * is no row yet and the failure needs somewhere to live.
+   */
+  private async recordLegFailure(orderId: string, leg: LegType, message: string, claimedLegId?: string) {
+    if (claimedLegId) {
+      await this.db
+        .from('delivery_legs')
+        .update({ status: 'failed', last_error: message })
+        .eq('id', claimedLegId);
+    } else {
+      await this.db.from('delivery_legs').insert({
+        order_id: orderId,
+        leg,
+        status: 'failed',
+        provider: 'none',
+        pickup_name: '-',
+        pickup_address: '-',
+        dropoff_name: '-',
+        dropoff_address: '-',
+        last_error: message,
+      });
+    }
     await this.db.from('orders').update({ status: 'failed', cancelled_reason: message }).eq('id', orderId);
   }
 

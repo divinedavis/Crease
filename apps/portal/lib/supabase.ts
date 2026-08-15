@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { SESSION_COOKIE_OPTIONS } from '@/lib/session-cookie';
 
 /**
  * Request-scoped Supabase client carrying the staff member's session.
@@ -15,6 +16,9 @@ export async function supabaseServer() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Not the library defaults — see lib/session-cookie.ts for why a shift
+      // is the right lifetime and why httpOnly stays off.
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (toSet: { name: string; value: string; options: CookieOptions }[]) => {

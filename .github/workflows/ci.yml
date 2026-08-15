@@ -1,0 +1,47 @@
+# The repo is public and `main` is unprotected, so until now the only thing
+# standing between a bad commit and production was one laptop: no test run, no
+# audit, no second signal. This is the cheap version of that signal.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege by default: nothing here needs to write to the repo.
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      # SHA-pinned rather than @v4: a mutable tag on a public repo means the
+      # action's owner (or anyone who compromises them) can change what runs
+      # here after review.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Every workspace, so a package that stops compiling can't ride to prod
+      # on a stale dist/ the way one already did.
+      - name: Typecheck and build
+        run: |
+          for pkg in packages/*/; do
+            [ -f "$pkg/tsconfig.json" ] && npx tsc -p "$pkg/tsconfig.json"
+          done
+          npx tsc -p services/dispatch/tsconfig.json
+          npx tsc --noEmit -p apps/portal/tsconfig.json
+
+      - name: Test
+        run: npm test --workspaces --if-present
+
+      # High and critical only: a moderate advisory in a build-time dependency
+      # shouldn't block a delivery fix, but a high in the process holding the
+      # service-role and Stripe keys should.
+      - name: Audit
+        run: npm audit --audit-level=high

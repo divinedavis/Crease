@@ -16,6 +16,23 @@ private let log = Logger(subsystem: "com.divinedavis.crease", category: "auth")
 ///
 /// The consequence is that both providers must actually work. There is no
 /// email fallback to hide behind if one of them is misconfigured.
+/// Why an account could not be deleted, in terms the customer can act on.
+enum DeleteAccountError: LocalizedError {
+    /// A shop's staff account: its orders, payouts and colleagues belong to the
+    /// business, so removing it is the owner's call, not a self-service one.
+    case staffAccount
+    case failed
+
+    var errorDescription: String? {
+        switch self {
+        case .staffAccount:
+            return "This account is linked to a shop. Ask the shop owner to remove it."
+        case .failed:
+            return "Something went wrong deleting your account. Please try again."
+        }
+    }
+}
+
 @MainActor
 final class Session: ObservableObject {
     enum State: Equatable {
@@ -153,6 +170,37 @@ final class Session: ObservableObject {
 
     func signOut() async {
         try? await client.auth.signOut()
+        state = .signedOut
+    }
+
+    /// Erase the account and everything attached to it.
+    ///
+    /// The work happens in one `delete_account()` call rather than a series of
+    /// client-side deletes: the rows have to go in foreign-key order (payouts,
+    /// orders and everything cascading off them, addresses, profile, then the
+    /// auth user), and a phone that loses signal halfway through that sequence
+    /// would leave an account that is half gone and cannot be finished.
+    ///
+    /// Throws `DeleteAccountError` so the caller can tell the one case worth
+    /// explaining — a shop's staff account, which belongs to the business —
+    /// apart from everything else, which gets the usual generic message.
+    func deleteAccount() async throws {
+        do {
+            try await client.rpc("delete_account").execute()
+        } catch {
+            let raw = error.localizedDescription
+            if raw.contains("staff accounts must be removed") {
+                throw DeleteAccountError.staffAccount
+            }
+            // Same reasoning as sign-in: the raw Postgres text can carry schema
+            // detail, so it is logged (redacted by OSLog) and never shown.
+            log.error("account deletion failed: \(raw)")
+            throw DeleteAccountError.failed
+        }
+
+        // Local sign-out only. The server-side session died with the auth user,
+        // so asking it to revoke one now would fail and strand the customer on
+        // a signed-in screen backing an account that no longer exists.
         state = .signedOut
     }
 

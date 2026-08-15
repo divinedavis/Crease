@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { TERMINAL_STATUSES } from './deps.js';
 import { RETAIN_ALL } from './payments.js';
 import { CANCELLATION_FEE_CENTS } from './pricing.js';
+import { parseWindow } from './windows.js';
 
 /**
  * When a customer may still call an order off themselves.
@@ -36,40 +37,6 @@ const COURIER_ENGAGED_STATUSES = [
   'delivered',
   'returned',
 ];
-
-/** How far ahead a delivery window may be booked. Long enough for a week away,
- *  short enough that a mistyped year cannot park a courier in 2036. */
-const RETURN_WINDOW_HORIZON_DAYS = 30;
-
-/**
- * The customer's chosen delivery window, or the reason it is not one.
- *
- * Checked rather than trusted: this is the one field the app hands us that goes
- * straight to a carrier as a dispatch time. A window that has already closed
- * quotes as "send someone now", and a far-future one holds an order open
- * indefinitely against a quote that expired months earlier.
- */
-function returnWindow(
-  start?: string,
-  end?: string,
-): { start: string; end: string } | { error: string } {
-  if (!start || !end) return { error: 'A delivery window needs both a start and an end time.' };
-
-  const from = Date.parse(start);
-  const to = Date.parse(end);
-  if (Number.isNaN(from) || Number.isNaN(to)) return { error: 'That delivery time is not a date.' };
-  if (from >= to) return { error: 'A delivery window has to end after it starts.' };
-
-  // The end, not the start: "as soon as possible" legitimately opens a minute
-  // ago, but a window that has already closed is not a time anyone can be sent.
-  const now = Date.now();
-  if (to <= now) return { error: 'That delivery time has already passed.' };
-  if (from > now + RETURN_WINDOW_HORIZON_DAYS * 24 * 60 * 60 * 1000) {
-    return { error: `Deliveries can be booked up to ${RETURN_WINDOW_HORIZON_DAYS} days ahead.` };
-  }
-
-  return { start: new Date(from).toISOString(), end: new Date(to).toISOString() };
-}
 
 /**
  * Endpoints the customer app is allowed to call.
@@ -408,7 +375,7 @@ export function registerCustomerRoutes(
       // order whose window is already set still dispatches with no body at all.
       const { start, end } = req.body ?? {};
       if (start || end) {
-        const chosen = returnWindow(start, end);
+        const chosen = parseWindow(start, end, 'delivery');
         if ('error' in chosen) return reply.code(400).send({ ok: false, error: chosen.error });
 
         const { error } = await db
