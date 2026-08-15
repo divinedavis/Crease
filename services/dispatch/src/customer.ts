@@ -5,6 +5,9 @@ import type { PaymentService } from './payments.js';
 import type { PushEnvironment, PushService } from './push.js';
 import { confirmAndDispatch } from './confirm.js';
 import { config } from './config.js';
+import { TERMINAL_STATUSES } from './deps.js';
+import { RETAIN_ALL } from './payments.js';
+import { CANCELLATION_FEE_CENTS } from './pricing.js';
 
 /**
  * When a customer may still call an order off themselves.
@@ -14,6 +17,25 @@ import { config } from './config.js';
  * money is a phone call to a shop that never saw the bag.
  */
 const CANCELLABLE_STATUSES = ['draft', 'scheduled', 'pickup_dispatched', 'failed'];
+
+/**
+ * Leg states that mean a courier is actually on the job.
+ *
+ * 'pending' and 'dispatching' are the only two where nobody has been engaged
+ * yet and calling the job off costs nothing. Everything past them — including
+ * the terminal ones, which is the point — means a carrier was assigned and will
+ * bill for the abort.
+ */
+const COURIER_ENGAGED_STATUSES = [
+  'courier_assigned',
+  'en_route_to_pickup',
+  'at_pickup',
+  'picked_up',
+  'en_route_to_dropoff',
+  'at_dropoff',
+  'delivered',
+  'returned',
+];
 
 /** How far ahead a delivery window may be booked. Long enough for a week away,
  *  short enough that a mistyped year cannot park a courier in 2036. */
@@ -259,23 +281,37 @@ export function registerCustomerRoutes(
     const order = await ownedOrder(req, reply);
     if (!order) return;
 
-    // Cancelling is gated on custody, and the gate lives here rather than in
-    // the app: a client check is a courtesy, not a control.
-    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+    // Claim the cancellation in the same operation that checks it is allowed.
+    // Reading the status here and writing 'cancelled' at the end left a window
+    // several hundred milliseconds wide — the length of a Stripe refund — in
+    // which confirm-payment could read a still-live order and dispatch a
+    // courier. The customer then has their money back and a driver at the door.
+    // A conditional update means only one of the two paths can win.
+    const { data: claimed } = await db
+      .from('orders')
+      .update({ status: 'cancelled', cancelled_reason: 'cancelled by customer' })
+      .eq('id', req.params.id)
+      .in('status', CANCELLABLE_STATUSES)
+      .select('id')
+      .maybeSingle();
+
+    if (!claimed) {
       return reply.code(409).send({
         ok: false,
         error: 'This order can no longer be cancelled. Please call the shop.',
       });
     }
 
+    // Every leg, not just the live ones: the live ones have to be called off at
+    // the carrier, and the finished ones decide what money comes back.
     const { data: legs } = await db
       .from('delivery_legs')
-      .select('id, provider, provider_delivery_id, status')
-      .eq('order_id', req.params.id)
-      .not('status', 'in', '(delivered,returned,cancelled,failed)');
+      .select('id, leg, provider, provider_delivery_id, status')
+      .eq('order_id', req.params.id);
 
     const errors: string[] = [];
     for (const leg of legs ?? []) {
+      if (TERMINAL_STATUSES.includes(leg.status)) continue;
       const provider = orders.providerFor(leg.provider);
       if (!provider || !leg.provider_delivery_id) continue;
       try {
@@ -284,13 +320,35 @@ export function registerCustomerRoutes(
         errors.push((err as Error).message);
       }
     }
-    if (errors.length) return reply.code(409).send({ ok: false, errors });
+    if (errors.length) {
+      // A courier we could not call off is still on the way. Put the order back
+      // where the claim found it rather than leaving a cancelled row with a live
+      // delivery against it, and refund nothing.
+      await db
+        .from('orders')
+        .update({ status: order.status, cancelled_reason: null })
+        .eq('id', req.params.id);
+      return reply.code(409).send({ ok: false, errors });
+    }
 
-    const money = await payments.voidOrder(req.params.id, 'cancelled by customer');
-    await db
-      .from('orders')
-      .update({ status: 'cancelled', cancelled_reason: 'cancelled by customer' })
-      .eq('id', req.params.id);
+    // What comes back depends on custody, not on the status the order is in.
+    // 'failed' is cancellable so a customer whose courier never showed can
+    // reach their own money — but it is also where an order lands after the
+    // return leg runs out of attempts, by which point Crease has paid for up to
+    // three couriers and a shop has cleaned the garments. Refunding that in full
+    // turns "be unavailable four times" into a free service.
+    const bagCollected = (legs ?? []).some((l) => l.leg === 'pickup' && l.status === 'delivered');
+    const courierEngaged = (legs ?? []).some((l) => COURIER_ENGAGED_STATUSES.includes(l.status));
+
+    const money = bagCollected
+      ? await payments.voidOrder(req.params.id, 'cancelled by customer after pickup', {
+          retainCents: RETAIN_ALL,
+        })
+      : courierEngaged
+        ? await payments.voidOrder(req.params.id, 'cancelled by customer after courier assigned', {
+            retainCents: CANCELLATION_FEE_CENTS,
+          })
+        : await payments.voidOrder(req.params.id, 'cancelled by customer');
 
     if (money.failed.length > 0) {
       req.log.error({ orderId: req.params.id, failed: money.failed }, 'cancelled but refund pending');
@@ -301,7 +359,32 @@ export function registerCustomerRoutes(
           'Your pickup is cancelled. The refund could not be completed automatically and is being processed manually.',
       };
     }
-    return { ok: true, refundPending: false };
+
+    if (bagCollected) {
+      return {
+        ok: true,
+        refundPending: false,
+        refunded: false,
+        message:
+          'Your order is cancelled. Because your items were already collected, the fee has not been refunded automatically — contact support and we will sort it out.',
+      };
+    }
+    if (courierEngaged) {
+      // A fee that swallowed the whole charge refunded nothing, and telling
+      // someone "the rest has been refunded" when no money moved is the message
+      // that becomes a chargeback.
+      const refunded = money.voided > 0;
+      return {
+        ok: true,
+        refundPending: false,
+        refunded,
+        retainedCents: money.retainedCents,
+        message: refunded
+          ? 'Your pickup is cancelled. A driver had already been assigned, so a cancellation fee was kept and the rest has been refunded.'
+          : 'Your pickup is cancelled. A driver had already been assigned, so the fee covers the cancellation charge and has not been refunded.',
+      };
+    }
+    return { ok: true, refundPending: false, refunded: true };
   });
 
   app.post<{ Params: { id: string }; Body: { start?: string; end?: string } }>(

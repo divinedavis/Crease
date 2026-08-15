@@ -9,6 +9,15 @@ import {
 import { deliveryFeeCents } from './pricing.js';
 
 /**
+ * `retainCents` value meaning "keep all of it".
+ *
+ * For orders where the service was substantially performed — the bag was
+ * collected, cleaned, carried — there is no automatic refund to compute. What,
+ * if anything, is owed back is a judgement a person makes.
+ */
+export const RETAIN_ALL = Number.POSITIVE_INFINITY;
+
+/**
  * Money for an order whose price is not known at checkout.
  *
  * The sequence is: hold at checkout against the estimate plus headroom, then
@@ -481,8 +490,19 @@ export class PaymentService {
    * An uncaptured hold is cancelled outright; a captured one is refunded.
    * Getting this backwards leaves a customer's money sitting on a cancelled
    * order, which is the complaint that ends a young marketplace.
+   *
+   * `retainCents` is money Crease has already spent on the customer's behalf
+   * and does not get back by cancelling — the carrier's cancellation charge
+   * once a courier has been engaged, and the card fee on the original capture.
+   * It is taken off the first captured payment; anything beyond it is returned.
+   * Uncaptured holds are always released in full: keeping one costs the
+   * customer their credit line and earns Crease nothing.
    */
-  async voidOrder(orderId: string, reason: string): Promise<{ voided: number; failed: string[] }> {
+  async voidOrder(
+    orderId: string,
+    reason: string,
+    opts: { retainCents?: number } = {},
+  ): Promise<{ voided: number; failed: string[]; retainedCents: number }> {
     const { data: payments } = await this.db
       .from('payments')
       .select('*')
@@ -491,13 +511,32 @@ export class PaymentService {
 
     const failed: string[] = [];
     let voided = 0;
+    let retain = Math.max(0, opts.retainCents ?? 0);
+    let retainedCents = 0;
 
     for (const p of payments ?? []) {
       try {
-        const state =
-          p.status === 'captured'
-            ? await this.provider.refund(p.provider_intent_ref)
-            : await this.provider.cancel(p.provider_intent_ref);
+        let state: PaymentState;
+        if (p.status === 'captured') {
+          const captured = p.captured_cents ?? p.authorized_cents ?? 0;
+          const keep = Math.min(retain, captured);
+          const giveBack = captured - keep;
+          retain -= keep;
+          retainedCents += keep;
+
+          if (giveBack <= 0) {
+            // The whole charge is money already spent. Say so in the log —
+            // a refund that never happened must not look like one that failed.
+            this.log.info({ orderId, paymentId: p.id, keep }, 'charge retained, nothing to refund');
+            continue;
+          }
+          state =
+            keep > 0
+              ? await this.provider.refund(p.provider_intent_ref, giveBack)
+              : await this.provider.refund(p.provider_intent_ref);
+        } else {
+          state = await this.provider.cancel(p.provider_intent_ref);
+        }
         await this.db
           .from('payments')
           .update({
@@ -520,8 +559,11 @@ export class PaymentService {
           .eq('id', p.id);
       }
     }
-    this.log.info({ orderId, reason, voided, failed: failed.length }, 'order payments voided');
-    return { voided, failed };
+    this.log.info(
+      { orderId, reason, voided, retainedCents, failed: failed.length },
+      'order payments voided',
+    );
+    return { voided, failed, retainedCents };
   }
 
   /**

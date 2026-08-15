@@ -46,6 +46,19 @@ for pkg in packages/*/; do
   cp "$pkg/package.json" "$STAGE/packages/$name/"
 done
 
+# The droplet installs with `npm ci`, which refuses to run without a lockfile,
+# and the repo's root lock is a workspace lock that `npm ci` cannot read from a
+# subdirectory. So resolve the dispatch tree here, on a laptop, and ship the
+# result: the box then installs exactly these versions with integrity checking
+# instead of re-resolving four caret ranges as root, unverified, into the
+# process that holds the service-role, Stripe and Uber keys.
+#
+# This runs after the package loop on purpose — the file: deps resolve against
+# $STAGE/packages, so a package that failed to build fails the deploy here,
+# locally, rather than halfway through an install on the server.
+echo "==> resolving dispatch dependency lock"
+(cd "$STAGE/services/dispatch" && npm install --package-lock-only --omit=dev --no-audit --no-fund --silent)
+
 # Next standalone already contains its traced node_modules and a server.js.
 cp -R apps/portal/.next/standalone/. "$STAGE/apps/portal/"
 mkdir -p "$STAGE/apps/portal/.next"
@@ -74,7 +87,11 @@ rsync -az --delete \
   "$STAGE/" "$HOST:$REMOTE/"
 
 echo "==> installing dispatch runtime deps"
-ssh "$HOST" "cd $REMOTE/services/dispatch && npm install --omit=dev --no-audit --no-fund --silent"
+# ci, not install: install would re-resolve the caret ranges on the box and
+# accept whatever the registry served. --ignore-scripts because this runs as
+# root — a postinstall in any of the 60-odd transitive packages would otherwise
+# execute with that privilege on a droplet shared with six other sites.
+ssh "$HOST" "cd $REMOTE/services/dispatch && npm ci --omit=dev --ignore-scripts --no-audit --no-fund --silent"
 
 # scripts/ imports @supabase/supabase-js but sits outside the dispatch
 # package, so give the deploy root a resolvable node_modules.

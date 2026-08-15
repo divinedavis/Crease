@@ -8,6 +8,7 @@ import {
   type Waypoint,
 } from './deps.js';
 import { config } from './config.js';
+import { deliveryFeeCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 
 export type LegType = 'pickup' | 'return';
@@ -99,13 +100,28 @@ export class OrderService {
     // 'captured' by the time either leg dispatches.
     const { data: payment } = await this.db
       .from('payments')
-      .select('status')
+      .select('status, captured_cents, authorized_cents')
       .eq('order_id', orderId)
       .eq('kind', 'primary')
       .maybeSingle();
     if (!payment || !['authorized', 'captured'].includes(payment.status)) {
       throw new Error(
         `order ${order.short_code} has no held funds (payment status '${payment?.status ?? 'none'}') — refusing to dispatch a courier`,
+      );
+    }
+
+    // Held funds are not the same as enough of them. The fee is priced once,
+    // when the intent is created, from whatever tier the order carried at that
+    // moment — and service_tier stays customer-writable while the order is a
+    // draft. So paying as pickup_only and then flipping the row to round_trip
+    // buys a second courier leg for nothing, and the status gate above waves it
+    // through because the payment really is captured. Re-check the price of the
+    // tier being dispatched against the money actually taken.
+    const paidCents = payment.captured_cents ?? payment.authorized_cents ?? 0;
+    const tierPriceCents = deliveryFeeCents(tier);
+    if (tierPriceCents > paidCents) {
+      throw new Error(
+        `order ${order.short_code} is ${tier} (${tierPriceCents}c) but only ${paidCents}c was taken — refusing to dispatch until it is repriced`,
       );
     }
 

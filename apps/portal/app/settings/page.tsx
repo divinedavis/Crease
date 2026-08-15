@@ -26,10 +26,20 @@ export default async function SettingsPage({
         .from('cleaners')
         .select(
           `id, name, phone, email, line1, line2, city, state, postal_code,
-           turnaround_hours, hours, stripe_account_id, payouts_enabled`,
+           turnaround_hours, hours`,
         )
         .eq('id', cleanerId)
         .maybeSingle()
+    : { data: null };
+
+  // Payout status comes through a staff-scoped function rather than off the
+  // row: cleaners_read matches every ACTIVE shop, not just yours, so the
+  // Connect account id can't be a column any authenticated user may select.
+  const { data: payoutStatus } = cleanerId
+    ? await db.rpc('shop_payout_status', { p_cleaner: cleanerId }).maybeSingle<{
+        has_account: boolean;
+        payouts_enabled: boolean;
+      }>()
     : { data: null };
 
   const { payouts } = await searchParams;
@@ -70,8 +80,8 @@ export default async function SettingsPage({
           />
           <PayoutPanel
             cleanerId={shop.id}
-            hasAccount={Boolean(shop.stripe_account_id)}
-            payoutsEnabled={Boolean(shop.payouts_enabled)}
+            hasAccount={Boolean(payoutStatus?.has_account)}
+            payoutsEnabled={Boolean(payoutStatus?.payouts_enabled)}
           />
         </>
       )}

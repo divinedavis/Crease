@@ -111,8 +111,14 @@
 <body>
 <div class="shell" id="app"></div>
 
+<!-- Vendored, not esm.sh. This page is served from portal.usecreaseapp.com,
+     the same origin as the cleaner portal, whose Supabase session cookies are
+     readable from script — so an unpinned third-party module here ("@2", newest
+     build at load time) is a standing handover of those sessions to whoever
+     publishes it next. Refresh the copy deliberately, from node_modules. -->
+<script src="supabase.js"></script>
 <script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const { createClient } = window.supabase;
 
 const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__');
 const app = document.getElementById('app');

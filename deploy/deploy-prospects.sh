@@ -16,8 +16,12 @@ trap 'rm -rf "$STAGE"' EXIT
 sed -e "s|__SUPABASE_URL__|$URL|" -e "s|__SUPABASE_ANON_KEY__|$ANON|" \
   "$ROOT/growth/prospects/index.html" > "$STAGE/index.html"
 
+# The page loads the SDK from this origin, so the bundle ships with it or the
+# tool is a blank screen.
+cp "$ROOT/growth/prospects/supabase.js" "$STAGE/supabase.js"
+
 # /var/www, not /root: nginx's workers cannot traverse root's home.
 ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
-scp -q "$STAGE/index.html" "$HOST:/var/www/crease-prospects/index.html"
+scp -q "$STAGE/index.html" "$STAGE/supabase.js" "$HOST:/var/www/crease-prospects/"
 
 echo -n "deployed: " && curl -s -o /dev/null -w '%{http_code}\n' https://portal.usecreaseapp.com/prospects/

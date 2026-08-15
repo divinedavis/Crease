@@ -35,13 +35,31 @@ export async function middleware(request: NextRequest) {
     // Behind nginx the standalone server resolves nextUrl against its own
     // listen address, so this redirect went out as localhost:3010 — a dead end
     // in the visitor's browser, which is what every signed-out visitor to
-    // crease.divinedavis.com hit. Rebuild the origin from what the proxy
-    // forwarded. nginx also rewrites Location as a second line of defence.
-    const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
-    if (host) {
-      url.protocol = `${request.headers.get('x-forwarded-proto') ?? 'https'}:`;
-      url.host = host;
-      url.port = '';
+    // crease.divinedavis.com hit. Rebuild the origin — but never from
+    // x-forwarded-host. Nothing strips that header, so it is caller-supplied:
+    // trusting it turned every signed-out request into an open redirect to
+    // whatever host an attacker put in it. PORTAL_PUBLIC_URL is the only
+    // source a client cannot reach; the Host header is the fallback, and the
+    // vhosts pin it to $host. nginx also rewrites Location as a second line
+    // of defence.
+    const configured = process.env.PORTAL_PUBLIC_URL?.trim().replace(/\/+$/, '');
+    // A typo in the unit file should not 500 every signed-out request, so a
+    // value that is not a bare origin is ignored rather than parsed.
+    const base = configured && /^https?:\/\/[^/]+$/.test(configured) ? new URL(configured) : null;
+
+    if (base) {
+      url.protocol = base.protocol;
+      url.host = base.host;
+      // The host setter keeps the existing port when the new host omits one,
+      // so 3010 survives unless it is cleared explicitly.
+      url.port = base.port;
+    } else {
+      const host = request.headers.get('host');
+      if (host) {
+        url.protocol = `${request.headers.get('x-forwarded-proto') ?? 'https'}:`;
+        url.host = host;
+        url.port = '';
+      }
     }
     return NextResponse.redirect(url);
   }

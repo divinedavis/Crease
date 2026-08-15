@@ -17,6 +17,19 @@ export const DELIVERY_FEE_CENTS: Record<string, number> = {
   pickup_only: 1995,
 };
 
+/**
+ * Kept from the refund when a customer cancels after a courier has been
+ * engaged.
+ *
+ * Cancelling is free right up until someone is assigned; after that the carrier
+ * bills for the aborted job and the card processor keeps its cut of the
+ * original capture whatever happens next. Returning the full fee there means
+ * every book-watch-cancel cycle costs Crease real money, which is a loop a
+ * customer can run all day. This is the floor of what that cycle actually
+ * costs, not a penalty.
+ */
+export const CANCELLATION_FEE_CENTS = 600;
+
 /** The authoritative delivery fee for a service tier, in cents. Throws on an
  *  unknown tier rather than guessing a price. */
 export function deliveryFeeCents(tier: string | null | undefined): number {

@@ -76,8 +76,38 @@ export async function confirmAndDispatch(
 
   // Only ever promote out of 'draft'. Both entry points can land at once, and
   // the loser of that race must not walk a moving order backwards.
+  //
+  // Conditional on the status still being 'draft', because the read above and
+  // this write are not one operation: a cancel arriving in between claims the
+  // order and refunds it, and an unconditional write here would drag it back
+  // out of 'cancelled' and send a courier for an order that has been paid back.
+  // Losing this race means the order is no longer ours to dispatch.
   if (order.status === 'draft') {
-    await db.from('orders').update({ status: 'scheduled' }).eq('id', orderId);
+    const { data: promoted } = await db
+      .from('orders')
+      .update({ status: 'scheduled' })
+      .eq('id', orderId)
+      .eq('status', 'draft')
+      .select('id')
+      .maybeSingle();
+
+    if (!promoted) {
+      const { data: current } = await db
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .maybeSingle();
+      log.warn(
+        { orderId, status: current?.status },
+        'order moved out of draft while confirming; not dispatching',
+      );
+      return {
+        outcome: 'confirmed',
+        paymentStatus,
+        orderStatus: current?.status ?? order.status,
+        dispatched: false,
+      };
+    }
   }
   const orderStatus = order.status === 'draft' ? 'scheduled' : order.status;
 
