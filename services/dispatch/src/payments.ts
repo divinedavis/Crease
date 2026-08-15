@@ -6,6 +6,7 @@ import {
   type PaymentProvider,
   type PaymentState,
 } from '@crease/payments';
+import { deliveryFeeCents } from './pricing.js';
 
 /**
  * Money for an order whose price is not known at checkout.
@@ -44,12 +45,20 @@ export class PaymentService {
    */
   async createDeliveryPaymentIntent(orderId: string) {
     const order = await this.loadOrder(orderId);
-    const amount = order.delivery_fee_cents;
 
-    if (!amount || amount <= 0) {
-      // A zero-price order is a bug, not a free ride. Refuse rather than
-      // silently handing back a payable-for-nothing intent.
-      throw new Error(`order ${orderId} has no delivery fee to charge`);
+    // Never trust the fee on the row. The app writes delivery_fee_cents
+    // directly into Supabase and RLS checks only ownership, so a customer can
+    // set any price. Recompute from the (constrained) service_tier and, if the
+    // stored value disagrees, overwrite it so this charge and every downstream
+    // total use the real price.
+    const amount = deliveryFeeCents(order.service_tier);
+    if (order.delivery_fee_cents !== amount) {
+      this.log.warn(
+        { orderId, clientFee: order.delivery_fee_cents, serverFee: amount },
+        'delivery fee on order did not match the tier price — using the server price',
+      );
+      await this.db.from('orders').update({ delivery_fee_cents: amount }).eq('id', orderId);
+      order.delivery_fee_cents = amount;
     }
 
     // Ask before writing. The upsert below stamps 'requires_payment_method',

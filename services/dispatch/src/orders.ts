@@ -90,6 +90,25 @@ export class OrderService {
       throw new Error(`order ${order.short_code} is ${tier} — there is no ${leg} leg to dispatch`);
     }
 
+    // Never send a paid-for courier for an order that hasn't paid. The customer
+    // can flip status to 'ready' directly in Supabase (orders RLS constrains
+    // ownership, not the status value), and the return route only checks
+    // status — so the money gate has to live here, below every caller (app,
+    // portal, webhooks). Mirrors the internal pickup route's check. Crease
+    // charges the delivery fee immediately at booking, so a genuine order is
+    // 'captured' by the time either leg dispatches.
+    const { data: payment } = await this.db
+      .from('payments')
+      .select('status')
+      .eq('order_id', orderId)
+      .eq('kind', 'primary')
+      .maybeSingle();
+    if (!payment || !['authorized', 'captured'].includes(payment.status)) {
+      throw new Error(
+        `order ${order.short_code} has no held funds (payment status '${payment?.status ?? 'none'}') — refusing to dispatch a courier`,
+      );
+    }
+
     const { data: priorLegs } = await this.db
       .from('delivery_legs')
       .select('*')

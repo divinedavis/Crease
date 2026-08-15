@@ -222,6 +222,14 @@ export async function markReady(orderId: string) {
 
 /** Leg 2. The cleaner presses this when the garments are bagged and on the rack. */
 export async function requestReturnCourier(orderId: string) {
+  // Read through the staff session first: callDispatch goes out on the internal
+  // key, which does no per-shop authorization, so RLS here is what stops one
+  // shop booking a courier on another shop's order. (Server actions are
+  // directly invocable by id — client-side button gating is not a control.)
+  const db = await supabaseServer();
+  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  if (!order) return { error: 'order not found' };
+
   try {
     await callDispatch(`/v1/orders/${orderId}/dispatch-return`);
   } catch (err) {
@@ -275,6 +283,12 @@ export async function markCollected(orderId: string) {
 
 /** Leg 1, by hand: the shop starting a paid order, or retrying one that failed. */
 export async function retryPickupCourier(orderId: string) {
+  // Ownership check through the staff RLS session before the internal-key call
+  // — same reason as requestReturnCourier: stop cross-shop courier booking.
+  const db = await supabaseServer();
+  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  if (!order) return { error: 'order not found' };
+
   try {
     await callDispatch(`/v1/orders/${orderId}/dispatch-pickup`);
   } catch (err) {
