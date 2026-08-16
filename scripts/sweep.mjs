@@ -39,6 +39,9 @@ const DISPATCH = `http://127.0.0.1:${env.PORT ?? 8011}`;
 const MAX_PER_RUN = 25;
 // Long enough that a leg mid-dispatch is never mistaken for an abandoned one.
 const STALE_CLAIM_MINUTES = 10;
+// A carrier that has said nothing for this long is not mid-delivery, it is
+// stuck. Generous, because a real courier leg legitimately spans hours.
+const STALLED_LEG_HOURS = 6;
 
 const TERMINAL = ['delivered', 'returned', 'cancelled', 'failed'];
 const stamp = () => new Date().toISOString();
@@ -72,6 +75,53 @@ async function releaseStaleClaims() {
 }
 
 /**
+ * Legs a carrier accepted and then stopped talking about.
+ *
+ * The other two checks between them cover a claim that never reached a carrier
+ * and an order that never got a leg. Neither covers the case in between: a leg
+ * that reached `dispatching` flipped the order to `pickup_dispatched`, so it is
+ * no longer `draft`/`scheduled`, and it has a provider so it is not an
+ * abandoned claim. It is non-terminal, so the partial unique index treats it as
+ * live and dispatchLeg hands it back to every caller as a success — forever.
+ *
+ * Two live sources: a real carrier whose callbacks stop arriving, and the mock,
+ * whose entire state machine is setTimeout inside the dispatcher's own process,
+ * so every deploy silently kills the timers of everything in flight.
+ *
+ * This only reports. Re-dispatching would risk a second courier for a delivery
+ * that may well be happening, and cancelling would strand a real one — the
+ * right move is to put it in front of a human.
+ */
+async function reportStalledLegs() {
+  const cutoff = new Date(Date.now() - STALLED_LEG_HOURS * 3_600_000).toISOString();
+  const { data, error } = await db
+    .from('delivery_legs')
+    .select('id, order_id, leg, status, provider, updated_at')
+    .not('status', 'in', `(${TERMINAL.join(',')})`)
+    .not('provider_delivery_id', 'is', null)
+    .lt('updated_at', cutoff)
+    .order('updated_at', { ascending: true })
+    .limit(MAX_PER_RUN);
+
+  if (error) {
+    console.error(`${stamp()} stalled-leg lookup failed: ${error.message}`);
+    failed = true;
+    return;
+  }
+  const stalled = data ?? [];
+  if (stalled.length > 0) {
+    failed = true; // non-zero exit, so the unit is visibly failed rather than quietly green
+    for (const l of stalled) {
+      console.error(
+        `${stamp()} STALLED leg ${l.id} (order ${l.order_id}, ${l.leg}, ${l.provider}) ` +
+          `has sat at '${l.status}' since ${l.updated_at} — no carrier update, needs a human`,
+      );
+    }
+  }
+  console.log(`${stamp()} stalled legs: ${stalled.length}`);
+}
+
+/**
  * Paid orders that never got a courier.
  *
  * The app's confirm-payment call is the only thing that normally dispatches,
@@ -88,6 +138,9 @@ async function dispatchStrandedOrders() {
     .eq('kind', 'primary')
     .in('status', ['authorized', 'captured'])
     .in('orders.status', ['draft', 'scheduled'])
+    // Oldest first, and deterministic: without an order by, a backlog larger
+    // than the cap can leave the same tail unvisited forever.
+    .order('created_at', { ascending: true })
     .limit(MAX_PER_RUN * 4);
 
   if (error) {
@@ -131,9 +184,18 @@ async function dispatchStrandedOrders() {
         ok++;
         console.log(`${stamp()} re-dispatched ${orderId}`);
       } else {
-        // Not necessarily an error: no courier coverage and an exhausted
-        // attempt cap both answer non-2xx, and both are states a human owns.
-        console.warn(`${stamp()} re-dispatch ${orderId} answered ${res.status}: ${(await res.text()).slice(0, 200)}`);
+        // 4xx from the dispatcher is usually a state a human owns — no courier
+        // coverage, an exhausted attempt cap — and not a sweep failure. But 401
+        // means the internal key was rotated out from under us and 5xx means
+        // the dispatcher is down; both make every future run a silent no-op,
+        // which is exactly the shape of failure this script exists to catch.
+        const body = (await res.text()).slice(0, 200);
+        if (res.status === 401 || res.status === 403 || res.status >= 500) {
+          console.error(`${stamp()} re-dispatch ${orderId} answered ${res.status}: ${body}`);
+          failed = true;
+        } else {
+          console.warn(`${stamp()} re-dispatch ${orderId} answered ${res.status}: ${body}`);
+        }
       }
     } catch (err) {
       console.error(`${stamp()} re-dispatch ${orderId} failed: ${err.message}`);
@@ -141,10 +203,15 @@ async function dispatchStrandedOrders() {
     }
   }
   console.log(`${stamp()} stranded orders dispatched: ${ok}/${candidates.length}`);
+  if (ok === 0 && candidates.length > 0) {
+    console.error(`${stamp()} every re-dispatch was refused — the reconciler is not reconciling`);
+    failed = true;
+  }
 }
 
 // Claims first: releasing an abandoned leg is what lets the same order be
 // re-dispatched in the step below, rather than waiting a whole cycle.
 await releaseStaleClaims();
 await dispatchStrandedOrders();
+await reportStalledLegs();
 process.exit(failed ? 1 : 0);
