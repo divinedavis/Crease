@@ -56,7 +56,21 @@ const ORDER_STATUS_BY_LEG: Record<LegType, Partial<Record<LegStatus, string>>> =
     // The garments are back with the customer; a human has to re-schedule.
     returned: 'failed',
     failed: 'failed',
-    cancelled: 'cancelled',
+    // A carrier cancelling is a failure to deliver, not somebody calling the
+    // order off — Uber sends this for an unassigned courier with no
+    // replacement, an undeliverable address, or a merchant-side abort. It used
+    // to map to 'cancelled', which is the one order status neither cancel route
+    // accepts: the customer was told "this order can no longer be cancelled"
+    // about an order Crease itself had cancelled, whose fee was captured at
+    // checkout, and voidOrder is reachable from nowhere else. 'failed' is the
+    // state that already means exactly this — dead, and the customer can still
+    // reach their money — and it is what the sibling 'returned' row maps to for
+    // the same class of event. Nobody collected the bag, so the custody check
+    // in the cancel route then refunds in full.
+    //
+    // 'cancelled' stays reserved for a deliberate call-off, which only the two
+    // cancel routes write.
+    cancelled: 'failed',
   },
   return: {
     dispatching: 'return_dispatched',
@@ -71,7 +85,15 @@ const ORDER_STATUS_BY_LEG: Record<LegType, Partial<Record<LegStatus, string>>> =
     // recoverable case: the order returns to 'ready' and we re-dispatch.
     returned: 'ready',
     failed: 'failed',
-    cancelled: 'cancelled',
+    // Same situation as 'returned' above, reached a different way: the delivery
+    // was called off before anyone took the garments, so they are still on the
+    // shop's rack. Terminating the order here was the worse of the two bugs —
+    // it left clean, paid-for clothes at the shop with no way to send them
+    // (dispatch-return requires 'ready') and no way to refund them ('cancelled'
+    // is not cancellable). Back to 'ready' so it can simply go out again; the
+    // attempt cap still bounds how many times, and lands it on 'failed' — which
+    // is refundable — when it runs out.
+    cancelled: 'ready',
   },
 };
 

@@ -413,6 +413,30 @@ struct Order: Codable, Identifiable, Hashable {
 
     var itemCount: Int { orderItems?.reduce(0) { $0 + $1.quantity } ?? 0 }
 
+    /// Whether a courier has ever taken custody of this bag.
+    ///
+    /// This is the line the service refunds on, so the app has to draw it the
+    /// same way or it promises money back that is not coming: a pickup leg
+    /// that reached 'delivered' means the clothes are at the shop, and
+    /// cancelling from there keeps the whole charge.
+    var bagCollected: Bool {
+        (deliveryLegs ?? []).contains { $0.isPickup && $0.didDeliver }
+    }
+
+    /// Whether a carrier has been put on the job and will bill for the abort.
+    ///
+    /// Mirrors the service's own list, terminal states included — that is the
+    /// point of it. An order lands in 'failed' both when no courier could ever
+    /// be booked, which refunds in full, and when the return leg ran out of
+    /// attempts, by which point couriers have been paid and clothes cleaned.
+    /// The status cannot tell those apart; the legs can.
+    var courierEngaged: Bool {
+        (deliveryLegs ?? []).contains {
+            ["courier_assigned", "en_route_to_pickup", "at_pickup", "picked_up",
+             "en_route_to_dropoff", "at_dropoff", "delivered", "returned"].contains($0.status)
+        }
+    }
+
     /// Pickup only: the courier fee bought one leg, to the shop. The clothes
     /// come home in the customer's hands.
     var isPickupOnly: Bool { serviceTier == "pickup_only" }

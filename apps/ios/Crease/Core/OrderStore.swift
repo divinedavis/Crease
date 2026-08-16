@@ -248,9 +248,9 @@ final class OrderStore: ObservableObject {
     /// or refunded, and neither of those is something a phone should be
     /// trusted to do. Flipping the status column here would leave a courier
     /// still en route and the customer still charged.
-    /// Returns nil on a clean cancellation, or a message the customer must
-    /// read — including the case where the pickup stopped but the refund did
-    /// not go through.
+    /// Returns nil only when the order was called off and the whole fee came
+    /// back. Anything else is a sentence the customer has to read: a refund
+    /// still being processed, or money the service has deliberately kept.
     func cancel(order: Order) async -> String? {
         do {
             let ack = try await DispatchAPI(accessToken: try await accessToken()).post(
@@ -262,7 +262,26 @@ final class OrderStore: ObservableObject {
                 return ack.message
                     ?? "Your pickup is cancelled, but the refund is still being processed."
             }
+            // A cancellation that costs money answers 200 exactly like a free
+            // one. The service keeps the whole charge once the bag has been
+            // collected and keeps a cancellation fee once a courier has been
+            // assigned, and it says so in `message` — dropping that because
+            // `refundPending` was false is how someone finds out they were
+            // charged from their bank statement instead of from us.
+            if ack.refunded == false || (ack.retainedCents ?? 0) > 0 {
+                return ack.message
+                    ?? "Your order is cancelled, but the courier fee has not been refunded. Contact support and we'll sort it out."
+            }
             return nil
+        } catch let failure as DispatchAPI.Failure {
+            // "This order can no longer be cancelled. Please call the shop." is
+            // the answer, not a transport hiccup. Replacing it with generic
+            // retry advice sends someone back at a route that will refuse them
+            // the same way every time, and hides the one instruction that would
+            // get their bag sorted out. Only the reason the service wrote for a
+            // customer is shown; its status-code fallback is not one.
+            return failure.serverReason
+                ?? "We couldn't cancel your order. Please try again or contact support."
         } catch {
             return "We couldn't cancel your order. Please try again or contact support."
         }
@@ -275,15 +294,27 @@ final class OrderStore: ObservableObject {
     /// thing that decides how much someone is charged.
     func approve(order: Order) async -> Bool {
         do {
-            try await client
-                .from("orders")
-                .update(["approved_at": Date()])
-                .eq("id", value: order.id)
-                .execute()
+            // Through the dispatcher, not by writing the row. Stamping
+            // `approved_at` looked like it recorded the decision and did not:
+            // nothing on the server ever read that column, so the hold was
+            // never captured and the difference never charged. It could not
+            // even fail visibly — the update matches zero rows once the shop
+            // has moved the order on, and PostgREST answers 204, so the app
+            // reported success for an approval that did nothing at all.
+            _ = try await DispatchAPI(accessToken: try await accessToken()).post(
+                "/v1/me/orders/\(order.id.uuidString.lowercased())/approve",
+                as: DispatchAPI.Ack.self
+            )
             await loadOrders()
             return true
+        } catch let failure as DispatchAPI.Failure {
+            // The service says whether this is worth retrying — a decline rolls
+            // the order back to awaiting_approval, so the customer can fix
+            // their card and try the same button again.
+            errorMessage = failure.serverReason ?? "We couldn't take that payment. Please try again."
+            return false
         } catch {
-            errorMessage = "Couldn't record your approval."
+            errorMessage = "We couldn't take that payment. Please try again."
             return false
         }
     }

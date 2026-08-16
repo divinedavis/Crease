@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderService } from './orders.js';
 import type { PaymentService } from './payments.js';
+import type { PayoutService } from './payouts.js';
 import type { PushEnvironment, PushService } from './push.js';
 import { confirmAndDispatch } from './confirm.js';
 import { config } from './config.js';
@@ -85,6 +86,7 @@ export function registerCustomerRoutes(
   db: SupabaseClient,
   orders: OrderService,
   payments: PaymentService,
+  payouts: PayoutService,
   push: PushService,
 ) {
   /**
@@ -285,6 +287,73 @@ export function registerCustomerRoutes(
     };
   });
 
+  /**
+   * The customer accepted a total that came in above their hold.
+   *
+   * This route exists because the approval had no server side at all. The only
+   * thing that captures the hold and charges the difference is
+   * `approveAndCharge`, and its single caller in the whole repo was an e2e
+   * script — the portal never approves, and the app wrote `orders.approved_at`
+   * straight through PostgREST, a column nothing reads. So the customer tapped
+   * Approve, the sheet dismissed, the shop's banner stayed up, and the balance
+   * was never taken. Both ends reported success because nothing had run.
+   *
+   * The write could not even fail loudly: `orders_customer_update` matches only
+   * 'draft' and 'awaiting_approval', so once the shop moved the order the UPDATE
+   * matched zero rows, PostgREST answered 204, and supabase-swift called that a
+   * success. Same shape as the delivery-window bug that route above documents.
+   *
+   * The status check here is a courtesy that produces a better message; the real
+   * gate is the atomic claim inside approveAndCharge, which is what stops a
+   * double-tap charging twice.
+   */
+  app.post<{ Params: { id: string } }>('/v1/me/orders/:id/approve', async (req, reply) => {
+    const order = await ownedOrder(req, reply);
+    if (!order) return;
+
+    if (order.status !== 'awaiting_approval') {
+      return reply
+        .code(409)
+        .send({ ok: false, error: 'This order is not waiting for your approval.' });
+    }
+
+    let result;
+    try {
+      result = await payments.approveAndCharge(req.params.id);
+    } catch (err) {
+      // A decline is the expected failure here, and approveAndCharge has already
+      // rolled the order back to 'awaiting_approval' so the customer can fix
+      // their card and come back. Generic on the wire for the usual reason: what
+      // throws quotes Stripe verbatim.
+      req.log.error({ err, orderId: req.params.id }, 'customer approve failed');
+      const message =
+        err instanceof CustomerFacingError
+          ? err.message
+          : 'We could not take that payment. Check your card details and try again.';
+      return reply.code(402).send({ ok: false, error: message });
+    }
+
+    // Paying the shop is bookkeeping, not part of the customer's transaction —
+    // the same rule the settle route states. A payout that fails must not tell
+    // someone their approved payment did not go through; the pending row is
+    // swept later.
+    try {
+      await payouts.payoutOrder(req.params.id);
+    } catch (err) {
+      req.log.error({ err, orderId: req.params.id }, 'payout deferred');
+    }
+
+    // `alreadyHandled` distinguishes "we just took the money" from "somebody
+    // else already had" — a retry after a dropped response is a success, and the
+    // app should not announce a second charge for it.
+    return {
+      ok: true,
+      totalCents: result.total,
+      chargedCents: result.remainder,
+      alreadyHandled: result.alreadyHandled ?? false,
+    };
+  });
+
   app.post<{ Params: { id: string } }>('/v1/me/orders/:id/cancel', async (req, reply) => {
     const order = await ownedOrder(req, reply);
     if (!order) return;
@@ -354,7 +423,15 @@ export function registerCustomerRoutes(
         .from('orders')
         .update({ status: order.status, cancelled_reason: order.cancelled_reason ?? null })
         .eq('id', req.params.id);
-      return reply.code(409).send({ ok: false, errors });
+      // `errors` are the carrier's own words, written for our logs. Send a
+      // sentence the customer can act on alongside them, or the app has nothing
+      // to show but its own generic retry copy — and retrying is exactly the
+      // wrong advice when a courier really is on the way.
+      return reply.code(409).send({
+        ok: false,
+        error: 'A courier is already on the way and we could not call them off. Please contact support.',
+        errors,
+      });
     }
 
     // What comes back depends on custody, not on the status the order is in.

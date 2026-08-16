@@ -504,7 +504,7 @@ struct BookPickupView: View {
             // attempts, so the retry carries whatever the stepper says now —
             // including nothing.
             await store.setCustomerItemCount(orderId: draft.id, count: itemCount > 0 ? itemCount : nil)
-            await settle(orderId: draft.id)
+            await settle(orderId: draft.id, serviceTier: draft.tier)
             return
         }
 
@@ -573,7 +573,7 @@ struct BookPickupView: View {
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.
         draft = Draft(id: created.id, tier: selected.id, cleanerId: cleaner.id)
-        await settle(orderId: created.id)
+        await settle(orderId: created.id, serviceTier: selected.id)
     }
 
     /// Charge the courier fee and let the dispatcher decide what the order
@@ -584,7 +584,12 @@ struct BookPickupView: View {
     /// how you get an order that looks scheduled to its owner and unpaid to
     /// everyone else — including the code that refuses to dispatch a courier
     /// for it.
-    private func settle(orderId: UUID) async {
+    /// The tier travels with the order id rather than being read off
+    /// `selected`, because it is what the dispatcher's answer has to be judged
+    /// against: a booking with no courier is normal for return-only and a
+    /// silent failure for everything else, and the row being settled is not
+    /// always the choice currently highlighted on screen.
+    private func settle(orderId: UUID, serviceTier: String) async {
         guard let token = try? await store.accessToken() else {
             error = "Please sign in again."
             return
@@ -603,7 +608,7 @@ struct BookPickupView: View {
             // Unless it could not find one. The money moved either way, so
             // leaving on the success animation would hide a paid order that
             // nobody is coming for behind a list of finished ones.
-            if let problem = confirmation?.problem {
+            if let problem = confirmation?.problem(serviceTier: serviceTier) {
                 error = problem
             } else {
                 // The only honest moment to ask. A driver is now coming, the

@@ -44,7 +44,7 @@ const push = new PushService(db, app.log);
 // Customer-facing routes, authenticated by the caller's own Supabase token.
 // Deliberately separate from /v1/, which stays loopback-only and shared-secret
 // guarded because it can dispatch and charge without an owner check.
-registerCustomerRoutes(app, db, orders, payments, push);
+registerCustomerRoutes(app, db, orders, payments, payouts, push);
 
 // Capture the raw body for every request so signature verification never has
 // to re-serialize a parsed object (key order changes break the HMAC).

@@ -494,12 +494,15 @@ final class CreaseUITests: XCTestCase {
             )
             // The wording moved when the courier fee started being taken at
             // booking: "you won't be charged" is only true of a draft now, and
-            // every other cancellable status is a refund. What must not change
-            // is that the dialog says which of the two this is.
+            // the rest depends on how far the order got. What must not change
+            // is that the dialog says which of them this is — a refund, a
+            // cancellation fee, or a fee that is already spent.
             let explained = app.staticTexts.allElementsBoundByIndex.contains {
                 $0.label.contains("costs you nothing")
                     || $0.label.contains("comes back to you")
                     || $0.label.contains("that trip is charged")
+                    || $0.label.contains("isn't refunded automatically")
+                    || $0.label.contains("cancellation fee is kept")
             }
             XCTAssertTrue(explained, "the confirmation must say whether cancelling costs anything")
             attach(app, "cancel-confirm")

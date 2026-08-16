@@ -475,8 +475,12 @@ struct OrderDetailView: View {
                 .controlSize(.large)
                 .disabled(cancelling)
 
-                if live.status.cancellationMayCost {
-                    Text("A driver may already be on the way. If they have set off, the trip is still charged.")
+                // Said before the tap, not only inside the dialog. A
+                // confirmation sheet is read in a hurry, and on an order whose
+                // fee is already spent this is the sentence that decides
+                // whether someone taps at all.
+                if live.status.cancellationMayCost || live.courierEngaged || live.bagCollected {
+                    Text(cancellationMoneyNote)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -534,14 +538,25 @@ struct OrderDetailView: View {
     ///
     /// The fee is taken at booking now, so the old single sentence — nothing
     /// collected, nothing charged — is only true of a draft. Everything past
-    /// it has already been paid for, and a failed order is a charge with
-    /// nothing whatsoever to show for it.
+    /// it has already been paid for.
+    ///
+    /// Read off the legs before the status, because the status is not enough
+    /// to answer with. 'failed' is both the paid order no courier would take,
+    /// which refunds in full, and the order whose return leg ran out of
+    /// attempts — clothes collected, cleaned and driven back, fee correctly
+    /// kept. Promising that second customer their money back one screen before
+    /// the service declines to give it is the shape of a chargeback.
     private var cancellationMoneyNote: String {
+        if live.bagCollected {
+            return "Your items have already been collected, so the courier fee isn't refunded automatically. Cancel if you need to and contact support — we'll sort the money out with you."
+        }
+        if live.courierEngaged {
+            return "A driver has already been assigned, so a cancellation fee is kept out of the courier fee."
+        }
         switch live.status {
-        case .draft: "Nothing has been charged, so this costs you nothing."
-        case .failed: "No driver was ever booked, so the courier fee comes back to you."
-        case .pickupDispatched: "We'll stop the driver if we still can. If they've already set off, that trip is charged."
-        default: "Nothing has been collected yet, so the courier fee comes back to you."
+        case .draft: return "Nothing has been charged, so this costs you nothing."
+        case .pickupDispatched: return "We'll stop the driver if we still can. If they've already set off, that trip is charged."
+        default: return "No driver has taken this on yet, so the courier fee comes back to you."
         }
     }
 
@@ -578,7 +593,7 @@ struct OrderDetailView: View {
             // Paid is not the same as dispatched. The reloaded order drops the
             // unpaid card, so without this the screen simply goes quiet on a
             // customer who is now owed either a courier or their money back.
-            payError = confirmation?.problem
+            payError = confirmation?.problem(serviceTier: live.serviceTier)
             // A draft finished here is a booking finished — same moment as the
             // booking screen, reached through the other door.
             if payError == nil { await PushRegistrar.shared.askAfterBooking() }

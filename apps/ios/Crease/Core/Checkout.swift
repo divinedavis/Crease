@@ -188,12 +188,23 @@ final class Checkout: ObservableObject {
         let outcome: String?
         let paymentStatus: String?
         let orderStatus: String?
-        /// False is legitimate: a return-only order has no pickup leg to book.
+        /// False is legitimate on exactly one tier — return-only, which has no
+        /// pickup leg to book. Anywhere else it is a paid order with no
+        /// courier, which is why `problem` needs the tier to read it.
         let dispatched: Bool?
         /// The dispatch failure, carried on a 200 because the charge itself
         /// succeeded. Ignoring it is how "we took your money and found nobody
         /// to collect your bag" gets handled as a clean booking.
         let error: String?
+        /// The courier leg, when the dispatcher had one to report. Its
+        /// presence next to `dispatched: false` is what separates "a driver
+        /// was booked by an earlier call" from "no driver was booked at all",
+        /// which are opposite things to tell someone whose card just cleared.
+        let leg: Leg?
+
+        struct Leg: Decodable {
+            let status: String?
+        }
 
         /// Why this is not a booking yet, if it is not one.
         ///
@@ -202,16 +213,48 @@ final class Checkout: ObservableObject {
         /// closes on a success animation and a paid order with no driver goes
         /// into the list as though it were on its way. Read broadly on
         /// purpose — the dispatcher reports the same fact through `outcome`,
-        /// `error` and the order's own status, and only one of them has to
-        /// arrive for the customer to deserve the truth.
-        var problem: String? {
+        /// `error`, `dispatched` and the order's own status, and only one of
+        /// them has to arrive for the customer to deserve the truth.
+        ///
+        /// The tier is a parameter because `dispatched: false` cannot be
+        /// judged without it: it is the correct, ordinary answer for a
+        /// return-only order, which has no pickup leg to book, and on every
+        /// other tier it means a charge with no courier behind it.
+        func problem(serviceTier: String) -> String? {
             if outcome == "processing" {
                 return "Your bank is still confirming this payment, so no driver is booked yet. We'll book one as soon as it clears — you don't need to pay again."
             }
-            guard ok == false || outcome == "dispatch_failed"
-                    || error != nil || orderStatus == "failed"
-            else { return nil }
-            return "Your payment went through, but we couldn't find a driver. Nothing has been collected — cancel this order for a refund, or leave it with us and we'll try to book one again."
+            if ok == false || outcome == "dispatch_failed"
+                || error != nil || orderStatus == "failed" {
+                return "Your payment went through, but we couldn't find a driver. Nothing has been collected — cancel this order for a refund, or leave it with us and we'll try to book one again."
+            }
+            // Paid, 'confirmed', and still nobody dispatched. The service
+            // answers this when the order had already been cancelled or
+            // delivered, when it lost the promote-out-of-draft race, or when a
+            // pickup leg already existed — none of which is a courier this
+            // call arranged, and all of which used to play the success
+            // animation and dismiss over a charged card.
+            //
+            // Absent counts as false: this field is the only evidence a
+            // courier was booked, and missing evidence is not evidence.
+            guard dispatched != true, serviceTier != "return_only" else { return nil }
+            if let leg {
+                // Not a failure — the pickup this order needed already exists,
+                // almost always because the confirm whose reply never reached
+                // the phone did its job. Worth saying anyway: the screen must
+                // not present someone else's earlier booking as this one.
+                return leg.status == "delivered"
+                    ? "Your bag has already been collected on this order, so no second driver was booked. You haven't been charged twice."
+                    : "A driver was already booked for this order, so we didn't send a second one. You haven't been charged twice — open the order to track them."
+            }
+            switch orderStatus {
+            case "cancelled":
+                return "This order was already cancelled, so no driver has been booked. If your card was charged, contact support and we'll refund it."
+            case "delivered":
+                return "This order is already finished, so no driver has been booked. If your card was charged, contact support and we'll refund it."
+            default:
+                return "Your payment went through, but no driver has been booked for this order. Nothing has been collected — contact support and we'll either send one or refund you."
+            }
         }
     }
 }

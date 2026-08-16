@@ -28,6 +28,14 @@ struct DispatchAPI {
         /// advice the app gives by default sends that customer at a route that
         /// will refuse them.
         var code: String? = nil
+        /// The service's own words for the customer, when it sent any.
+        ///
+        /// Only the singular `error` field counts. The `errors` array is a
+        /// list of carrier failures written for our logs, and the fallback
+        /// `message` below is a bare status code — a caller that wants to show
+        /// the server's reason instead of its own copy needs to know which of
+        /// the three it is holding, because two of them are not an answer.
+        var serverReason: String? = nil
         var errorDescription: String? { message }
     }
 
@@ -68,7 +76,8 @@ struct DispatchAPI {
             let failure = try? JSONDecoder().decode(ErrorBody.self, from: data)
             throw Failure(
                 message: failure?.readable ?? "That didn't work (\(status)).",
-                code: failure?.code
+                code: failure?.code,
+                serverReason: failure?.error
             )
         }
         do {
@@ -99,6 +108,17 @@ struct DispatchAPI {
         /// automatically. The customer needs to hear that, not a clean
         /// "cancelled" that implies they have been refunded.
         let refundPending: Bool?
+        /// Whether any money actually came back.
+        ///
+        /// The two cancellations the service honours but does not refund — the
+        /// bag was already collected, or the cancellation fee swallowed the
+        /// whole charge — both answer 200 with `refundPending: false`, so
+        /// nothing else on this reply distinguishes them from a free cancel.
+        let refunded: Bool?
+        /// What was kept back, when a courier had already been assigned and
+        /// the rest was refunded. Money the customer is not getting back is
+        /// worth saying out loud even when most of it is.
+        let retainedCents: Int?
         let message: String?
     }
 }
