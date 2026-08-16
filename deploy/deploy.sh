@@ -134,8 +134,15 @@ echo "==> restoring ownership to $SERVICE_USER"
 ssh "$HOST" "chown -R $SERVICE_USER:$SERVICE_USER $REMOTE && chmod 700 $REMOTE/secrets 2>/dev/null; chmod 600 $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local 2>/dev/null; true"
 
 echo "==> systemd"
-scp -q deploy/crease-dispatch.service deploy/crease-portal.service "$HOST:/etc/systemd/system/"
+# The sweep units ship here too. They were installed by hand once, which meant a
+# rebuild from this repo would have come up without the reconciler — and this
+# release deliberately relies on it: the Stripe ledger now settles on a failed
+# dispatch so the provider stops retrying, and retryable create failures are
+# parked for the sweep to release. Without the timer running, nothing retries.
+scp -q deploy/crease-dispatch.service deploy/crease-portal.service \
+      deploy/crease-sweep.service deploy/crease-sweep.timer "$HOST:/etc/systemd/system/"
 ssh "$HOST" 'systemctl daemon-reload && systemctl enable --now crease-dispatch crease-portal && systemctl restart crease-dispatch crease-portal'
+ssh "$HOST" 'systemctl enable --now crease-sweep.timer'
 
 echo "==> waiting for health"
 for i in $(seq 1 15); do

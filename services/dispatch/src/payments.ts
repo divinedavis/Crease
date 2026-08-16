@@ -504,9 +504,21 @@ export class PaymentService {
           throw new Error(`could not create difference payment: ${rowErr?.message ?? 'no row returned'}`);
         }
 
+        // The row id alone cannot be the idempotency key here. Reusing the row
+        // (which the restored unique index forces) means a second approval
+        // attempt would replay Stripe's stored response for the first — so a
+        // customer whose card declined, then fixed it, gets the cached decline
+        // back for 24 hours, and a shop that recounted in between gets a hard
+        // 400 for reusing a key with different parameters. Both are permanent.
+        //
+        // Widening the key with the amount and a coarse time bucket keeps the
+        // property the key exists for — a network retry of the SAME attempt,
+        // seconds apart, still collapses to one charge — while letting a
+        // genuinely new attempt reach the card.
+        const attemptKey = `${row.id}:${remainder}:${Math.floor(Date.now() / 300_000)}`;
         const state = await this.provider.chargeDifference({
           orderId,
-          externalId: row.id,
+          externalId: attemptKey,
           customerRef: order.customer?.payment_customer_ref ?? undefined,
           paymentMethodRef: order.customer?.default_payment_method_ref ?? undefined,
           amountCents: remainder,
