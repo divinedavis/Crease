@@ -22,6 +22,9 @@ struct OrdersView: View {
 
     @State private var exporting = false
     @State private var exportFile: ExportFile?
+    // Held separately so it can be deleted in the sheet's onDismiss: the item
+    // binding is already nil by the time that fires.
+    @State private var lastExportURL: URL?
     @State private var exportError: String?
 
     /// The finished export, identified by where it was written so the sheet
@@ -172,7 +175,14 @@ struct OrdersView: View {
             } message: {
                 Text(deleteError ?? "")
             }
-            .sheet(item: $exportFile) { file in
+            .sheet(item: $exportFile, onDismiss: {
+                // The share sheet is done: delete the PII export rather than
+                // leaving it in tmp for iOS to purge whenever it chooses.
+                if let url = lastExportURL {
+                    try? FileManager.default.removeItem(at: url)
+                    lastExportURL = nil
+                }
+            }) { file in
                 ShareSheet(url: file.url)
             }
             .alert(
@@ -238,7 +248,9 @@ struct OrdersView: View {
         exporting = true
         defer { exporting = false }
         do {
-            exportFile = ExportFile(url: try await store.exportAccountData())
+            let url = try await store.exportAccountData()
+            lastExportURL = url
+            exportFile = ExportFile(url: url)
         } catch {
             exportError = "We couldn't put your data together just now. Please try again."
         }

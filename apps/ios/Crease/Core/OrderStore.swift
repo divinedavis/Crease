@@ -366,7 +366,12 @@ final class OrderStore: ObservableObject {
         // rather than an untitled blob of text.
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("crease-data-\(Self.fileStamp.string(from: Date())).json")
-        try data.write(to: url, options: .atomic)
+        // completeFileProtection: this is the single most concentrated PII blob
+        // the app produces (profile, home address with access notes, full order
+        // and courier history), so it stays encrypted at rest and unreadable
+        // while the device is locked. The caller deletes it once the share sheet
+        // is done rather than leaving it for iOS to purge on its own schedule.
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
         return url
     }
 

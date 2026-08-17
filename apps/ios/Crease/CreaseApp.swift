@@ -33,19 +33,32 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        ZStack {
-            content
+        content
+            // The lock and privacy cover live in a dedicated window above every
+            // sheet and cover (see SecurityOverlayWindow), not in a ZStack here
+            // where a presented modal would render on top of them. Drive that
+            // window from the same three inputs the ZStack used to switch on.
+            .onAppear { syncOverlay() }
+            .onChange(of: lock.isLocked) { _ in syncOverlay() }
+            .onChange(of: scenePhase) { _ in syncOverlay() }
+            .onChange(of: isSignedIn) { _ in syncOverlay() }
+    }
 
-            // Only guard an authenticated session. The lock (Face ID) takes
-            // priority; otherwise, hide contents whenever the app isn't active
-            // so the app-switcher snapshot never shows orders/address/PIN.
-            if case .signedIn = session.state {
-                if lock.isLocked {
-                    LockView()
-                } else if scenePhase != .active {
-                    PrivacyCover()
-                }
-            }
+    /// Whether there is an authenticated session to guard. Only a signed-in
+    /// customer has orders/address/PIN on screen worth covering.
+    private var isSignedIn: Bool {
+        if case .signedIn = session.state { return true }
+        return false
+    }
+
+    private func syncOverlay() {
+        guard isSignedIn else { SecurityOverlayWindow.shared.hide(); return }
+        if lock.isLocked {
+            SecurityOverlayWindow.shared.showLock(LockView().environmentObject(lock))
+        } else if scenePhase != .active {
+            SecurityOverlayWindow.shared.showPrivacy(PrivacyCover())
+        } else {
+            SecurityOverlayWindow.shared.hide()
         }
     }
 
