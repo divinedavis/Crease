@@ -195,9 +195,14 @@ echo "==> systemd"
 # dispatch so the provider stops retrying, and retryable create failures are
 # parked for the sweep to release. Without the timer running, nothing retries.
 scp -q deploy/crease-dispatch.service deploy/crease-portal.service \
-      deploy/crease-sweep.service deploy/crease-sweep.timer "$HOST:/etc/systemd/system/"
+      deploy/crease-sweep.service deploy/crease-sweep.timer \
+      deploy/crease-purge.service deploy/crease-purge.timer "$HOST:/etc/systemd/system/"
 ssh "$HOST" 'systemctl daemon-reload && systemctl enable --now crease-dispatch crease-portal && systemctl restart crease-dispatch crease-portal'
-ssh "$HOST" 'systemctl enable --now crease-sweep.timer'
+ssh "$HOST" 'systemctl enable --now crease-sweep.timer crease-purge.timer'
+# The retention job ran from /etc/cron.d as root — the last thing still doing so
+# after the move to an unprivileged service user. The timer above replaces it on
+# the same weekly schedule; remove the cron entry so they can't both fire.
+ssh "$HOST" 'rm -f /etc/cron.d/crease-purge-events'
 
 echo "==> waiting for health"
 ready=0

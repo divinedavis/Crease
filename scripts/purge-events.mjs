@@ -53,13 +53,18 @@ const jobs = [
 
 let failed = false;
 for (const [fn, label, overrideDays] of jobs) {
-  const { data, error } = await db.rpc(fn, { p_days: overrideDays ?? days });
+  // Log the window the job actually used, not the default. Two of these jobs
+  // override it, so the old message claimed order notes were scrubbed at 90
+  // days when the call passed 365 — the log is the only record of what
+  // retention this system really applies, and it was misreporting it.
+  const window = overrideDays ?? days;
+  const { data, error } = await db.rpc(fn, { p_days: window });
   const stamp = new Date().toISOString();
   if (error) {
     console.error(`${stamp} ${fn} failed: ${error.message}`);
     failed = true;
   } else {
-    console.log(`${stamp} ${label}: ${data} (older than ${days}d)`);
+    console.log(`${stamp} ${label}: ${data} (older than ${window}d)`);
   }
 }
 process.exit(failed ? 1 : 0);

@@ -1,0 +1,18 @@
+[Unit]
+Description=Run the Crease retention sweep weekly
+# The retention functions are the only thing that ever removes customer
+# addresses, courier phone numbers and handoff PINs from this database. If
+# nothing fires them, the migrations that define them are documentation.
+
+[Timer]
+# Sunday 04:17 UTC, matching the cron entry this replaces, so the cadence
+# doesn't change along with the ownership.
+OnCalendar=Sun *-*-* 04:17:00
+# A reboot must not skip a week's retention silently.
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+Unit=crease-purge.service
+
+[Install]
+WantedBy=timers.target

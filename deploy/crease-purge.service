@@ -1,0 +1,30 @@
+[Unit]
+Description=Crease retention sweep (purge raw courier payloads, scrub PII off finished legs, drop abandoned drafts)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# This used to be a root entry in /etc/cron.d, left behind when everything else
+# moved off root. It reads the same service-role key the dispatcher holds and
+# needs nothing more, so it runs as the same unprivileged user.
+User=crease
+Group=crease
+Type=oneshot
+WorkingDirectory=/opt/crease/services/dispatch
+ExecStart=/usr/bin/node /opt/crease/scripts/purge-events.mjs 90
+
+Environment=NODE_OPTIONS=--max-old-space-size=128
+MemoryMax=192M
+
+# Five DELETE/UPDATE statements over indexed date columns. If this is still
+# running after ten minutes something is wrong and blocking is worse than
+# skipping a week.
+TimeoutStartSec=600
+
+StandardOutput=append:/var/log/crease/purge.log
+StandardError=append:/var/log/crease/purge.log
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
