@@ -68,14 +68,16 @@ export class PaymentService {
    * Returns the client secret, which is the only thing the app needs and the
    * only thing it is allowed to have.
    */
-  async createDeliveryPaymentIntent(orderId: string) {
-    const order = await this.loadOrder(orderId);
-
-    // Never trust the fee on the row. The app writes delivery_fee_cents
-    // directly into Supabase and RLS checks only ownership, so a customer can
-    // set any price. Recompute from the (constrained) service_tier and, if the
-    // stored value disagrees, overwrite it so this charge and every downstream
-    // total use the real price.
+  /**
+   * Recompute the delivery fee from the (constrained) service_tier and, if the
+   * stored value disagrees, overwrite it. delivery_fee_cents is customer-
+   * writable at order creation and RLS checks only ownership, so no money total
+   * may be built from the column until it has been re-pinned to the tier price.
+   * Called on every path that reads the fee into money: checkout below, the
+   * manual hold in authorizeOrder, and settleOrder — so the pin does not depend
+   * on which path happened to run first.
+   */
+  private async pinDeliveryFee(order: any, orderId: string): Promise<number> {
     const amount = deliveryFeeCents(order.service_tier);
     if (order.delivery_fee_cents !== amount) {
       this.log.warn(
@@ -85,6 +87,13 @@ export class PaymentService {
       await this.db.from('orders').update({ delivery_fee_cents: amount }).eq('id', orderId);
       order.delivery_fee_cents = amount;
     }
+    return amount;
+  }
+
+  async createDeliveryPaymentIntent(orderId: string) {
+    const order = await this.loadOrder(orderId);
+
+    const amount = await this.pinDeliveryFee(order, orderId);
 
     // Ask before writing. The upsert below stamps 'requires_payment_method',
     // so a check made after it can only ever see that — which is how re-tapping
@@ -223,6 +232,10 @@ export class PaymentService {
       return existing;
     }
 
+    // The hold total includes the delivery fee, which is customer-writable at
+    // order creation — pin it to the tier price before it enters the sum.
+    await this.pinDeliveryFee(order, orderId);
+
     const amount = authorizationAmount(
       order.estimate_subtotal_cents + order.delivery_fee_cents + order.service_fee_cents,
       order.approval_threshold_cents,
@@ -322,6 +335,9 @@ export class PaymentService {
     await this.recomputeSubtotal(orderId);
 
     const order = await this.loadOrder(orderId);
+    // The fee is customer-writable and feeds both total_cents and the capture
+    // decision below; re-pin it to the tier price before summing, same as checkout.
+    await this.pinDeliveryFee(order, orderId);
     const cleaning = order.subtotal_cents ?? order.estimate_subtotal_cents ?? 0;
     const total =
       cleaning +
