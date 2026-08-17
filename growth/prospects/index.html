@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
 <title>Crease — Brooklyn canvass</title>
+<!-- Without these the tab shows Safari's fallback letter — a "U" taken from
+     usecreaseapp.com, which is neither the product's name nor its mark.
+     Relative hrefs: this is served from /prospects/, not the site root. -->
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<!-- Added to the home screen it is a street tool, so it gets a short name and
+     the shop-floor colour behind the status bar rather than white. -->
+<meta name="apple-mobile-web-app-title" content="Canvass" />
+<meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#16161a" media="(prefers-color-scheme: dark)" />
 <style>
   /* Street tool: used one-handed on a phone between shop doors. Big targets,
      the working state visible without a tap, nothing precious. */

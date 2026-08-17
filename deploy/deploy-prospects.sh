@@ -20,8 +20,14 @@ sed -e "s|__SUPABASE_URL__|$URL|" -e "s|__SUPABASE_ANON_KEY__|$ANON|" \
 # tool is a blank screen.
 cp "$ROOT/growth/prospects/supabase.js" "$STAGE/supabase.js"
 
+# The tab icon. Without them the browser falls back to a letter from the
+# domain, which is how this page spent its life labelled "U".
+cp "$ROOT/growth/prospects/icon.svg" "$STAGE/icon.svg"
+cp "$ROOT/growth/prospects/apple-touch-icon.png" "$STAGE/apple-touch-icon.png"
+
 # /var/www, not /root: nginx's workers cannot traverse root's home.
 ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
-scp -q "$STAGE/index.html" "$STAGE/supabase.js" "$HOST:/var/www/crease-prospects/"
+scp -q "$STAGE/index.html" "$STAGE/supabase.js" "$STAGE/icon.svg" \
+  "$STAGE/apple-touch-icon.png" "$HOST:/var/www/crease-prospects/"
 
 echo -n "deployed: " && curl -s -o /dev/null -w '%{http_code}\n' https://portal.usecreaseapp.com/prospects/

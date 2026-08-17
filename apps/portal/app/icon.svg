@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Crease">
+  <!-- The Crease mark, traced from apps/ios/icon/AppIcon-1024.png so the tab,
+       the home screen and the App Store all show the same hanger.
+
+       SVG rather than a PNG: a favicon is rendered at 16px and at 180px from
+       the same file, and a raster scaled that far loses the hook first.
+
+       Drawn ~18% larger than the app icon, with heavier strokes. An iOS icon
+       is looked at big and wants the breathing room; a favicon is 16-32px in a
+       tab strip, where that same padding is the difference between a hanger
+       and a smudge. -->
+  <defs>
+    <linearGradient id="crease-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2c7d68" />
+      <stop offset="1" stop-color="#0d4635" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed: Safari, iOS and Android each mask this to their own shape,
+       so rounding the corners here would only round them twice. -->
+  <rect width="1024" height="1024" fill="url(#crease-bg)" />
+
+  <g fill="none" stroke="#fff" stroke-width="74" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hook: right stem down to the shoulders' apex, semicircle over the top,
+         short left stem ending free. -->
+    <path d="M 512 500 L 512 317 A 84 84 0 0 0 344 317 L 344 388" />
+    <!-- Shoulders. -->
+    <path d="M 203 724 L 512 496 L 821 724" />
+  </g>
+  <!-- The bar reads heavier than the shoulders in the app icon; drawn as its
+       own shape so it keeps that weight instead of inheriting the stroke. -->
+  <rect x="172" y="686" width="680" height="76" rx="38" fill="#fff" />
+</svg>
