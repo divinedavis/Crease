@@ -49,15 +49,20 @@ const COURIER_ENGAGED_STATUSES = [
  * off and the cancellation can proceed; a delivery it knows about but will not
  * cancel is a courier holding real garments and has to block.
  *
- * This is not hypothetical. The simulator keeps its deliveries in memory, so
- * every in-flight order dispatched before a deploy answers 404 here for the
- * rest of its life — and the rollback below then refuses the customer their own
- * cancellation, permanently, on an order with no courier behind it at all.
+ * Getting it wrong costs the customer their own cancellation: the rollback
+ * below treats any carrier error as "a courier is still coming", so a delivery
+ * the carrier has no record of would block the cancel — and keep blocking it,
+ * on every attempt, for an order with nobody on the road behind it.
  *
- * 404 is the signal the carriers and the simulator both send. The code and
- * message checks are for a provider that answers 400-with-a-body instead, and
- * they are deliberately narrow: a 409 'cannot cancel after pickup' must not
- * match.
+ * A real carrier answers 404 for a delivery it has already dropped, one that
+ * never landed on its side, or one from a create whose response we lost. (The
+ * simulator used to be the loudest source of this — its deliveries live in
+ * memory and did not survive a deploy — but it now reports an unknown delivery
+ * as already cancelled, so this guard is here for the carriers.)
+ *
+ * The code and message checks are for a provider that answers 400-with-a-body
+ * instead, and they are deliberately narrow: a 409 'cannot cancel after pickup'
+ * must not match.
  */
 function isUnknownDelivery(err: unknown): boolean {
   if (err instanceof DeliveryProviderError) {

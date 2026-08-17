@@ -37,6 +37,31 @@ if [ "${CREASE_DEPLOY_DIRTY:-0}" != "1" ]; then
 fi
 echo "==> deploying $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)"
 
+# The repo pins Node 22 (.nvmrc, and `engines` in services/dispatch/package.json)
+# while the droplet still runs 20, and nothing has ever said so out loud: the
+# mismatch surfaces as a service that will not start after the restart, halfway
+# through a deploy, not as anything you can read here. A warning rather than a
+# failure on purpose — 20 is genuinely what the box runs today, so hard-failing
+# would block every deploy, including the one that upgrades it.
+echo "==> preflight: remote node"
+# || true throughout: a missing .nvmrc or an unreachable box makes this check
+# unavailable, which is not a reason to stop a deploy.
+PINNED_MAJOR="$(tr -cd '0-9.' < .nvmrc 2>/dev/null | cut -d. -f1 || true)"
+REMOTE_NODE="$(ssh "$HOST" 'node -v' 2>/dev/null || true)"
+REMOTE_MAJOR="${REMOTE_NODE#v}"
+REMOTE_MAJOR="${REMOTE_MAJOR%%.*}"
+if [ -z "$PINNED_MAJOR" ]; then
+  echo "!!  WARNING: no readable .nvmrc — cannot check the remote Node version" >&2
+elif [ -z "$REMOTE_NODE" ]; then
+  echo "!!  WARNING: could not read 'node -v' on $HOST — remote Node version unverified" >&2
+elif [ "$REMOTE_MAJOR" != "$PINNED_MAJOR" ]; then
+  echo "!!  WARNING: $HOST runs Node $REMOTE_NODE but this repo pins Node $PINNED_MAJOR" >&2
+  echo "!!  (.nvmrc + services/dispatch/package.json engines). npm ci will warn and any" >&2
+  echo "!!  ${PINNED_MAJOR}-only syntax or API in the built output will fail at service start." >&2
+else
+  echo "    node $REMOTE_NODE matches the pinned major ($PINNED_MAJOR)"
+fi
+
 echo "==> building"
 # Build every package, so adding one cannot be silently forgotten here.
 for pkg in packages/*/; do
@@ -93,15 +118,45 @@ cp -R deploy "$STAGE/deploy"
 cp -R supabase "$STAGE/supabase"
 cp -R scripts "$STAGE/scripts"
 
+# Two of these are production jobs — sweep.mjs (crease-sweep.service) and
+# purge-events.mjs (weekly cron) — and they must keep shipping. The rest is
+# laptop tooling, and the e2e/seed scripts are the dangerous half: run from
+# /opt/crease they read the production service-role key out of the .env sitting
+# right beside them and then create, cancel and re-book real orders. Nothing on
+# the box invokes them; they were only ever there because this copied the whole
+# directory. --delete removes the copies earlier deploys left behind.
+rm -f "$STAGE"/scripts/e2e*.mjs \
+      "$STAGE"/scripts/seed*.mjs \
+      "$STAGE"/scripts/rls-check.mjs \
+      "$STAGE"/scripts/ios-session.mjs \
+      "$STAGE"/scripts/ios-test.sh \
+      "$STAGE"/scripts/testflight.sh \
+      "$STAGE"/scripts/marketing-shots.sh \
+      "$STAGE"/scripts/upload-screenshots.py \
+      "$STAGE"/scripts/asc.py \
+      "$STAGE"/scripts/asc-config.env*
+
 echo "==> uploading"
 ssh "$HOST" "mkdir -p $REMOTE /var/log/crease"
 # --delete removes anything on the box that is not in the stage, so every
 # credential that lives only on the droplet has to be named here or a deploy
 # quietly destroys it. secrets/ holds the APNs .p8, which Apple issues exactly
 # once and will not reissue.
+#
+# '.env' and '.env.local' match a basename exactly, so scripts/asc-config.env
+# sailed straight past them and put the App Store Connect key and issuer IDs on
+# a public-facing box that has no use for them. The globs cover every future
+# *.env and any signing key that lands in the tree.
 rsync -az --delete \
-  --exclude '.env' --exclude '.env.local' --exclude 'secrets/' \
+  --exclude '.env' --exclude '.env.local' --exclude '*.env' --exclude '*.p8' \
+  --exclude 'secrets/' \
   "$STAGE/" "$HOST:$REMOTE/"
+
+# An rsync --exclude also protects the matching file on the receiver from
+# --delete, so the asc-config.env already up there survives the rule that now
+# keeps it from being sent. Remove it once, by name. (secrets/*.p8 is excluded
+# as a directory above and is untouched by this.)
+ssh "$HOST" "rm -f $REMOTE/scripts/asc-config.env"
 
 # The health check below proves the service answers, not that it is running the
 # code we just built — a partial rsync passes it too. Compare a checksum of the
@@ -145,13 +200,33 @@ ssh "$HOST" 'systemctl daemon-reload && systemctl enable --now crease-dispatch c
 ssh "$HOST" 'systemctl enable --now crease-sweep.timer'
 
 echo "==> waiting for health"
+ready=0
 for i in $(seq 1 15); do
-  if ssh "$HOST" 'curl -sf -m 3 http://127.0.0.1:8011/healthz >/dev/null'; then break; fi
+  if ssh "$HOST" 'curl -sf -m 3 http://127.0.0.1:8011/healthz >/dev/null'; then ready=1; break; fi
   sleep 2
 done
+[ "$ready" = 1 ] || echo "    dispatch still not answering after 30s — verifying anyway" >&2
 
+# Assert, don't narrate. This step used to print the health body and the portal
+# status code and exit 0 regardless, so a deploy that left both services broken
+# ended with "==> done" and the operator walked away. Same checks the sibling
+# deploy scripts make: a health body that says ok, and a portal that renders.
 echo "==> verifying"
-ssh "$HOST" 'echo -n "dispatch: "; curl -s -m 5 http://127.0.0.1:8011/healthz; echo; \
-             echo -n "portal:   "; curl -s -o /dev/null -w "%{http_code}\n" -m 8 http://127.0.0.1:3010/login; \
-             systemctl is-active crease-dispatch crease-portal'
+health="$(ssh "$HOST" 'curl -s -m 5 http://127.0.0.1:8011/healthz' || true)"
+portal="$(ssh "$HOST" 'curl -s -o /dev/null -w "%{http_code}" -m 8 http://127.0.0.1:3010/login' || true)"
+units="$(ssh "$HOST" 'systemctl is-active crease-dispatch crease-portal' || true)"
+echo "    dispatch healthz -> ${health:-<no response>}"
+echo "    portal /login    -> ${portal:-<no response>} (expect 200)"
+echo "    units            -> $(echo "$units" | tr '\n' ' ')"
+
+echo "$health" | grep -q '"ok":true' || {
+  echo "ERROR: dispatch is not healthy after restart — the new code is live and broken" >&2
+  echo "  journalctl -u crease-dispatch -n 50 --no-pager" >&2
+  exit 1
+}
+[ "$portal" = "200" ] || {
+  echo "ERROR: portal /login returned '${portal:-<no response>}', expected 200" >&2
+  echo "  journalctl -u crease-portal -n 50 --no-pager" >&2
+  exit 1
+}
 echo "==> done"

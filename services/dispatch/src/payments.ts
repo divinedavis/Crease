@@ -472,8 +472,57 @@ export class PaymentService {
           .eq('id', primary.id);
       }
 
-      const remainder = total - held;
+      // What is still owed, net of any top-up already collected. Computing the
+      // remainder from the primary hold alone re-billed the whole overage every
+      // time this ran a second time: an order whose difference had already been
+      // charged, coming back through here after a later recount, asked the
+      // customer for money it had taken once already.
+      //
+      // This read has to be fatal when it fails. Everything below treats "no
+      // row" as "nothing has been charged yet" and writes on that basis, so a
+      // select that merely errored would look identical to a clean order and
+      // walk straight into overwriting a real charge — the read failing is
+      // exactly when the guard matters most.
+      const { data: priorDifference, error: priorErr } = await this.db
+        .from('payments')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('kind', 'difference')
+        .maybeSingle();
+      if (priorErr) {
+        throw new Error(`could not read the existing difference payment: ${priorErr.message}`);
+      }
+
+      // Money on the row rather than a status, because a charge whose provider
+      // status has not landed yet has still been taken off the card.
+      const differenceTaken = Math.max(
+        0,
+        (priorDifference?.captured_cents ?? 0) - (priorDifference?.refunded_cents ?? 0),
+      );
+      const remainder = total - held - differenceTaken;
+
       if (remainder > 0) {
+        // A difference row that already carries a charge must never be written
+        // over. (order_id, kind) is unique, and `kind` is checked against
+        // ('primary', 'difference') — so there is exactly one difference row
+        // per order and no second name to give another. Upserting across a
+        // captured one replaces the provider_intent_ref and charge_ref of a
+        // real Stripe charge: voidOrder can then no longer refund that money
+        // and payoutOrder's capturedTotal no longer counts it, with nothing
+        // anywhere saying a charge went missing.
+        //
+        // So the rare case that needs a second row — a shop recounting higher
+        // again, after a top-up has already been collected — stops here and
+        // asks for a person, rather than balancing the books by destroying the
+        // record of the first charge. Supporting it properly means widening
+        // that check constraint so a second top-up can have a row of its own.
+        if (priorDifference && (differenceTaken > 0 || priorDifference.charge_ref)) {
+          throw new Error(
+            `order ${orderId} has already collected a top-up and owes ${remainder}c more — ` +
+              'recording a second one would overwrite the first charge, so this needs a person',
+          );
+        }
+
         // Check the write error instead of blindly dereferencing row.id — a
         // failed insert used to throw a confusing "cannot read id of undefined"
         // mid-charge.
@@ -483,9 +532,8 @@ export class PaymentService {
         // reachable: an approval whose difference charge was declined comes
         // back to 'awaiting_approval' to be tried again, and a plain insert
         // would then hit the unique index and fail the retry forever on a
-        // constraint rather than on the card. Re-using the row is also the
-        // honest shape — there is one difference owed on this order, and this
-        // is it.
+        // constraint rather than on the card. The guard above is what keeps
+        // that reuse honest — it only ever reuses a row that took no money.
         const { data: row, error: rowErr } = await this.db
           .from('payments')
           .upsert(

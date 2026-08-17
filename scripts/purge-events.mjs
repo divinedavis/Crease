@@ -23,7 +23,19 @@ const db = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   realtime: { transport: WebSocketTransport },
 });
 
+// Number('') is 0, so a cron line whose $RETENTION_DAYS was never set expands
+// to an empty argument and asks for "older than 0 days" — every event, every
+// note, every finished leg's PII, scrubbed, and reported as a normal success
+// line. An unusable retention has to stop the run, not become the widest
+// possible one.
 const days = Number(process.argv[2] ?? 90);
+if (!Number.isFinite(days) || days < 1) {
+  console.error(
+    `refusing to purge with retention '${process.argv[2]}': need a number of days >= 1. ` +
+      'Omit the argument for the 90-day default.',
+  );
+  process.exit(2);
+}
 
 // Three jobs, one schedule: raw webhook payloads, the PII denormalised onto
 // finished legs (customer address/phone, courier phone and GPS, the handoff

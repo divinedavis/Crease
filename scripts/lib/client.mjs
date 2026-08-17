@@ -40,44 +40,70 @@ async function transport() {
   }
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '0.0.0.0']);
+// The live stack, named exactly. The Supabase project ref appears in every
+// form of its URL (<ref>.supabase.co, db.<ref>.supabase.co, the pooler host),
+// so match the ref itself rather than a hostname.
+const PROD_PROJECT_REF = 'xfhmquvybdnrmcigflxy';
+const PROD_HOSTS = new Set([
+  'api.usecreaseapp.com',
+  'portal.usecreaseapp.com',
+  // Still a live alias serving iOS builds in the field, so it is production
+  // even though nothing new points at it.
+  'crease.divinedavis.com',
+]);
 
-/** Whether a URL points at this machine. An absent value points nowhere. */
-function isLocalTarget(value) {
-  if (!value) return true;
+/** What makes this value production, or null if nothing does. */
+function productionReason(value) {
+  if (!value) return null;
+  let hostname;
   try {
     // IPv6 hostnames come back bracketed, and '[::1]' is not '::1'.
-    return LOCAL_HOSTS.has(new URL(value).hostname.replace(/^\[|\]$/g, ''));
+    hostname = new URL(value).hostname.replace(/^\[|\]$/g, '');
   } catch {
-    return false;
+    // Not a URL we can parse — fall back to the ref, which is distinctive
+    // enough that its presence anywhere in the string means production.
+    return value.includes(PROD_PROJECT_REF) ? `production project ${PROD_PROJECT_REF}` : null;
   }
+  if (hostname.includes(PROD_PROJECT_REF)) return `production project ${PROD_PROJECT_REF}`;
+  if (PROD_HOSTS.has(hostname)) return `production host ${hostname}`;
+  return null;
 }
 
 /**
- * Refuse to aim a service-role credential at a live stack by accident.
+ * Refuse to aim a service-role credential at the *live* stack by accident.
  *
  * The deploy rsyncs this whole repo onto the droplet, where
- * services/dispatch/.env is *production* — so `node scripts/e2e-money.mjs`
+ * services/dispatch/.env is production — so `node scripts/e2e-money.mjs`
  * typed in that directory books couriers, moves money and rewrites real
  * customers' orders with the production service-role key, and nothing on the
- * command line hints at it. Localhost is the only target that needs no
- * thought; anything else has to be asked for out loud.
+ * command line hints at it.
+ *
+ * This used to demand localhost, but there is no local Supabase stack in this
+ * repo (supabase/ is migrations only, no config.toml), so every run of
+ * rls-check.mjs, seed.mjs and the e2e scripts needed CREASE_ALLOW_PROD=1 —
+ * which teaches the operator to export it in their shell profile, and then the
+ * guard is gone and the RLS regression suite is what is actually off. So name
+ * the one stack that must never be hit by accident and let everything else —
+ * localhost, a branch/preview project, a future staging box — run unflagged.
  */
-export function assertLocalTarget(env) {
+export function assertNotProduction(env) {
   if (process.env.CREASE_ALLOW_PROD === '1') return;
   // CREASE_BASE is what the e2e scripts actually fetch when it is set, so it
   // is the value worth checking rather than the PUBLIC_URL it overrides.
-  const remote = [
+  const hits = [
     ['SUPABASE_URL', env.SUPABASE_URL],
     ['PUBLIC_URL', process.env.CREASE_BASE ?? env.PUBLIC_URL],
-  ].filter(([, value]) => !isLocalTarget(value));
-  if (remote.length === 0) return;
+  ]
+    .map(([name, value]) => [name, value, productionReason(value)])
+    .filter(([, , reason]) => reason !== null);
+  if (hits.length === 0) return;
 
   throw new Error(
-    `refusing to build a service-role client: ${remote
-      .map(([name, value]) => `${name}=${value}`)
-      .join(', ')} is not localhost. ` +
-      'Set CREASE_ALLOW_PROD=1 to run this against a non-local stack on purpose.',
+    `refusing to build a service-role client against production: ${hits
+      .map(([name, value, reason]) => `${name}=${value} is the ${reason}`)
+      .join('; ')}. ` +
+      'These scripts create, mutate and cancel real orders and payments. ' +
+      'Set CREASE_ALLOW_PROD=1 to do that on purpose.',
   );
 }
 
@@ -92,6 +118,6 @@ export async function makeClient(key, url) {
 /** Service-role client from the dispatch service's own .env. */
 export async function adminClient() {
   const env = readEnv('services/dispatch/.env');
-  assertLocalTarget(env);
+  assertNotProduction(env);
   return { env, db: await makeClient(env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_URL) };
 }

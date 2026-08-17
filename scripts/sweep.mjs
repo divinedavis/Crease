@@ -37,6 +37,16 @@ const DISPATCH = `http://127.0.0.1:${env.PORT ?? 8011}`;
 // A bad state must not become a storm. If more than this many orders look
 // stranded something systemic is wrong and a human should see it, not a loop.
 const MAX_PER_RUN = 25;
+// The unit is TimeoutStartSec=240 and the timer fires every 5 minutes, so the
+// whole run has to finish well inside that or systemd SIGTERMs it part way
+// through — which it did on every backed-up run, because 25 re-dispatches at a
+// 30s timeout is 750s. Budget the run instead: stop cleanly at BUDGET and say
+// what was left, and keep each call short enough that the last one started
+// still lands before the unit timeout. Worst case is BUDGET + one call.
+const RUN_BUDGET_MS = 150_000;
+// Ample for a dispatch the dispatcher answers on the loopback; a carrier call
+// slower than this is one the next run should retry, not one to sit on.
+const DISPATCH_TIMEOUT_MS = 8_000;
 // Long enough that a leg mid-dispatch is never mistaken for an abandoned one.
 const STALE_CLAIM_MINUTES = 10;
 // A carrier that has said nothing for this long is not mid-delivery, it is
@@ -45,6 +55,8 @@ const STALLED_LEG_HOURS = 6;
 
 const TERMINAL = ['delivered', 'returned', 'cancelled', 'failed'];
 const stamp = () => new Date().toISOString();
+const startedAt = Date.now();
+const budgetLeftMs = () => RUN_BUDGET_MS - (Date.now() - startedAt);
 let failed = false;
 
 /**
@@ -156,11 +168,24 @@ async function dispatchStrandedOrders() {
     // customer choosing a delivery time, so it is not stranded.
     if (order?.service_tier === 'return_only') continue;
 
-    const { data: legs } = await db
+    const { data: legs, error: legError } = await db
       .from('delivery_legs')
       .select('status')
       .eq('order_id', row.order_id)
       .eq('leg', 'pickup');
+
+    // A read that failed says nothing about whether a leg exists. Treating it
+    // as "no live leg" would queue a re-dispatch for an order that may already
+    // have a courier, and would burn the cap on orders we know nothing about.
+    // Unknown means skip; the next run in five minutes asks again.
+    if (legError) {
+      console.error(
+        `${stamp()} leg lookup for order ${row.order_id} failed: ${legError.message} — ` +
+          'state unknown, skipping it this run',
+      );
+      failed = true;
+      continue;
+    }
 
     const live = (legs ?? []).some((l) => !TERMINAL.includes(l.status));
     if (!live) candidates.push(row.order_id);
@@ -173,12 +198,27 @@ async function dispatchStrandedOrders() {
   }
 
   let ok = 0;
-  for (const orderId of candidates) {
+  let attempted = 0;
+  let deferred = 0;
+  for (const [i, orderId] of candidates.entries()) {
+    // Stop before the call that would run past the budget, not after. Nothing
+    // is lost by deferring: these orders are found by query, so the next run
+    // picks up exactly where this one stopped — but only if it is this loop
+    // that stops, rather than systemd killing the process mid-dispatch.
+    if (budgetLeftMs() <= DISPATCH_TIMEOUT_MS) {
+      deferred = candidates.length - i;
+      console.warn(
+        `${stamp()} run budget (${RUN_BUDGET_MS / 1000}s) reached after ${attempted} re-dispatches — ` +
+          `${deferred} stranded order(s) left for the next run`,
+      );
+      break;
+    }
+    attempted++;
     try {
       const res = await fetch(`${DISPATCH}/v1/orders/${orderId}/dispatch-pickup`, {
         method: 'POST',
         headers: { 'x-crease-key': env.INTERNAL_API_KEY, 'content-type': 'application/json' },
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
       });
       if (res.ok) {
         ok++;
@@ -202,8 +242,13 @@ async function dispatchStrandedOrders() {
       failed = true;
     }
   }
-  console.log(`${stamp()} stranded orders dispatched: ${ok}/${candidates.length}`);
-  if (ok === 0 && candidates.length > 0) {
+  console.log(
+    `${stamp()} stranded orders dispatched: ${ok}/${attempted}` +
+      (deferred > 0 ? ` (${deferred} deferred to the next run)` : ''),
+  );
+  // Judge only what was actually tried — a run that deferred everything after
+  // one refusal is not "every re-dispatch was refused".
+  if (ok === 0 && attempted > 0) {
     console.error(`${stamp()} every re-dispatch was refused — the reconciler is not reconciling`);
     failed = true;
   }

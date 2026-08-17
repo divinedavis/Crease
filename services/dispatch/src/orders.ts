@@ -253,20 +253,35 @@ export class OrderService {
     // A released claim is cheap, not free: each one bought a quote before it
     // was let go, and the return route is customer-triggerable, so cheap times
     // an unbounded retry loop is still a bill. The cap above no longer bounds
-    // that — deliberately — so bound the rows themselves instead. Set far
-    // enough out that no ordinary carrier outage reaches it, near enough that a
-    // phone with a stuck retry loop cannot run up quotes all afternoon.
-    const MAX_CLAIMS = 10;
-    if ((priorLegs?.length ?? 0) >= MAX_CLAIMS) {
-      this.log.warn({ orderId, leg, claims: priorLegs?.length }, 'refusing dispatch — too many claims');
+    // that — deliberately — so bound the released claims themselves.
+    //
+    // Two things it has to get right, and the first version got both wrong.
+    // It counted every prior leg, so it double-counted the couriers
+    // MAX_ATTEMPTS already rations and never isolated the quote spend it exists
+    // for. And it counted them for all time: once ten rows existed the order
+    // could never be dispatched again by anyone — not the customer, not the
+    // portal, not an operator on the internal route — because the refusal
+    // writes 'failed' without recording a leg, so the count it tripped on could
+    // never come back down. A window is the difference between a rate limit and
+    // a death sentence: a carrier having a bad afternoon should cost an order a
+    // few hours, not its life.
+    const MAX_CLAIMS_PER_DAY = 10;
+    const claimWindowStart = Date.now() - 24 * 60 * 60 * 1000;
+    const releasedRecently = (priorLegs ?? []).filter(
+      (l) => !reachedCarrier(l) && Date.parse(l.created_at ?? '') > claimWindowStart,
+    ).length;
+    if (releasedRecently >= MAX_CLAIMS_PER_DAY) {
+      this.log.warn({ orderId, leg, claims: releasedRecently }, 'refusing dispatch — too many claims');
       // Straight to the order, without recording another leg: ten rows already
       // say this, each with the carrier's own words on it, and an eleventh
-      // written by the refusal itself adds nothing but a row per retry.
+      // written by the refusal itself adds nothing but a row per retry. Safe to
+      // leave the count un-incremented now that it only looks at the last day —
+      // the window is what lets the order recover on its own.
       await this.db
         .from('orders')
         .update({
           status: 'failed',
-          cancelled_reason: `${priorLegs?.length} ${leg} dispatch attempts without reaching a courier`,
+          cancelled_reason: `${releasedRecently} ${leg} dispatch attempts today without reaching a courier`,
         })
         .eq('id', orderId);
       throw new CustomerFacingError(
@@ -750,9 +765,13 @@ export class OrderService {
    * A claim sits at 'pending', which the partial unique index reads as live, so
    * an abandoned one locks this leg out of dispatch permanently. Cancelled, not
    * failed: no courier was booked and no money moved, so the order itself is
-   * still perfectly good and a retry may follow. That retry gets a fresh
-   * attempt number — the burnt one is the point, since it is what bounds how
-   * many billable quotes a customer hammering the endpoint can run up.
+   * still perfectly good and a retry may follow.
+   *
+   * That retry deliberately does NOT spend the courier budget — MAX_ATTEMPTS
+   * counts only legs that reached a carrier, because a quote that never came
+   * back engaged nobody. What the released row does spend is the rolling
+   * per-day claim allowance above, which is what stops a stuck retry loop
+   * running up billable quotes all afternoon.
    */
   private async releaseClaim(legId: string, message: string) {
     await this.db

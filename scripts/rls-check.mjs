@@ -10,7 +10,7 @@
  *
  *   node scripts/rls-check.mjs
  */
-import { assertLocalTarget, makeClient, readEnv } from './lib/client.mjs';
+import { assertNotProduction, makeClient, readEnv } from './lib/client.mjs';
 
 // Test-account password comes from the environment. This repo is public,
 // and the Supabase project it points at is live — a known password in a
@@ -25,8 +25,9 @@ const svcEnv = readEnv('services/dispatch/.env');
 const webEnv = readEnv('apps/portal/.env.local');
 const URL = svcEnv.SUPABASE_URL;
 // This writes rows with the service-role key, so it gets the same refusal the
-// other operational scripts get: localhost, or CREASE_ALLOW_PROD=1 said aloud.
-assertLocalTarget(svcEnv);
+// other operational scripts get: anything but the live stack runs unflagged,
+// production needs CREASE_ALLOW_PROD=1 said aloud.
+assertNotProduction(svcEnv);
 const admin = await makeClient(svcEnv.SUPABASE_SERVICE_ROLE_KEY, URL);
 
 const TEST_EMAIL = 'testcustomer@crease.local';

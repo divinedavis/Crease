@@ -18,6 +18,9 @@ Environment=NODE_OPTIONS=--max-old-space-size=128
 MemoryMax=192M
 
 # Bounded so a hung carrier call can never overlap the next timer firing.
+# sweep.mjs budgets itself against this number (RUN_BUDGET_MS + one call must
+# stay under it, or a backed-up run gets SIGTERM'd part way through instead of
+# stopping cleanly). Change one and change the other.
 TimeoutStartSec=240
 
 StandardOutput=append:/var/log/crease/sweep.log
