@@ -586,7 +586,14 @@ struct OrderDetailView: View {
             payError = "Please sign in again."
             return
         }
-        let confirmation = await checkout.pay(orderId: live.id, accessToken: token)
+        // The fee on the card above the button is the number they are agreeing
+        // to. If the server prices the route higher than that, it says so
+        // rather than charging the difference.
+        let confirmation = await checkout.pay(
+            orderId: live.id,
+            accessToken: token,
+            agreedCents: live.deliveryFeeCents
+        )
         switch checkout.state {
         case .paid:
             await store.loadOrders()
@@ -604,6 +611,13 @@ struct OrderDetailView: View {
             // nothing was charged, directly above the line saying it was.
             await store.loadOrders()
             payError = message
+        case let .repriced(cents):
+            // Nothing charged. The order row now carries the priced fee, so a
+            // reload puts the real number on the card and the button — and the
+            // next tap agrees to it explicitly.
+            await store.loadOrders()
+            payError =
+                "This trip is farther than our standard rate covers, so it costs \(cents.asMoney). Nothing has been charged — tap Pay again to book it."
         case .idle, .working:
             break
         }

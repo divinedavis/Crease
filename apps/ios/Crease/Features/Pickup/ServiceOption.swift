@@ -10,6 +10,13 @@ import Foundation
 /// The numbers come from live Uber Direct quotes: $12.99 a leg in Brooklyn,
 /// $25.98 a round trip, essentially flat under three miles. See
 /// scripts/courier-pricing.mjs.
+///
+/// They are a FLOOR, not the final price. "Essentially flat under three miles"
+/// is the whole caveat: past that band a leg costs $15.99 and a round trip
+/// sold at $29.95 loses money. The dispatcher quotes the real route when it
+/// mints the intent and may come back with more — Checkout surfaces that as
+/// `.repriced` and asks before anything is charged, so these stay the numbers
+/// on the screen until a route says otherwise.
 struct ServiceOption: Identifiable, Hashable {
     let id: String
     let name: String

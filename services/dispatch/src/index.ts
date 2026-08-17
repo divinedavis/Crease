@@ -36,7 +36,12 @@ const db = createClient(config.supabaseUrl, config.supabaseServiceKey, {
 const chain = buildChain({ ...config.providers, PUBLIC_URL: config.publicUrl } as any);
 const orders = new OrderService(db, chain, app.log);
 const paymentProvider = buildPaymentProvider(config.payments);
-const payments = new PaymentService(db, paymentProvider, app.log);
+// Pricing asks the dispatcher what the route costs before it charges for it.
+// Passed as a closure rather than the service itself so payments keeps no
+// dependency on couriers beyond this one question.
+const payments = new PaymentService(db, paymentProvider, app.log, (id) =>
+  orders.quoteRouteCostCents(id),
+);
 const connectProvider = buildConnectProvider(config.payments);
 const payouts = new PayoutService(db, connectProvider, app.log);
 const push = new PushService(db, app.log);

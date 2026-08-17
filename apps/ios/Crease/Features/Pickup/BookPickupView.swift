@@ -23,6 +23,10 @@ struct BookPickupView: View {
     @State private var error: String?
     @State private var pickupDay = Date()
     @State private var choosingCleaner = false
+    /// Set when the server priced this route above the published fee. Nothing
+    /// has been charged at that point — it is a question, and the answer either
+    /// pays the real price or leaves the draft alone.
+    @State private var repricedTo: (orderId: UUID, serviceTier: String, cents: Int)?
     /// How many pieces are going in the bag, 0 meaning "didn't count".
     /// Optional on purpose: nobody should have to count socks to book a
     /// courier, but a number given here is what the shop checks the bag
@@ -83,6 +87,34 @@ struct BookPickupView: View {
                 frameRoute()
             }
             .presentationDetents([.medium, .large])
+        }
+        // A route outside the flat-rate courier band costs more to drive than
+        // the published fee collects. The customer gets the real number and a
+        // choice, rather than a card charge that does not match the button they
+        // tapped. Declining leaves the draft to be paid — or abandoned — later.
+        .alert(
+            "This trip costs more",
+            isPresented: Binding(
+                get: { repricedTo != nil },
+                set: { if !$0 { repricedTo = nil } }
+            ),
+            presenting: repricedTo
+        ) { priced in
+            Button("Pay \(priced.cents.asMoney)") {
+                repricedTo = nil
+                Task {
+                    await settle(
+                        orderId: priced.orderId,
+                        serviceTier: priced.serviceTier,
+                        agreedCents: priced.cents
+                    )
+                }
+            }
+            Button("Cancel", role: .cancel) { repricedTo = nil }
+        } message: { priced in
+            Text(
+                "\(cleaner?.name ?? "This shop") is farther than our standard rate covers, so this trip is \(priced.cents.asMoney) instead of \(selected.priceCents.asMoney). Nothing has been charged."
+            )
         }
         .task {
             if store.cleaners.isEmpty { await store.loadCleaners() }
@@ -504,7 +536,7 @@ struct BookPickupView: View {
             // attempts, so the retry carries whatever the stepper says now —
             // including nothing.
             await store.setCustomerItemCount(orderId: draft.id, count: itemCount > 0 ? itemCount : nil)
-            await settle(orderId: draft.id, serviceTier: draft.tier)
+            await settle(orderId: draft.id, serviceTier: draft.tier, agreedCents: selected.priceCents)
             return
         }
 
@@ -573,7 +605,7 @@ struct BookPickupView: View {
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.
         draft = Draft(id: created.id, tier: selected.id, cleanerId: cleaner.id)
-        await settle(orderId: created.id, serviceTier: selected.id)
+        await settle(orderId: created.id, serviceTier: selected.id, agreedCents: selected.priceCents)
     }
 
     /// Charge the courier fee and let the dispatcher decide what the order
@@ -589,7 +621,7 @@ struct BookPickupView: View {
     /// against: a booking with no courier is normal for return-only and a
     /// silent failure for everything else, and the row being settled is not
     /// always the choice currently highlighted on screen.
-    private func settle(orderId: UUID, serviceTier: String) async {
+    private func settle(orderId: UUID, serviceTier: String, agreedCents: Int) async {
         guard let token = try? await store.accessToken() else {
             error = "Please sign in again."
             return
@@ -599,7 +631,11 @@ struct BookPickupView: View {
         // sheet up over whatever the customer moved on to.
         guard isPresented else { return }
 
-        let confirmation = await checkout.pay(orderId: orderId, accessToken: token)
+        let confirmation = await checkout.pay(
+            orderId: orderId,
+            accessToken: token,
+            agreedCents: agreedCents
+        )
         switch checkout.state {
         case .paid:
             // The dispatcher promoted the order and booked the courier before
@@ -625,6 +661,11 @@ struct BookPickupView: View {
             // reads as the app having lost the booking. Stay on the screen and
             // say what happened — the draft is still here to retry against.
             error = message
+        case let .repriced(cents):
+            // Nothing was charged and the draft is intact. Ask, then pay the
+            // real price if they accept — a farther shop costs more to reach,
+            // and quietly charging the difference is not an option.
+            repricedTo = (orderId: orderId, serviceTier: serviceTier, cents: cents)
         case .idle, .working:
             break
         }

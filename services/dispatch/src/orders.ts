@@ -11,7 +11,7 @@ import {
   type Waypoint,
 } from './deps.js';
 import { config } from './config.js';
-import { deliveryFeeCents } from './pricing.js';
+import { cardFeeCents, deliveryFeeCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 import { parseWindow } from './windows.js';
 
@@ -107,6 +107,83 @@ export class OrderService {
   /** Carrier by name, for callers that need to cancel a specific leg. */
   providerFor(name: string) {
     return this.chain.get(name);
+  }
+
+  /**
+   * What one courier leg on this order's route actually costs.
+   *
+   * Delivery used to be priced from a flat per-tier table nothing about the
+   * route ever reached, so a six-mile round trip was sold at the same $29.95 as
+   * a four-block one and lost $3.20 every time. Pricing calls this before it
+   * charges; feeForCourierCost turns the answer into a fee.
+   *
+   * Both legs are the same road in opposite directions, so one quote prices the
+   * pair — quoting twice would double the API spend to learn the same number.
+   *
+   * Returns null rather than throwing when the carrier cannot answer. A quote
+   * is an optimisation on the price, not a precondition of booking: a customer
+   * must still be able to book during an Uber outage, at the published price.
+   */
+  async quoteRouteCostCents(orderId: string): Promise<number | null> {
+    let order: any;
+    try {
+      order = await this.loadOrder(orderId);
+    } catch (err) {
+      this.log.warn({ orderId, err }, 'could not load order to quote its route');
+      return null;
+    }
+
+    // A cached quote, if it is still about the same road. Freshness matters
+    // more than it looks: carriers surge, and re-pricing a booking from a
+    // number bought hours ago is guessing at a road that has moved on.
+    const cached = Number(order.quoted_leg_cost_cents);
+    const cachedAt = Date.parse(order.quoted_at ?? '');
+    if (
+      Number.isFinite(cached) &&
+      cached > 0 &&
+      Number.isFinite(cachedAt) &&
+      Date.now() - cachedAt < ROUTE_QUOTE_TTL_MS
+    ) {
+      return cached;
+    }
+
+    // No claim row and no retry budget spent: this is a price check, not a
+    // dispatch. It must never leave a 'pending' leg behind, because that row
+    // is the mutex dispatchLeg depends on.
+    try {
+      const { pickup, dropoff } = this.waypoints(order, 'pickup');
+      const best = await this.chain.bestQuote({
+        pickup,
+        dropoff,
+        manifest: {
+          description: `Dry cleaning — order ${order.short_code}`,
+          declaredValueCents: config.declaredValueDefaultCents,
+          itemCount: 1,
+          requiresCar: true,
+        },
+      });
+      if (!best) {
+        this.log.warn({ orderId }, 'no courier coverage when pricing this route');
+        return null;
+      }
+
+      await this.db
+        .from('orders')
+        .update({
+          quoted_leg_cost_cents: best.quote.feeCents,
+          quoted_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+      this.log.info(
+        { orderId, provider: best.provider.name, perLegCents: best.quote.feeCents },
+        'route priced from a live courier quote',
+      );
+      return best.quote.feeCents;
+    } catch (err) {
+      this.log.warn({ orderId, err }, 'route quote failed — falling back to the published price');
+      return null;
+    }
   }
 
   /**
@@ -403,6 +480,38 @@ export class OrderService {
         'quote is about to expire — re-quoting before dispatch',
       );
       ({ best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq));
+    }
+
+    // What this order has now cost in couriers, against what was taken for it.
+    //
+    // Pricing quotes the route before charging, so this should not fire — but
+    // it is the only place that sees the real number the carrier finally
+    // charged, and "should not" is not "cannot": a quote can lapse into a
+    // surge, a retry buys a second courier on one fee, and a fallback to the
+    // published price happens whenever the carrier could not be reached.
+    //
+    // Deliberately does NOT refuse. The customer has paid and, on a return leg,
+    // the shop is holding their clothes; stranding that bag to protect a few
+    // dollars of margin is the worse outcome. Loud is the right response, not
+    // fatal — this is the line that tells you the pricing needs looking at.
+    const courierSpend =
+      (priorLegs ?? []).filter(reachedCarrier).reduce((n, l) => n + (l.fee_cents ?? 0), 0) +
+      (best.quote.feeCents ?? 0);
+    const netCents = paidCents - courierSpend - cardFeeCents(paidCents);
+    if (netCents < 0) {
+      this.log.error(
+        {
+          orderId,
+          shortCode: order.short_code,
+          tier,
+          leg,
+          paidCents,
+          courierSpend,
+          netCents,
+          provider: best.provider.name,
+        },
+        'order is underwater — couriers cost more than the fee charged',
+      );
     }
 
     const createReq: CreateDeliveryRequest = {
@@ -882,6 +991,17 @@ function reachedCarrier(l: { provider?: string | null; provider_delivery_id?: st
  * call; a lapsed one costs the order.
  */
 const QUOTE_MIN_REMAINING_MS = 30_000;
+
+/**
+ * How long a route price stays good enough to charge from.
+ *
+ * Longer than a carrier's own quote expiry on purpose — this figure prices the
+ * fee, it does not book the courier, and re-quoting on every read of the price
+ * would buy an API call each time the app opened the booking screen. Half an
+ * hour is short enough that a surge cannot ride along into a booking and long
+ * enough that browsing is free.
+ */
+const ROUTE_QUOTE_TTL_MS = 30 * 60 * 1000;
 
 /** True only for a timestamp we can read that is genuinely nearly up. */
 function expiringWithin(expiresAt: string | null | undefined, withinMs: number): boolean {

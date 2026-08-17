@@ -6,7 +6,18 @@ import {
   type PaymentProvider,
   type PaymentState,
 } from '@crease/payments';
-import { deliveryFeeCents } from './pricing.js';
+import { deliveryFeeCents, feeForCourierCost } from './pricing.js';
+
+/**
+ * Asks the dispatcher what one courier leg costs on an order's route.
+ *
+ * A function rather than an OrderService reference so the two services stay
+ * independent — payments would otherwise depend on dispatch to charge a card,
+ * and every test of this class would need a courier chain behind it. Returns
+ * null when no carrier could answer; the caller falls back to the published
+ * price rather than refusing the booking.
+ */
+export type RouteCostLookup = (orderId: string) => Promise<number | null>;
 
 /**
  * `retainCents` value meaning "keep all of it".
@@ -54,6 +65,12 @@ export class PaymentService {
     private readonly db: SupabaseClient,
     private readonly provider: PaymentProvider,
     private readonly log: { info: Function; warn: Function; error: Function },
+    /**
+     * Optional, because a box with no courier configured must still take
+     * money. Absent, every order prices at the published flat rate — which is
+     * exactly the behaviour that shipped before, kept as the floor.
+     */
+    private readonly routeCost?: RouteCostLookup,
   ) {}
 
   /**
@@ -69,20 +86,54 @@ export class PaymentService {
    * only thing it is allowed to have.
    */
   /**
-   * Recompute the delivery fee from the (constrained) service_tier and, if the
-   * stored value disagrees, overwrite it. delivery_fee_cents is customer-
-   * writable at order creation and RLS checks only ownership, so no money total
-   * may be built from the column until it has been re-pinned to the tier price.
-   * Called on every path that reads the fee into money: checkout below, the
-   * manual hold in authorizeOrder, and settleOrder — so the pin does not depend
-   * on which path happened to run first.
+   * Recompute the delivery fee and, if the stored value disagrees, overwrite
+   * it. delivery_fee_cents is customer-writable at order creation and RLS
+   * checks only ownership, so no money total may be built from the column until
+   * it has been re-pinned to a server-computed price. Called on every path that
+   * reads the fee into money: checkout below, the manual hold in authorizeOrder,
+   * and settleOrder — so the pin does not depend on which path happened to run
+   * first.
+   *
+   * `reprice` is the difference between the two kinds of caller. The paths that
+   * are about to charge a card buy a quote for the real route first, because a
+   * six-mile round trip costs more in couriers than the published price
+   * collects. Settlement passes false: the customer has already paid, the
+   * charge is closed, and re-pricing there would move the order's total away
+   * from the money actually taken. It re-derives from the cached quote instead,
+   * which by construction is the figure that was charged.
    */
-  private async pinDeliveryFee(order: any, orderId: string): Promise<number> {
-    const amount = deliveryFeeCents(order.service_tier);
+  private async pinDeliveryFee(
+    order: any,
+    orderId: string,
+    opts: { reprice?: boolean } = {},
+  ): Promise<number> {
+    // The published price is the floor and the fallback. Everything below can
+    // only raise it.
+    let perLegCents: number | null = Number.isFinite(Number(order.quoted_leg_cost_cents))
+      ? Number(order.quoted_leg_cost_cents)
+      : null;
+
+    if (opts.reprice && this.routeCost) {
+      const quoted = await this.routeCost(orderId);
+      if (quoted !== null) {
+        perLegCents = quoted;
+        order.quoted_leg_cost_cents = quoted;
+      }
+    }
+
+    const amount = feeForCourierCost(order.service_tier, perLegCents);
+    const published = deliveryFeeCents(order.service_tier);
+    if (amount > published) {
+      this.log.info(
+        { orderId, tier: order.service_tier, perLegCents, published, priced: amount },
+        'route costs more than the flat rate — pricing above the published fee',
+      );
+    }
+
     if (order.delivery_fee_cents !== amount) {
       this.log.warn(
         { orderId, clientFee: order.delivery_fee_cents, serverFee: amount },
-        'delivery fee on order did not match the tier price — using the server price',
+        'delivery fee on order did not match the priced fee — using the server price',
       );
       await this.db.from('orders').update({ delivery_fee_cents: amount }).eq('id', orderId);
       order.delivery_fee_cents = amount;
@@ -93,7 +144,8 @@ export class PaymentService {
   async createDeliveryPaymentIntent(orderId: string) {
     const order = await this.loadOrder(orderId);
 
-    const amount = await this.pinDeliveryFee(order, orderId);
+    // Price the real route before charging for it, not after.
+    const amount = await this.pinDeliveryFee(order, orderId, { reprice: true });
 
     // Ask before writing. The upsert below stamps 'requires_payment_method',
     // so a check made after it can only ever see that — which is how re-tapping
@@ -233,8 +285,8 @@ export class PaymentService {
     }
 
     // The hold total includes the delivery fee, which is customer-writable at
-    // order creation — pin it to the tier price before it enters the sum.
-    await this.pinDeliveryFee(order, orderId);
+    // order creation — price it from the real route before it enters the sum.
+    await this.pinDeliveryFee(order, orderId, { reprice: true });
 
     const amount = authorizationAmount(
       order.estimate_subtotal_cents + order.delivery_fee_cents + order.service_fee_cents,
@@ -336,7 +388,9 @@ export class PaymentService {
 
     const order = await this.loadOrder(orderId);
     // The fee is customer-writable and feeds both total_cents and the capture
-    // decision below; re-pin it to the tier price before summing, same as checkout.
+    // decision below; re-pin before summing, same as checkout. No reprice here:
+    // the card is already charged, so this must reproduce the fee that was
+    // taken, not discover a new one.
     await this.pinDeliveryFee(order, orderId);
     const cleaning = order.subtotal_cents ?? order.estimate_subtotal_cents ?? 0;
     const total =

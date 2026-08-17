@@ -19,6 +19,10 @@ final class Checkout: ObservableObject {
         case working
         case paid
         case failed(String)
+        /// The server priced this route above the published fee, so nothing has
+        /// been presented and nothing charged. Carries the real price for the
+        /// caller to put in front of the customer.
+        case repriced(Int)
     }
 
     @Published private(set) var state: State = .idle
@@ -39,7 +43,14 @@ final class Checkout: ObservableObject {
     /// Returns the dispatcher's answer when the money moved, because "paid" is
     /// not the same as "a driver is coming" and the caller has to be able to
     /// tell those apart.
-    func pay(orderId: UUID, accessToken: String) async -> Confirmation? {
+    /// - Parameter agreedCents: the price the customer actually saw and tapped.
+    ///   The published tier prices assume the flat-rate courier band; a route
+    ///   outside it costs more than that fee collects, so the server prices the
+    ///   real route when it mints the intent. Charging the difference silently
+    ///   would take money against a number nobody agreed to, so a higher price
+    ///   comes back as `.repriced` and the sheet is never presented — the
+    ///   caller asks, and calls again with the new figure if they say yes.
+    func pay(orderId: UUID, accessToken: String, agreedCents: Int) async -> Confirmation? {
         state = .working
 
         let api = DispatchAPI(accessToken: accessToken)
@@ -78,6 +89,15 @@ final class Checkout: ObservableObject {
             // their payment failing. Skip straight to confirmation, which is
             // also how a booking whose confirm call was lost gets finished.
             charged = intent.alreadyPaid == true
+
+            // Stop before the sheet if the price moved. Only upward: a server
+            // price at or below what they tapped is theirs to have, and an
+            // order already paid has no price left to renegotiate.
+            if !charged, let priced = intent.amountCents, priced > agreedCents {
+                state = .repriced(priced)
+                return nil
+            }
+
             if !charged {
                 STPAPIClient.shared.publishableKey = publishable
 

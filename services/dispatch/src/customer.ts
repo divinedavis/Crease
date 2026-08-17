@@ -9,7 +9,7 @@ import { config } from './config.js';
 import { DeliveryProviderError, TERMINAL_STATUSES } from './deps.js';
 import { CustomerFacingError } from './orders.js';
 import { RETAIN_ALL } from './payments.js';
-import { CANCELLATION_FEE_CENTS } from './pricing.js';
+import { cancellationRetainCents } from './pricing.js';
 import { parseWindow } from './windows.js';
 
 /**
@@ -144,6 +144,25 @@ export function registerCustomerRoutes(
       return null;
     }
     return order;
+  }
+
+  /**
+   * Money actually taken for an order, for working out what a cancellation
+   * costs. The card fee is charged on what was collected, so a retention that
+   * includes it has to know that figure rather than assume the list price.
+   *
+   * Falls back to the authorized amount for a hold that was never captured,
+   * and to zero when there is no payment at all — a cancellation must not fail
+   * because the arithmetic behind the refund could not find a number.
+   */
+  async function capturedCentsFor(orderId: string): Promise<number> {
+    const { data: payment } = await db
+      .from('payments')
+      .select('captured_cents, authorized_cents')
+      .eq('order_id', orderId)
+      .eq('kind', 'primary')
+      .maybeSingle();
+    return payment?.captured_cents ?? payment?.authorized_cents ?? 0;
   }
 
   /**
@@ -388,7 +407,9 @@ export function registerCustomerRoutes(
     // the carrier, and the finished ones decide what money comes back.
     const { data: legs } = await db
       .from('delivery_legs')
-      .select('id, leg, provider, provider_delivery_id, status')
+      // fee_cents rides along because the refund is computed from what the
+      // couriers actually billed, not from a flat guess.
+      .select('id, leg, provider, provider_delivery_id, status, fee_cents')
       .eq('order_id', req.params.id);
 
     const errors: string[] = [];
@@ -454,7 +475,14 @@ export function registerCustomerRoutes(
         })
       : courierEngaged
         ? await payments.voidOrder(req.params.id, 'cancelled by customer after courier assigned', {
-            retainCents: CANCELLATION_FEE_CENTS,
+            // What the aborted job really cost: the carrier's fee on every leg
+            // that reached a courier, plus the card fee Stripe keeps on the
+            // refund. The flat $6 that used to sit here lost about $8 on every
+            // cancelled round trip, and twice that once both legs were out.
+            retainCents: cancellationRetainCents({
+              legs: legs ?? [],
+              capturedCents: await capturedCentsFor(req.params.id),
+            }),
           })
         : await payments.voidOrder(req.params.id, 'cancelled by customer');
 
