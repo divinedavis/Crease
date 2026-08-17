@@ -85,15 +85,25 @@ async function requireInternalKey(req: any, reply: any) {
   }
 }
 
-app.get('/healthz', async () => ({
-  ok: true,
-  providers: chain.active().map((p) => p.name),
-  payments: paymentProvider.name,
-  connect: connectProvider.name,
-  // Reported because a broken push config is otherwise invisible: sends become
-  // no-ops and nothing errors. Health is the one place a deploy check looks.
-  push: push.status(),
-}));
+app.get('/healthz', async (req) => {
+  // The provider/payment/push posture is useful to a deploy check and useless
+  // to a stranger — knowing the mock provider is or isn't live is a recon
+  // signal, nothing more, so only the direct-loopback caller (the deploy's
+  // 127.0.0.1:8011 probe, which nginx never touches so it carries no
+  // X-Forwarded-For) sees it. Anything arriving through the proxy — i.e. the
+  // public internet — gets a bare liveness answer.
+  const viaProxy = req.headers['x-forwarded-for'] !== undefined;
+  if (viaProxy) return { ok: true };
+  return {
+    ok: true,
+    providers: chain.active().map((p) => p.name),
+    payments: paymentProvider.name,
+    connect: connectProvider.name,
+    // Reported because a broken push config is otherwise invisible: sends become
+    // no-ops and nothing errors. Health is the one place a deploy check looks.
+    push: push.status(),
+  };
+});
 
 /**
  * A PaymentIntent for the delivery fee, for the app to settle with Apple Pay
