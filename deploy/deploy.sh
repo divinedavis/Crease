@@ -137,7 +137,7 @@ rm -f "$STAGE"/scripts/e2e*.mjs \
       "$STAGE"/scripts/asc-config.env*
 
 echo "==> uploading"
-ssh "$HOST" "mkdir -p $REMOTE /var/log/crease"
+ssh "$HOST" "mkdir -p $REMOTE /var/log/crease && chown $SERVICE_USER:adm /var/log/crease && chmod 750 /var/log/crease"
 # --delete removes anything on the box that is not in the stage, so every
 # credential that lives only on the droplet has to be named here or a deploy
 # quietly destroys it. secrets/ holds the APNs .p8, which Apple issues exactly
@@ -184,9 +184,24 @@ ssh "$HOST" "cd $REMOTE/services/dispatch && npm ci --omit=dev --ignore-scripts 
 ssh "$HOST" "ln -sfn $REMOTE/services/dispatch/node_modules $REMOTE/node_modules"
 
 # rsync/npm run over SSH as root, so the tree comes back root-owned. Hand it
-# back or the unprivileged service cannot read its own code and .env.
-echo "==> restoring ownership to $SERVICE_USER"
-ssh "$HOST" "chown -R $SERVICE_USER:$SERVICE_USER $REMOTE && chmod 700 $REMOTE/secrets 2>/dev/null; chmod 600 $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local 2>/dev/null; true"
+# Code is root-owned and only group-readable by the service user, so a
+# compromise of the webhook-facing dispatch process (which holds the
+# service-role key) cannot rewrite its own binaries and persist across a restart
+# or a timer run — ProtectSystem=full does not cover /opt, so this ownership
+# split is what confines it. The service user owns only what it must write:
+# Next's runtime cache, its secrets, and its env.
+echo "==> ownership: code root-owned, secrets + runtime cache to $SERVICE_USER"
+ssh "$HOST" "set -e
+  chown -R root:$SERVICE_USER $REMOTE
+  chmod -R u=rwX,g=rX,o= $REMOTE
+  # Next writes its incremental cache here at runtime (revalidatePath); without
+  # a writable subtree a root-owned code tree turns that into an EACCES.
+  mkdir -p $REMOTE/apps/portal/.next/cache
+  chown -R $SERVICE_USER:$SERVICE_USER $REMOTE/apps/portal/.next/cache
+  if [ -d $REMOTE/secrets ]; then chown -R $SERVICE_USER:$SERVICE_USER $REMOTE/secrets; chmod 700 $REMOTE/secrets; fi
+  for f in $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local; do
+    if [ -f \"\$f\" ]; then chown $SERVICE_USER:$SERVICE_USER \"\$f\"; chmod 600 \"\$f\"; fi
+  done"
 
 echo "==> systemd"
 # The sweep units ship here too. They were installed by hand once, which meant a

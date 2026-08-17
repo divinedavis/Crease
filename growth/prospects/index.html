@@ -276,7 +276,7 @@ function shopRow(r) {
         <button data-co ${r.cash_only === true ? 'class="on"' : ''}>Cash only</button>
       </div>
       <textarea data-notes placeholder="Notes — who you spoke to, pricing, objections…">${esc(r.notes ?? '')}</textarea>
-      <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${saveText(r)}</div>
+      <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${esc(saveText(r))}</div>
     </div>` : ''}
   </div>`;
 }
