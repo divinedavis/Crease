@@ -179,6 +179,14 @@ const PENDING_KEY = 'canvassPending';
 const readPending = () => { try { return JSON.parse(localStorage[PENDING_KEY] ?? '{}'); } catch { return {}; } };
 let pending = readPending();
 let authLost = false;
+/* Has a sync attempt actually failed, or are we offline?
+ *
+ * NOT "is anything queued". Every keystroke stages an edit and the push is on a
+ * 700ms debounce, so a queue length above zero is the normal state of typing a
+ * note — warning about it meant the bar sat on screen the entire time someone
+ * was writing, which trains people to ignore it. The bar now speaks only when
+ * the work is genuinely not reaching the server. */
+let syncBlocked = false;
 const pendingCount = () => Object.keys(pending).length;
 const persistPending = () => { localStorage[PENDING_KEY] = JSON.stringify(pending); };
 
@@ -243,11 +251,17 @@ function renderSyncBar() {
   const notice = document.getElementById('syncnotice');
   if (!notice) return;
   const n = pendingCount();
-  notice.hidden = !authLost && !n;
+  const offline = !navigator.onLine;
+  // Only three things are worth interrupting someone mid-canvass for, and all
+  // three mean the same thing: this work is not on the server yet.
+  const stuck = n > 0 && (authLost || syncBlocked || offline);
+  notice.hidden = !stuck;
   notice.className = `notice ${authLost ? 'danger' : 'pend'}`;
-  document.getElementById('syncmsg').textContent = authLost
+  document.getElementById('syncmsg').textContent = !stuck ? '' : authLost
     ? `Signed out — ${n} edit${n === 1 ? '' : 's'} held on this phone, nothing lost. Sign in to sync.`
-    : n ? `${n} edit${n === 1 ? '' : 's'} waiting to sync…` : '';
+    : offline
+    ? `Offline — ${n} edit${n === 1 ? '' : 's'} held on this phone. They'll sync when you're back on.`
+    : `${n} edit${n === 1 ? '' : 's'} couldn't reach the server yet. Still held on this phone.`;
   document.getElementById('resync').hidden = !authLost;
 }
 
@@ -434,6 +448,7 @@ async function flush() {
     const { data: { session } } = await db.auth.getSession();
     if (!session) {
       authLost = true;
+      syncBlocked = true;
       for (const id of Object.keys(pending)) markRow(id, 'queued');
       return;
     }
@@ -455,6 +470,10 @@ async function flush() {
       }
 
       if (!error) {
+        // A write landed, so whatever was blocking us is over. Clearing this on
+        // success (not just on an empty queue) means a run of typing that keeps
+        // the queue non-empty still puts the bar away.
+        syncBlocked = false;
         // Only clear what was actually sent — the person may have typed more
         // into this row while the request was in flight.
         for (const k of Object.keys(sent)) {
@@ -468,6 +487,7 @@ async function flush() {
 
       if (isAuthFail(error) || isNetFail(error)) {
         if (isAuthFail(error)) authLost = true;
+        syncBlocked = true;          // now the bar has something real to say
         markRow(id, 'queued');
         break;                       // hold the rest; the same wall is in front of them
       }
@@ -501,6 +521,8 @@ db.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT') { authLost = true; renderSyncBar(); }
 });
 window.addEventListener('online', () => flush());
+// Going offline is itself a reason to raise the bar; nothing else fires here.
+window.addEventListener('offline', () => renderSyncBar());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) flush(); });
 setInterval(() => { if (pendingCount()) flush(); }, 20000);
 
