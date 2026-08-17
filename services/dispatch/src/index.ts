@@ -88,12 +88,13 @@ async function requireInternalKey(req: any, reply: any) {
 app.get('/healthz', async (req) => {
   // The provider/payment/push posture is useful to a deploy check and useless
   // to a stranger — knowing the mock provider is or isn't live is a recon
-  // signal, nothing more, so only the direct-loopback caller (the deploy's
-  // 127.0.0.1:8011 probe, which nginx never touches so it carries no
-  // X-Forwarded-For) sees it. Anything arriving through the proxy — i.e. the
-  // public internet — gets a bare liveness answer.
-  const viaProxy = req.headers['x-forwarded-for'] !== undefined;
-  if (viaProxy) return { ok: true };
+  // signal, nothing more. Only the direct-loopback caller sees it: the deploy's
+  // probe hits 127.0.0.1:8011 so its Host is the loopback address, while nginx
+  // rewrites Host to the public domain on every proxied request. (The /healthz
+  // nginx block does not forward X-Forwarded-For, so Host is the reliable tell.)
+  const host = req.headers.host ?? '';
+  const loopback = host.startsWith('127.0.0.1') || host.startsWith('localhost') || host.startsWith('[::1]');
+  if (!loopback) return { ok: true };
   return {
     ok: true,
     providers: chain.active().map((p) => p.name),
