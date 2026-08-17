@@ -105,7 +105,16 @@
   .editor .seg button { font-size: 13px; }
   .savestate { font-size: 12px; color: var(--muted); text-align: right; min-height: 16px; }
   .savestate.ok { color: var(--live-fg); }
+  .savestate.queued { color: var(--warn-fg); }
   .empty { color: var(--muted); text-align: center; padding: 32px 12px; }
+
+  /* The unsynced-work bar. Loud on purpose: an edit that only lives in this
+     phone's localStorage is work nobody else can see yet. */
+  .notice.pend { background: var(--warn-bg); color: var(--warn-fg); }
+  .syncbar form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin-top: 8px; }
+  @media (max-width: 520px) { .syncbar form { grid-template-columns: 1fr; } }
+  .syncbar input { min-height: 40px; }
+  .syncbar button { min-height: 40px; }
 </style>
 </head>
 <body>
@@ -146,14 +155,37 @@ const persistUi = () => {
 const esc = (s) => (s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/* ---------------------------------------------------------------------------
+ * Autosave is a two-step: every edit lands in a durable local queue first, and
+ * the network write is a retry against that queue. The old one-shot update
+ * meant any failure — and the common one is the access token expiring while
+ * the page sits open between shops, after which supabase-js sends the anon key
+ * and Postgres answers "permission denied for table prospects" (42501) — threw
+ * away what was typed at the counter. Nothing is lost now: the queue survives a
+ * reload, a dead cell signal, and a signed-out session, and drains when the
+ * session comes back.
+ * ------------------------------------------------------------------------ */
+const PENDING_KEY = 'canvassPending';
+const readPending = () => { try { return JSON.parse(localStorage[PENDING_KEY] ?? '{}'); } catch { return {}; } };
+let pending = readPending();
+let authLost = false;
+const pendingCount = () => Object.keys(pending).length;
+const persistPending = () => { localStorage[PENDING_KEY] = JSON.stringify(pending); };
+
 async function main() {
   const { data: { session } } = await db.auth.getSession();
   if (!session) return renderLogin();
+  authLost = false;
+  localStorage.canvassEmail = session.user.email ?? '';
   const { data, error } = await db.from('prospects').select('*').limit(1000);
   if (error) return renderLogin(`Couldn't load the list: ${error.message}`);
   if (!data.length) return renderLogin('Signed in, but this account cannot see the canvass list.');
   rows = data;
+  // Unsynced local edits outrank the server copy: they're newer by definition,
+  // and they're what the person believes they recorded.
+  for (const r of rows) if (pending[r.id]) Object.assign(r, pending[r.id]);
   render();
+  flush();
 }
 
 function renderLogin(err) {
@@ -173,6 +205,56 @@ function renderLogin(err) {
       password: document.getElementById('pw').value,
     });
     error ? renderLogin(error.message) : main();
+  };
+}
+
+/* The list stays on screen when the session dies — the re-auth is a bar above
+ * it, not a trip back to the login page. Losing the working view mid-canvass
+ * (which shop was open, what was typed) is its own kind of data loss.
+ *
+ * Built once per render and afterwards only *updated* — text swapped, pieces
+ * hidden. An innerHTML rewrite here would destroy the password field mid-typing
+ * (every keystroke in a note updates this bar), and a blur handler makes that
+ * happen at exactly the wrong moment. */
+function syncBarHTML() {
+  return `
+    <div class="notice" id="syncnotice" hidden>
+      <span id="syncmsg"></span>
+      <form id="resync" hidden>
+        <input id="reemail" type="email" autocomplete="username" placeholder="Email"
+               value="${esc(localStorage.canvassEmail ?? '')}" required />
+        <input id="repw" type="password" autocomplete="current-password" placeholder="Password" required />
+        <button class="primary">Sync</button>
+      </form>
+    </div>`;
+}
+
+function renderSyncBar() {
+  const notice = document.getElementById('syncnotice');
+  if (!notice) return;
+  const n = pendingCount();
+  notice.hidden = !authLost && !n;
+  notice.className = `notice ${authLost ? 'danger' : 'pend'}`;
+  document.getElementById('syncmsg').textContent = authLost
+    ? `Signed out — ${n} edit${n === 1 ? '' : 's'} held on this phone, nothing lost. Sign in to sync.`
+    : n ? `${n} edit${n === 1 ? '' : 's'} waiting to sync…` : '';
+  document.getElementById('resync').hidden = !authLost;
+}
+
+function wireSyncBar() {
+  const form = document.getElementById('resync');
+  if (!form) return;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await db.auth.signInWithPassword({
+      email: document.getElementById('reemail').value.trim(),
+      password: document.getElementById('repw').value,
+    });
+    if (error) { alert(error.message); return; }
+    localStorage.canvassEmail = document.getElementById('reemail').value.trim();
+    authLost = false;
+    renderSyncBar();
+    flush();
   };
 }
 
@@ -203,6 +285,7 @@ function render() {
       </div>
       <button id="signout">Sign out</button>
     </header>
+    <div class="syncbar" id="syncbar">${syncBarHTML()}</div>
     <div class="filters">
       <div class="seg" id="kindseg">
         <button data-k="dry_cleaner" ${ui.kind === 'dry_cleaner' ? 'class="on"' : ''}>Dry cleaners · ${rows.filter((r) => r.kind === 'dry_cleaner').length}</button>
@@ -284,6 +367,7 @@ function shopRow(r) {
 const saveText = (r) =>
   r._save === 'saving' ? 'Saving…' :
   r._save === 'ok' ? 'Saved' :
+  r._save === 'queued' ? 'Saved on this phone — will sync' :
   r._save === 'err' ? `Not saved: ${r._saveMsg ?? ''}` : '';
 
 /**
@@ -295,7 +379,8 @@ function setSaveState(r, s, msg) {
   r._save = s;
   r._saveMsg = msg;
   const el = document.querySelector(`.shop[data-id="${r.id}"] [data-save]`);
-  if (el) { el.className = `savestate ${s === 'ok' ? 'ok' : ''}`; el.textContent = saveText(r); }
+  if (el) { el.className = `savestate ${s === 'ok' ? 'ok' : s === 'queued' ? 'queued' : ''}`;
+            el.textContent = saveText(r); }
   if (s === 'ok') setTimeout(() => {
     if (r._save !== 'ok') return;
     r._save = null;
@@ -304,19 +389,121 @@ function setSaveState(r, s, msg) {
   }, 2500);
 }
 
-async function save(r, patch) {
-  setSaveState(r, 'saving');
-  const { error } = await db.from('prospects')
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('id', r.id);
-  if (error) { setSaveState(r, 'err', error.message); return false; }
+/**
+ * Record an edit. Applies it to the row on screen, writes it to the durable
+ * queue, and returns — no network. Every keystroke can afford this, which is
+ * the point: the note is safe before the debounce fires, not after.
+ */
+function stage(r, patch) {
   Object.assign(r, patch);
-  setSaveState(r, 'ok');
-  return true;
+  pending[r.id] = { ...pending[r.id], ...patch, updated_at: new Date().toISOString() };
+  persistPending();
+  setSaveState(r, navigator.onLine && !authLost ? 'saving' : 'queued');
+  renderSyncBar();
 }
 
+// Retryable: the session died, or the phone is between cell towers. The queue
+// keeps the edit and tries again. Anything else (a constraint, a rejected
+// value) will fail identically forever, so it must not wedge the queue.
+const isAuthFail = (e) =>
+  e.code === '42501' || e.code === 'PGRST301' || e.code === '401' ||
+  /jwt|token|permission denied|not authoriz/i.test(e.message ?? '');
+const isNetFail = (e) => !e.code && /fetch|network|load failed|timeout|offline/i.test(e.message ?? '');
+
+let flushing = false, flushAgain = false;
+
+/** Drain the queue oldest-first. Safe to call from anywhere, any number of times. */
+async function flush() {
+  if (flushing) { flushAgain = true; return; }
+  flushing = true;
+  let hardFailed = false;
+  try {
+    if (!pendingCount()) return;
+    // getSession refreshes an expired access token; without this the write
+    // goes out under the anon key and comes back 42501.
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) {
+      authLost = true;
+      for (const id of Object.keys(pending)) markRow(id, 'queued');
+      return;
+    }
+    authLost = false;
+
+    for (const id of Object.keys(pending)) {
+      const sent = { ...pending[id] };
+      // select('id') so a policy refusal is visible: RLS denies an UPDATE by
+      // matching no rows, not by erroring, and a silently dropped edit is the
+      // failure this whole queue exists to prevent.
+      const { data: hit, error } = await db.from('prospects').update(sent).eq('id', id).select('id');
+
+      if (!error && hit && hit.length === 0) {
+        delete pending[id];
+        persistPending();
+        hardFailed = true;
+        markRow(id, 'err', 'this sign-in cannot edit the canvass list');
+        continue;
+      }
+
+      if (!error) {
+        // Only clear what was actually sent — the person may have typed more
+        // into this row while the request was in flight.
+        for (const k of Object.keys(sent)) {
+          if (pending[id] && pending[id][k] === sent[k]) delete pending[id][k];
+        }
+        if (pending[id] && !Object.keys(pending[id]).filter((k) => k !== 'updated_at').length) delete pending[id];
+        persistPending();
+        markRow(id, pending[id] ? 'queued' : 'ok');
+        continue;
+      }
+
+      if (isAuthFail(error) || isNetFail(error)) {
+        if (isAuthFail(error)) authLost = true;
+        markRow(id, 'queued');
+        break;                       // hold the rest; the same wall is in front of them
+      }
+
+      // Permanently rejected: drop it and show what the server actually holds,
+      // rather than leaving a lie on screen.
+      delete pending[id];
+      persistPending();
+      hardFailed = true;
+      markRow(id, 'err', error.message);
+      const { data } = await db.from('prospects').select('*').eq('id', id).maybeSingle();
+      const r = rows.find((x) => x.id === id);
+      if (data && r) Object.assign(r, data);
+    }
+  } finally {
+    flushing = false;
+    renderSyncBar();
+    if (hardFailed) render();
+    if (flushAgain) { flushAgain = false; flush(); }
+  }
+}
+
+function markRow(id, state, msg) {
+  const r = rows.find((x) => x.id === id);
+  if (r) setSaveState(r, state, msg);
+}
+
+// Every plausible way the session or the signal comes back is a chance to drain.
+db.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') { authLost = false; flush(); }
+  if (event === 'SIGNED_OUT') { authLost = true; renderSyncBar(); }
+});
+window.addEventListener('online', () => flush());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) flush(); });
+setInterval(() => { if (pendingCount()) flush(); }, 20000);
+
 function wire() {
-  document.getElementById('signout').onclick = async () => { await db.auth.signOut(); renderLogin(); };
+  wireSyncBar();
+  renderSyncBar();
+  document.getElementById('signout').onclick = async () => {
+    // Unsynced work is not the sign-out button's to throw away; warn, and keep
+    // the queue either way so the next sign-in drains it.
+    if (pendingCount() && !confirm(`${pendingCount()} edit(s) haven't synced yet. Sign out anyway? They'll sync next time you sign in on this phone.`)) return;
+    await db.auth.signOut();
+    renderLogin();
+  };
   document.getElementById('kindseg').onclick = (e) => {
     const k = e.target.dataset?.k;
     if (k) { ui.kind = k; persistUi(); render(); }
@@ -341,13 +528,15 @@ function wire() {
   for (const shopEl of document.querySelectorAll('.shop')) {
     const r = rows.find((x) => x.id === shopEl.dataset.id);
 
-    shopEl.querySelector('[data-visit]').onchange = async (e) => {
-      const ok = await save(r, {
+    shopEl.querySelector('[data-visit]').onchange = (e) => {
+      // The tap sticks immediately — the queue owns getting it to the server —
+      // so the box never flips back under the person's thumb.
+      stage(r, {
         visited: e.target.checked,
         visited_at: e.target.checked ? new Date().toISOString() : null,
       });
-      if (!ok) e.target.checked = !e.target.checked;
-      else render();
+      render();
+      flush();
     };
 
     shopEl.querySelector('[data-expand]').onclick = () => {
@@ -360,31 +549,43 @@ function wire() {
       const k = e.target.dataset?.out;
       if (!k) return;
       // tapping the active outcome clears it — a mis-tap must be undoable
-      save(r, { outcome: r.outcome === k ? null : k }).then(() => render());
+      stage(r, { outcome: r.outcome === k ? null : k });
+      render();
+      flush();
     });
 
     shopEl.querySelector('[data-fsseg]')?.addEventListener('click', (e) => {
       const v = e.target.dataset?.fs;
       if (v === undefined) return;
       const next = String(r.full_service) === v ? null : v === 'true';
-      save(r, { full_service: next }).then(() => render());
+      stage(r, { full_service: next });
+      render();
+      flush();
     });
 
     shopEl.querySelector('[data-flagseg]')?.addEventListener('click', (e) => {
       // Independent toggles, not a radio group: a shop can be both.
       // Each toggles true <-> unknown; the negative is just the default.
       if (e.target.dataset?.oa !== undefined) {
-        save(r, { own_app: r.own_app === true ? null : true }).then(() => render());
+        stage(r, { own_app: r.own_app === true ? null : true });
       } else if (e.target.dataset?.co !== undefined) {
-        save(r, { cash_only: r.cash_only === true ? null : true }).then(() => render());
-      }
+        stage(r, { cash_only: r.cash_only === true ? null : true });
+      } else return;
+      render();
+      flush();
     });
 
     const notes = shopEl.querySelector('[data-notes]');
     if (notes) {
       let t;
-      notes.oninput = () => { clearTimeout(t); t = setTimeout(() => save(r, { notes: notes.value || null }), 700); };
-      notes.onblur = () => { clearTimeout(t); save(r, { notes: notes.value || null }); };
+      // Staged on every keystroke (durable, local, free), pushed on a debounce.
+      // A phone that dies mid-sentence loses nothing.
+      notes.oninput = () => {
+        stage(r, { notes: notes.value || null });
+        clearTimeout(t);
+        t = setTimeout(flush, 700);
+      };
+      notes.onblur = () => { clearTimeout(t); stage(r, { notes: notes.value || null }); flush(); };
     }
   }
 }
