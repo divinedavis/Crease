@@ -21,7 +21,31 @@ const SERVICES = [
   { id: 'press', label: 'Press only' },
 ];
 
-export function OrderForm({ shops }: { shops: ShopOption[] }) {
+const TIER_IDS = new Set(TIERS.map((t) => t.id));
+const SERVICE_IDS = new Set(SERVICES.map((s) => s.id));
+
+export function OrderForm({
+  shops,
+  initialTier = '',
+  initialService = '',
+  initialAddress = '',
+  initialWhen = '',
+}: {
+  shops: ShopOption[];
+  initialTier?: string;
+  initialService?: string;
+  initialAddress?: string;
+  initialWhen?: string;
+}) {
+  // Validated, not trusted: these arrive in a URL anybody can edit, and an
+  // unknown value would either select nothing or post a tier the dispatcher
+  // has no price for.
+  const tier = TIER_IDS.has(initialTier) ? initialTier : 'round_trip';
+  const service = SERVICE_IDS.has(initialService) ? initialService : 'dry_clean';
+  // A return carries no cleaning: the clothes are at the shop already and paid
+  // for, so asking what is in the bag is asking about a bag that isn't there.
+  const carriesCleaning = tier !== 'return_only';
+
   const [state, submit, sending] = useActionState<RequestResult | null, FormData>(
     requestPickup,
     null,
@@ -63,6 +87,7 @@ export function OrderForm({ shops }: { shops: ShopOption[] }) {
         name="address"
         required
         autoComplete="street-address"
+        defaultValue={initialAddress}
         placeholder="Pickup address in Brooklyn"
         aria-label="Pickup address"
       />
@@ -75,7 +100,7 @@ export function OrderForm({ shops }: { shops: ShopOption[] }) {
       <label className="fine" htmlFor="service_tier">
         What do you need?
       </label>
-      <select id="service_tier" name="service_tier" defaultValue="round_trip" aria-label="Service tier">
+      <select id="service_tier" name="service_tier" defaultValue={tier} aria-label="Service tier">
         {TIERS.map((t) => (
           <option key={t.id} value={t.id}>
             {t.label} · {t.price}
@@ -86,7 +111,7 @@ export function OrderForm({ shops }: { shops: ShopOption[] }) {
       <label className="fine" htmlFor="service_type">
         Which service?
       </label>
-      <select id="service_type" name="service_type" defaultValue="dry_clean" aria-label="Service">
+      <select id="service_type" name="service_type" defaultValue={service} aria-label="Service">
         {SERVICES.map((s) => (
           <option key={s.id} value={s.id}>
             {s.label}
@@ -111,13 +136,16 @@ export function OrderForm({ shops }: { shops: ShopOption[] }) {
         </>
       )}
 
-      <input
-        name="items_note"
-        placeholder="Roughly what's in the bag — e.g. 2 shirts, a suit, one comforter"
-        aria-label="What is in the bag"
-      />
+      {carriesCleaning && (
+        <input
+          name="items_note"
+          placeholder="Roughly what's in the bag — e.g. 2 shirts, a suit, one comforter"
+          aria-label="What is in the bag"
+        />
+      )}
       <input
         name="preferred_when"
+        defaultValue={initialWhen}
         placeholder="When suits you? e.g. tomorrow morning"
         aria-label="Preferred pickup time"
       />

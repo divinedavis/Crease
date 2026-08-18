@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://creasenyc.com'),
   title: 'Crease — Dry cleaning, picked up and delivered',
   description:
     'A courier collects from your door, your neighborhood cleaner does the work, and everything comes back pressed. Live in Brooklyn — check your address.',

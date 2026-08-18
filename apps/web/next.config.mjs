@@ -88,6 +88,15 @@ export default {
   // Nothing gains from telling a scanner which framework version to look up.
   poweredByHeader: false,
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      {
+        // Marketing images and QR codes change when the site is redeployed and
+        // not otherwise. Cached here rather than in nginx so the rule ships
+        // with the files it applies to.
+        source: '/assets/:file*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+    ];
   },
 };

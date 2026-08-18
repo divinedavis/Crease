@@ -23,7 +23,21 @@ export const revalidate = 300;
  * person who wants a pickup on Tuesday; an email on a waitlist is a person who
  * once read a page.
  */
-export default async function OrderPage() {
+export default async function OrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // The home page sends people here having already chosen — a tier off the
+  // price list, a service off the tiles, an address they already typed. Losing
+  // that on the way is how somebody answers the same question twice and books
+  // the wrong thing on the second try.
+  const params = await searchParams;
+  const one = (k: string) => {
+    const v = params[k];
+    return (Array.isArray(v) ? v[0] : v) ?? '';
+  };
+
   const db = serviceClient();
   const { data: shops } = db
     ? await db.from('cleaners').select('id, name, line1').eq('active', true).order('name')
@@ -50,7 +64,13 @@ export default async function OrderPage() {
               courier collects, and your neighborhood cleaner prices exactly what&rsquo;s in the
               bag — you approve the total before anything is charged.
             </p>
-            <OrderForm shops={shops ?? []} />
+            <OrderForm
+              shops={shops ?? []}
+              initialTier={one('tier')}
+              initialService={one('service')}
+              initialAddress={one('address')}
+              initialWhen={one('when')}
+            />
           </div>
         </section>
       </main>
