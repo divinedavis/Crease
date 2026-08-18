@@ -20,6 +20,7 @@
 		57924740791051A3E9A53B82 /* AddressSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D63B98765EE93622090BA42 /* AddressSearch.swift */; };
 		6194AC704D44CB772D9F326A /* ServiceOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA2545435CF9E12FDF457B0 /* ServiceOption.swift */; };
 		62CAA121325D196E5626A169 /* OrderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB696D3EE6A52919F9E72D81 /* OrderStore.swift */; };
+		631DC30D9566B139523EED66 /* CheckoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B77131F7935B9CB915FE644 /* CheckoutView.swift */; };
 		65248D63B9B13189C67F76B9 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC7A8FDD347AF1823F8CCFA9 /* Session.swift */; };
 		669F7E8131B91DF7C219E8DC /* KeychainAuthStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025FFB663606E0CE1E06BADB /* KeychainAuthStorage.swift */; };
 		707D1EB4C562655AED6F23C7 /* LocationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D2741AE4AAB43D7ED21403 /* LocationProvider.swift */; };
@@ -95,6 +96,7 @@
 		94CCCF60E110ACED75AAD19D /* ServiceTierCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTierCopyTests.swift; sourceTree = "<group>"; };
 		96C6E03832EC16E4C2D5EE2C /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
 		9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersView.swift; sourceTree = "<group>"; };
+		9B77131F7935B9CB915FE644 /* CheckoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutView.swift; sourceTree = "<group>"; };
 		AB696D3EE6A52919F9E72D81 /* OrderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderStore.swift; sourceTree = "<group>"; };
 		C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyTrackTests.swift; sourceTree = "<group>"; };
 		C57D978D1F2305CEEC98E55E /* BookPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookPickupView.swift; sourceTree = "<group>"; };
@@ -106,7 +108,7 @@
 		F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleReturnView.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_7C3E3D97-B167-480D-9F1A-0C047BD550DF" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_2BA37CCB-5C9F-4D75-A81C-1ACBABD85B74" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +196,7 @@
 				D432DFD06B6B7CA0BAE6AD67 /* AddressEntryView.swift */,
 				7D63B98765EE93622090BA42 /* AddressSearch.swift */,
 				C57D978D1F2305CEEC98E55E /* BookPickupView.swift */,
+				9B77131F7935B9CB915FE644 /* CheckoutView.swift */,
 				FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */,
 				65CDD7EB235F4833E4AB572E /* PinConfirmView.swift */,
 				5BAC00BF5438D954783BADAB /* ServiceMenuView.swift */,
@@ -233,10 +236,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_6B8E684C-43E5-4DD4-935A-D591054B4F38" /* ios */ = {
+		"TEMP_E3A62F19-61E9-4C91-A464-DC02E49E1974" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_7C3E3D97-B167-480D-9F1A-0C047BD550DF" /* Secrets.xcconfig */,
+				"TEMP_2BA37CCB-5C9F-4D75-A81C-1ACBABD85B74" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -375,6 +378,7 @@
 				B7523734AA73A0034651B3E6 /* BiometricAuth.swift in Sources */,
 				CE3DA935F82E416A86E57774 /* BookPickupView.swift in Sources */,
 				1D902640E8721BA432092439 /* Checkout.swift in Sources */,
+				631DC30D9566B139523EED66 /* CheckoutView.swift in Sources */,
 				5315BCF511CB4837D1B45042 /* CleanerPickerView.swift in Sources */,
 				92B390FAF0CED6D747E33C1B /* CreaseApp.swift in Sources */,
 				FC60CCABC97DB389285ED304 /* DispatchAPI.swift in Sources */,
@@ -495,7 +499,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C3E3D97-B167-480D-9F1A-0C047BD550DF" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_2BA37CCB-5C9F-4D75-A81C-1ACBABD85B74" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -644,7 +648,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C3E3D97-B167-480D-9F1A-0C047BD550DF" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_2BA37CCB-5C9F-4D75-A81C-1ACBABD85B74" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

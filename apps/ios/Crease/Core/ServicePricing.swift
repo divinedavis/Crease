@@ -31,6 +31,23 @@ enum ServicePricing {
         lines.reduce(0) { $0 + lineTotalCents($1.item, entered: $1.entered) }
     }
 
+    /// The headroom the card is held for above the estimate.
+    ///
+    /// Mirrors orders.approval_threshold_cents, whose column default this is.
+    /// If that default moves, move this with it — the number is shown to the
+    /// customer at checkout, and a screen promising a smaller hold than Stripe
+    /// then asks for is worse than not mentioning it at all.
+    static let approvalThresholdCents = 1500
+
+    /// What Stripe is asked to authorize: the estimate plus room for the shop
+    /// to find a sock. A mirror of authorizationAmount in
+    /// packages/payments/src/types.ts — the app has to show this number
+    /// because Stripe's own sheet puts it on the Pay button, and a customer
+    /// meeting it there for the first time reads it as an overcharge.
+    static func holdCents(total: Int, threshold: Int = approvalThresholdCents) -> Int {
+        min(Int((Double(total) * 1.25).rounded(.up)), total + threshold)
+    }
+
     /// Whether the weight floor — not the bag — is setting this line's price.
     /// The screen says so where it happens, because "why is 8 lb $33.75" is a
     /// question best answered before it is asked.

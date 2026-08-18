@@ -419,13 +419,22 @@ final class CreaseUITests: XCTestCase {
         }
         home.tap()
 
-        // "Book a pickup" opened this flow; the confirm button carries a price,
-        // which is what tells the two apart.
-        let confirm = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH 'Book ' AND label CONTAINS '$'"))
+        // "Book a pickup" opened this flow; the continue button carries the
+        // whole price, which is what tells the two apart.
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
             .firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 15), "booking must offer a priced confirm button")
-        confirm.tap()
+        XCTAssertTrue(proceed.waitForExistence(timeout: 15), "booking must offer a priced continue button")
+        proceed.tap()
+
+        // The bill, before any money moves. One charge covers the cleaning and
+        // the couriers, so both have to be on screen before the card is taken.
+        XCTAssertTrue(app.navigationBars["Checkout"].waitForExistence(timeout: 10),
+                      "continuing must reach an itemised checkout, not a charge")
+        let pay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Pay $'")).firstMatch
+        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced pay button")
+        attach(app, "checkout")
+        pay.tap()
 
         // Stripe mints the intent and loads the sheet over the network, so this
         // is slow by nature. It either arrives or the flow is dead — which is
@@ -438,18 +447,17 @@ final class CreaseUITests: XCTestCase {
             || app.staticTexts["Card information"].waitForExistence(timeout: 5)
         attach(app, "payment-sheet")
 
-        // Stripe's sheet covers the bottom of the screen, and what shows above
-        // it used to be the tier list — still offering the choice the customer
-        // had just made, and saying nothing about what the Pay button charges
-        // for. The review has to survive there, at the top, where the sheet
-        // cannot reach.
+        // Stripe's sheet grows from the bottom by an amount only Stripe decides,
+        // so the bill lives at the top of a screen of its own. It has to still
+        // be readable with the sheet up — that is the whole reason checkout is
+        // not a card floating over the map.
         XCTAssertTrue(
-            app.staticTexts["Review your order"].waitForExistence(timeout: 10),
-            "the order review must be visible behind the payment sheet"
+            app.staticTexts["Total"].waitForExistence(timeout: 10),
+            "the itemised total must be visible behind the payment sheet"
         )
         XCTAssertTrue(
-            app.staticTexts["Courier fee"].exists,
-            "the review must name what the charge actually buys"
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'courier'")).firstMatch.exists,
+            "the bill must name the courier line, not just a total"
         )
 
         XCTAssertTrue(

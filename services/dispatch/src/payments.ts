@@ -141,11 +141,36 @@ export class PaymentService {
     return amount;
   }
 
+  /**
+   * The single hold that covers the whole order.
+   *
+   * It used to authorize — and immediately capture — the delivery fee alone,
+   * which made the cleaning a second charge the customer met after their
+   * clothes had gone: the intake capture asked for a total the hold could not
+   * cover, threw OverAuthorization, and every order landed in the approval
+   * flow to be charged again. Two payments for one errand, and the booking
+   * screen said "cleaning billed separately by the shop" to explain a bill the
+   * shop never sent.
+   *
+   * Now it holds the estimate plus the fee plus capped headroom and captures
+   * the real total once the bag is counted, which is what settleIntake was
+   * always written for. Manual capture, so the money is only reserved until
+   * somebody has actually looked in the bag.
+   */
   async createDeliveryPaymentIntent(orderId: string) {
     const order = await this.loadOrder(orderId);
 
     // Price the real route before charging for it, not after.
-    const amount = await this.pinDeliveryFee(order, orderId, { reprice: true });
+    const fee = await this.pinDeliveryFee(order, orderId, { reprice: true });
+
+    // The estimate is what the customer picked off the shop's price list. Zero
+    // is legitimate — a bag handed over to be priced at the counter — and the
+    // headroom is what makes that case work without a second charge.
+    const cleaning = order.estimate_subtotal_cents ?? 0;
+    const amount = authorizationAmount(
+      cleaning + fee + (order.service_fee_cents ?? 0),
+      order.approval_threshold_cents,
+    );
 
     // Ask before writing. The upsert below stamps 'requires_payment_method',
     // so a check made after it can only ever see that — which is how re-tapping
@@ -162,7 +187,7 @@ export class PaymentService {
       if (['authorized', 'captured'].includes(status) || paid.state.providerStatus === 'processing') {
         // Don't hand back a live client secret for an already-settled intent —
         // the app only needs the alreadyPaid flag to skip to confirmation.
-        return { clientSecret: '', amountCents: amount, alreadyPaid: true };
+        return { clientSecret: '', amountCents: amount, feeCents: fee, alreadyPaid: true };
       }
       // Money that was taken and given back leaves a row whose refs point at a
       // real charge. Past the provider's idempotency window the upsert below
@@ -198,7 +223,10 @@ export class PaymentService {
       amountCents: amount,
       currency: 'usd',
       description: `Crease ${order.service_tier ?? 'delivery'} — order ${order.short_code}`,
-      captureMethod: 'immediate',
+      // Held, not taken. The shop has not opened the bag yet, and capturing a
+      // total nobody has verified is how a customer ends up chasing a refund
+      // for a shirt they never sent.
+      captureMethod: 'manual',
     });
 
     await this.db
@@ -210,8 +238,8 @@ export class PaymentService {
       })
       .eq('id', row.id);
 
-    this.log.info({ orderId, amount }, 'delivery payment intent created');
-    return { clientSecret: state.clientSecret, amountCents: amount, alreadyPaid: false };
+    this.log.info({ orderId, hold: amount, fee, cleaning }, 'order hold created');
+    return { clientSecret: state.clientSecret, amountCents: amount, feeCents: fee, alreadyPaid: false };
   }
 
   /**

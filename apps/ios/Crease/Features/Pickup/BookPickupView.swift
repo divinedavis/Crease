@@ -38,6 +38,9 @@ struct BookPickupView: View {
     /// for per-piece services, pounds for per-pound ones.
     @State private var quantities: [UUID: Double] = [:]
     @State private var choosingItems = false
+    /// The checkout screen. Booking is two steps now: choose, then see the
+    /// whole bill before any money moves.
+    @State private var reviewing = false
     @StateObject private var checkout = Checkout()
     @State private var draft: Draft?
     /// Whether this screen is still the one presented.
@@ -81,6 +84,11 @@ struct BookPickupView: View {
     /// something is picked — and zero is honest there, not a quote of free.
     private var estimateCents: Int { ServicePricing.subtotalCents(declaredLines) }
 
+    /// One charge covers both halves: Crease is merchant of record and pays
+    /// the shop afterwards, on whichever rail they chose. So this is the
+    /// number on the button, not the courier fee it used to show.
+    private var totalCents: Int { estimateCents + selected.priceCents }
+
     /// The order this screen already created, and the choice it was created
     /// for. Kept so a retry can pay for it instead of making another, and
     /// discarded as soon as the choice changes — the price and the shop are
@@ -96,16 +104,6 @@ struct BookPickupView: View {
             map
             VStack(spacing: 10) {
                 header
-                // Anchored to the top, not appended to the options sheet: the
-                // payment sheet covers the bottom of the screen by an amount
-                // only Stripe decides (it grows with each wallet row it
-                // offers), so anything bottom-anchored is behind it exactly
-                // when it needs to be read. The top is the one band that
-                // cannot be covered.
-                if submitting, let cleaner {
-                    reviewCard(cleaner: cleaner)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
             }
             .animation(.easeInOut(duration: 0.25), value: submitting)
         }
@@ -120,6 +118,28 @@ struct BookPickupView: View {
                 frameRoute()
             }
             .presentationDetents([.medium, .large])
+        }
+        // Full screen, not a sheet: Stripe's own sheet presents over whatever is
+        // topmost and grows to fit the wallets it offers, so the bill has to
+        // own a screen whose top it cannot reach.
+        .fullScreenCover(isPresented: $reviewing) {
+            CheckoutView(
+                shopName: cleaner?.name ?? "This shop",
+                serviceLabel: serviceKind.label,
+                lines: declaredLines,
+                cleaningCents: estimateCents,
+                deliveryLabel: "\(selected.name) courier",
+                deliveryFeeCents: selected.priceCents,
+                // Both are always zero today. Rendered from the order's own
+                // fields rather than hidden, so the day either becomes real
+                // the checkout does not have to be rewritten to say so.
+                serviceFeeCents: 0,
+                taxCents: 0,
+                holdCents: ServicePricing.holdCents(total: estimateCents + selected.priceCents),
+                working: submitting
+            ) {
+                Task { await book() }
+            }
         }
         .sheet(isPresented: $choosingItems) {
             ServiceMenuView(
@@ -447,11 +467,13 @@ struct BookPickupView: View {
                 .padding(.top, 12)
 
             Button {
-                Task { await book() }
+                reviewing = true
             } label: {
-                // No "Booking…" state here any more: these controls are
-                // replaced wholesale while a booking is in flight.
-                Text("Book \(selected.name) · \(selected.priceCents.asMoney)")
+                // The whole bill, not the courier fee. This button used to
+                // charge a card for $29.95 while the customer was also, in the
+                // same transaction, paying for the cleaning — a number that
+                // appeared nowhere until their statement.
+                Text("Continue · \(totalCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -472,11 +494,11 @@ struct BookPickupView: View {
         let shop = cleaner?.name ?? "the shop"
         switch selected.id {
         case "pickup_only":
-            return "Covers the courier to \(shop) only. You pay them for the cleaning and collect it from their counter when it's done."
+            return "One payment covers the courier to \(shop) and their cleaning. You collect it from their counter when it's done."
         case "return_only":
-            return "Covers the courier back to you only — you drop the bag at \(shop). You pay them for the cleaning, and pick a delivery time once it's ready."
+            return "You drop the bag at \(shop). One payment covers their cleaning and the courier back — pick a delivery time once it's ready."
         default:
-            return "Covers pickup and delivery only. You pay \(shop) for the cleaning. They'll tell you when it's ready and you choose a delivery time."
+            return "One payment covers pickup, delivery and \(shop)'s cleaning. They'll tell you when it's ready and you choose a delivery time."
         }
     }
 
@@ -777,6 +799,7 @@ struct BookPickupView: View {
                 // screen that is already going away can be dropped, and iOS
                 // never offers that alert a second time.
                 await PushRegistrar.shared.askAfterBooking()
+                reviewing = false
                 dismiss()
             }
         case let .failed(message):

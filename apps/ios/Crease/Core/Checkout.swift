@@ -90,10 +90,16 @@ final class Checkout: ObservableObject {
             // also how a booking whose confirm call was lost gets finished.
             charged = intent.alreadyPaid == true
 
-            // Stop before the sheet if the price moved. Only upward: a server
-            // price at or below what they tapped is theirs to have, and an
-            // order already paid has no price left to renegotiate.
-            if !charged, let priced = intent.amountCents, priced > agreedCents {
+            // Stop before the sheet if the courier price moved. Compared
+            // against the fee, never the hold: the hold is the estimate plus
+            // headroom and is larger by design, so comparing it here would
+            // report every ordinary booking as a reprice and never present a
+            // sheet at all.
+            //
+            // Only upward: a server price at or below what they tapped is
+            // theirs to have, and an order already paid has no price left to
+            // renegotiate.
+            if !charged, let priced = intent.feeCents, priced > agreedCents {
                 state = .repriced(priced)
                 return nil
             }
@@ -195,7 +201,13 @@ final class Checkout: ObservableObject {
         let ok: Bool?
         let clientSecret: String?
         let publishableKey: String?
+        /// What Stripe is asked to hold: the estimate, the courier fee and
+        /// capped headroom. This is the figure the payment sheet shows.
         let amountCents: Int?
+        /// The courier fee alone, priced against the real route. Separate from
+        /// the hold because only this one is comparable to the price the
+        /// customer tapped — the hold is deliberately larger.
+        let feeCents: Int?
         let alreadyPaid: Bool?
         let error: String?
     }
