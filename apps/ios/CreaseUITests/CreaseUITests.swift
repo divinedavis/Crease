@@ -105,6 +105,41 @@ final class CreaseUITests: XCTestCase {
         )
     }
 
+    /// The privacy cover has to come back down.
+    ///
+    /// It is an opaque window the app raises over itself whenever it stops
+    /// being frontmost, and it used to be lowered on a SwiftUI `scenePhase`
+    /// change — a signal another window in front of the app can stop
+    /// delivering. When that happened the customer was left staring at a black
+    /// screen with a padlock and no way out but backgrounding the app.
+    ///
+    /// Asserting the cover is absent, rather than that the app is visible: the
+    /// cover is its own window, so everything beneath it stays in the
+    /// accessibility tree and a plain existence check passes while the screen
+    /// is black.
+    func testTheAppIsNotCoveredAfterReturningFromTheBackground() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        let cover = app.descendants(matching: .any)["privacy-cover"]
+
+        // Twice: the report was of an intermittent cover, and the first resume
+        // can succeed on a window the second one then leaves behind.
+        for pass in 1...2 {
+            XCUIDevice.shared.press(.home)
+            app.activate()
+            XCTAssertTrue(
+                app.buttons["Book a pickup"].waitForExistence(timeout: 15),
+                "the order list did not come back after resume \(pass)"
+            )
+            XCTAssertFalse(
+                cover.waitForExistence(timeout: 3),
+                "the privacy cover is still up after resume \(pass) — the app is a black screen"
+            )
+        }
+        attach(app, "after-resume")
+    }
+
     func testSignedInCustomerSeesTheirOrders() {
         let app = launch(signedIn: true)
 

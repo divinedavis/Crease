@@ -45,5 +45,10 @@ struct PrivacyCover: View {
                 .font(.system(size: 44))
                 .foregroundStyle(Theme.accent)
         }
+        // Named so a UI test can assert it is *gone* after a resume. Its
+        // presence is invisible to a test otherwise: the cover is a separate
+        // window, so everything it hides is still in the accessibility tree
+        // and every ordinary assertion passes while the screen is black.
+        .accessibilityIdentifier("privacy-cover")
     }
 }

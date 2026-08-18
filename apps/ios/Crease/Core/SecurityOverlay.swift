@@ -58,6 +58,11 @@ final class SecurityOverlayWindow {
         let overlay = window ?? UIWindow(windowScene: scene)
         overlay.windowScene = scene
         overlay.windowLevel = .alert + 1
+        // Only the lock takes touches — it has a button to press. The privacy
+        // cover has nothing to tap, and a window that accepts touches can take
+        // key status from the app's own window, which is how a cover meant to
+        // last a second ends up outliving the state that raised it.
+        overlay.isUserInteractionEnabled = newMode == .lock
         overlay.rootViewController = host
         overlay.isHidden = false
         window = overlay
