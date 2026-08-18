@@ -86,46 +86,30 @@ struct CheckoutView: View {
     /// Every garment on its own line, priced. The shop re-counts the bag and
     /// that count is what settles — but a customer disputing a total needs to
     /// be able to see which line they disagree with.
-    @ViewBuilder private var itemCard: some View {
-        if lines.isEmpty {
-            EmptyView()
-        } else {
-            VStack(spacing: 10) {
-                ForEach(lines, id: \.item.id) { line in
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(quantityLabel(line))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(minWidth: 46, alignment: .leading)
-                        Text(line.item.label).font(.subheadline)
-                        Spacer(minLength: 8)
-                        Text(ServicePricing.lineTotalCents(line.item, entered: line.entered).asMoney)
-                            .font(.subheadline.monospacedDigit())
-                    }
-                    .accessibilityElement(children: .combine)
+    private var itemCard: some View {
+        VStack(spacing: 10) {
+            ForEach(lines, id: \.item.id) { line in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(quantityLabel(line))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 46, alignment: .leading)
+                    Text(line.item.label).font(.subheadline)
+                    Spacer(minLength: 8)
+                    Text(ServicePricing.lineTotalCents(line.item, entered: line.entered).asMoney)
+                        .font(.subheadline.monospacedDigit())
                 }
+                .accessibilityElement(children: .combine)
             }
-            .padding(14)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var totals: some View {
         VStack(spacing: 10) {
-            // Nothing picked is a real choice — somebody in a hurry hands over
-            // a bag and lets the counter price it. Showing $0.00 for that
-            // would read as free cleaning, which is the one thing it is not.
-            if cleaningCents > 0 {
-                totalRow(serviceLabel, cleaningCents)
-            } else {
-                HStack {
-                    Text(serviceLabel).font(.subheadline).foregroundStyle(.secondary)
-                    Spacer()
-                    Text("Counted at the shop").font(.subheadline).foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-            }
+            totalRow(serviceLabel, cleaningCents)
             totalRow(deliveryLabel, deliveryFeeCents)
             if serviceFeeCents > 0 { totalRow("Service fee", serviceFeeCents) }
             if taxCents > 0 { totalRow("Taxes", taxCents) }
@@ -195,22 +179,10 @@ struct CheckoutView: View {
         .background(.regularMaterial)
     }
 
-    /// What the button can honestly promise.
-    ///
-    /// "Pay $16.95" is a lie on a bag nobody has priced: the courier fee is
-    /// the only part of that order anyone knows, and the cleaning lands on the
-    /// same card as soon as the shop counts. Naming a total that is not the
-    /// total is exactly the surprise this screen exists to remove.
-    private var payLabel: String {
-        cleaningCents > 0
-            ? "Pay \(totalCents.asMoney)"
-            : "Place order · \(deliveryFeeCents.asMoney) + cleaning"
-    }
+    private var payLabel: String { "Pay \(totalCents.asMoney)" }
 
     private var holdExplainer: String {
-        cleaningCents > 0
-            ? "We hold exactly what this comes to — never more. \(shopName) counts the bag, and if it matches what you picked you pay \(totalCents.asMoney) and nothing else. If they count more, we ask you before taking another penny."
-            : "You haven't priced the cleaning, so this holds the courier fee alone. \(shopName) counts the bag and we'll ask you to approve their price before anything else is taken."
+        "We hold exactly what this comes to — never more. \(shopName) counts the bag, and if it matches what you picked you pay \(totalCents.asMoney) and nothing else. If they count more, we ask you before taking another penny."
     }
 
     private var itemSummary: String {

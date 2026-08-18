@@ -470,19 +470,30 @@ struct BookPickupView: View {
                 .padding(.top, 12)
 
             Button {
-                reviewing = true
+                // Nothing picked is not a checkout. A bag with no prices on it
+                // reaches the counter as a question — the shop cannot quote it,
+                // the hold cannot cover it, and the customer meets the real
+                // number after their clothes have gone. So the button does the
+                // only useful thing instead of refusing: it opens the list.
+                if declaredLines.isEmpty {
+                    choosingItems = true
+                } else {
+                    reviewing = true
+                }
             } label: {
                 // The whole bill, not the courier fee. This button used to
                 // charge a card for $29.95 while the customer was also, in the
                 // same transaction, paying for the cleaning — a number that
                 // appeared nowhere until their statement.
-                Text("Continue · \(totalCents.asMoney)")
+                Text(declaredLines.isEmpty
+                     ? "Choose what you're sending"
+                     : "Continue · \(totalCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent)
             .controlSize(.large)
-            .disabled(cleaner == nil)
+            .disabled(cleaner == nil || menu.isEmpty)
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 18)

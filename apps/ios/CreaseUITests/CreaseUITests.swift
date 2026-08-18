@@ -48,6 +48,33 @@ final class CreaseUITests: XCTestCase {
         return app
     }
 
+    /// Put something in the bag, which booking now requires.
+    ///
+    /// Checkout used to be reachable with nothing selected, which sent the shop
+    /// a bag it could not quote and held only the courier fee against a bill
+    /// nobody had named. The flow asks first now, so every test that reaches a
+    /// price has to answer.
+    @discardableResult
+    private func pickFirstGarment(in app: XCUIApplication) -> Bool {
+        let opener = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Choose what' OR label BEGINSWITH 'Dry cleaning'"))
+            .firstMatch
+        guard opener.waitForExistence(timeout: 15) else { return false }
+        opener.tap()
+        guard app.navigationBars["Your order"].waitForExistence(timeout: 10) else { return false }
+
+        // The steppers carry no label of their own, so the increment is reached
+        // through the row it sits in.
+        let plus = app.buttons.matching(NSPredicate(format: "label == 'Increment'")).firstMatch
+        guard plus.waitForExistence(timeout: 5) else {
+            app.buttons["Done"].tap()
+            return false
+        }
+        plus.tap()
+        app.buttons["Done"].tap()
+        return true
+    }
+
     /// Find a button whether it is in the app or inside a presented sheet.
     ///
     /// confirmationDialog puts its buttons under the sheet, and a cancel-role
@@ -419,6 +446,16 @@ final class CreaseUITests: XCTestCase {
         }
         home.tap()
 
+        // Nothing is priced yet, so the button asks for that rather than
+        // offering a checkout the shop could not quote.
+        XCTAssertFalse(
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Continue'")).firstMatch.exists,
+            "an empty bag must not reach checkout"
+        )
+        guard pickFirstGarment(in: app) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+
         // "Book a pickup" opened this flow; the continue button carries the
         // whole price, which is what tells the two apart.
         let proceed = app.buttons
@@ -431,13 +468,8 @@ final class CreaseUITests: XCTestCase {
         // the couriers, so both have to be on screen before the card is taken.
         XCTAssertTrue(app.navigationBars["Checkout"].waitForExistence(timeout: 10),
                       "continuing must reach an itemised checkout, not a charge")
-        // "Pay $39.43" once the bag is itemised; "Place order · $16.95 +
-        // cleaning" when it is not, because a bag nobody priced has no total to
-        // promise — only the courier fee is known before the shop counts.
-        let pay = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH 'Pay $' OR label BEGINSWITH 'Place order'"))
-            .firstMatch
-        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced action button")
+        let pay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Pay $'")).firstMatch
+        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced pay button")
         attach(app, "checkout")
         pay.tap()
 
