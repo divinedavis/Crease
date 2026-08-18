@@ -3,13 +3,13 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://creasenyc.com'),
-  title: 'Crease — Dry cleaning, picked up and delivered',
+  title: 'Crease — Laundry, picked up and delivered in Brooklyn',
   description:
-    'A courier collects from your door, your neighborhood cleaner does the work, and everything comes back pressed. Live in Brooklyn — check your address.',
+    'Wash & fold pickup and delivery in Brooklyn. $2.00 a pound, $20 minimum. A courier collects from your door and your neighborhood laundromat does the rest.',
   openGraph: {
-    title: 'Crease — Dry cleaning, picked up and delivered',
+    title: 'Crease — Laundry, picked up and delivered in Brooklyn',
     description:
-      'Book a pickup, your neighborhood cleaner does the work, and it comes back pressed. Live in Brooklyn.',
+      'Wash & fold pickup and delivery in Brooklyn. $2.00 a pound, $20 minimum.',
     url: 'https://usecreaseapp.com/',
     type: 'website',
   },

@@ -240,3 +240,9 @@
   /* Named only when it is not Brooklyn, because "Brooklyn" on every row is
      noise and the other boroughs are the ones worth flagging. */
   .ac-note { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+  /* A service we do not sell yet is shown, not linked. Hiding it loses the
+     answer to "do you do dry cleaning?"; linking it promises something no shop
+     has priced. */
+  .tile.soon { opacity: 0.55; }
+  .tile.soon strong { font-weight: 600; }

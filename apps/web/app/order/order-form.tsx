@@ -16,11 +16,10 @@ const TIERS = [
   { id: 'return_only', label: "Return only — it's already at the shop", price: '$16.95' },
 ];
 
-const SERVICES = [
-  { id: 'dry_clean', label: 'Dry cleaning' },
-  { id: 'wash_fold', label: 'Wash & fold' },
-  { id: 'press', label: 'Press only' },
-];
+// Only what a shop has actually priced. Dry cleaning returns as an option the
+// day one gives a price list; offering it now would take an order nobody can
+// quote.
+const SERVICES = [{ id: 'wash_fold', label: 'Wash & fold — $2.00/lb, $20 minimum' }];
 
 const TIER_IDS = new Set(TIERS.map((t) => t.id));
 const SERVICE_IDS = new Set(SERVICES.map((s) => s.id));
@@ -42,7 +41,7 @@ export function OrderForm({
   // unknown value would either select nothing or post a tier the dispatcher
   // has no price for.
   const tier = TIER_IDS.has(initialTier) ? initialTier : 'round_trip';
-  const service = SERVICE_IDS.has(initialService) ? initialService : 'dry_clean';
+  const service = SERVICE_IDS.has(initialService) ? initialService : 'wash_fold';
   // A return carries no cleaning: the clothes are at the shop already and paid
   // for, so asking what is in the bag is asking about a bag that isn't there.
   const carriesCleaning = tier !== 'return_only';
@@ -105,16 +104,8 @@ export function OrderForm({
         ))}
       </select>
 
-      <label className="fine" htmlFor="service_type">
-        Which service?
-      </label>
-      <select id="service_type" name="service_type" defaultValue={service} aria-label="Service">
-        {SERVICES.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.label}
-          </option>
-        ))}
-      </select>
+      {/* One service, so a picker would be a control with nothing to choose. */}
+      <input type="hidden" name="service_type" value={service} />
 
       {shops.length > 1 && (
         <>
@@ -136,8 +127,8 @@ export function OrderForm({
       {carriesCleaning && (
         <input
           name="items_note"
-          placeholder="Roughly what's in the bag — e.g. 2 shirts, a suit, one comforter"
-          aria-label="What is in the bag"
+          placeholder="Roughly how much — e.g. two full kitchen bags, one comforter"
+          aria-label="Roughly how much laundry"
         />
       )}
       <input

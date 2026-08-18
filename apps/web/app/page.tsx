@@ -10,11 +10,16 @@ import { QuoteBox } from './quote-box';
  */
 const APP_STORE_URL = process.env.CREASE_APP_STORE_URL ?? null;
 
-const SERVICES = [
-  { emoji: '👔', name: 'Dry cleaning', note: 'Suits, coats, dresses', href: '/order?service=dry_clean' },
-  { emoji: '🧺', name: 'Wash & fold', note: 'By the pound, back in hours', href: '/order?service=wash_fold' },
-  { emoji: '✨', name: 'Press only', note: 'Already clean, needs pressing', href: '/order?service=press' },
+// Laundry first, and only laundry. Dry cleaning is a per-garment price list
+// every shop keeps differently; wash & fold is one rate anybody can quote from
+// a doorstep, and it is weekly where dry cleaning is monthly. It comes back as
+// a service when a shop has given real prices for it — until then it is named
+// as what it is, which is not yet.
+const SERVICES: Array<{ emoji: string; name: string; note: string; href: string | null }> = [
+  { emoji: '🧺', name: 'Wash & fold', note: '$2.00/lb · $20 minimum', href: '/order?service=wash_fold' },
+  { emoji: '🛏️', name: 'Bedding & towels', note: 'Weighed in with the rest', href: '/order?service=wash_fold' },
   { emoji: '📦', name: 'Return only', note: "It's at the shop — bring it home", href: '/order?tier=return_only' },
+  { emoji: '👔', name: 'Dry cleaning', note: 'Coming next', href: null },
 ];
 
 export default async function Home({
@@ -66,22 +71,36 @@ export default async function Home({
                   : 'Noted — visits from this device are no longer counted as traffic.'}
               </p>
             )}
-            <h1>Dry cleaning, picked up and delivered.</h1>
+            <h1>Laundry, picked up and delivered.</h1>
+            <p className="lede">
+              $2.00 a pound, $20 minimum. A courier collects from your door, a laundromat on your
+              own block washes and folds it, and it comes back to you.
+            </p>
             <QuoteBox />
           </div>
 
           <div id="services">
             <h2 style={{ fontSize: '1.35rem', marginBottom: 16 }}>Services</h2>
             <div className="tiles">
-              {SERVICES.map((s) => (
-                <a className="tile" key={s.name} href={s.href}>
-                  <span className="emoji" aria-hidden="true">
-                    {s.emoji}
-                  </span>
-                  <strong>{s.name}</strong>
-                  <span>{s.note}</span>
-                </a>
-              ))}
+              {SERVICES.map((s) =>
+                s.href ? (
+                  <a className="tile" key={s.name} href={s.href}>
+                    <span className="emoji" aria-hidden="true">
+                      {s.emoji}
+                    </span>
+                    <strong>{s.name}</strong>
+                    <span>{s.note}</span>
+                  </a>
+                ) : (
+                  <div className="tile soon" key={s.name}>
+                    <span className="emoji" aria-hidden="true">
+                      {s.emoji}
+                    </span>
+                    <strong>{s.name}</strong>
+                    <span>{s.note}</span>
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </section>
@@ -99,16 +118,16 @@ export default async function Home({
             </div>
             <div className="card">
               <span className="num">2</span>
-              <h3>A real cleaner does the work</h3>
+              <h3>A neighborhood laundromat does the work</h3>
               <p>
-                Your order goes to a neighborhood dry cleaner, not a warehouse. They count every
-                garment and price exactly what&rsquo;s in the bag.
+                Your bag goes to a shop on your own block, not a warehouse. They weigh it and
+                charge $2.00 a pound for exactly what came in.
               </p>
             </div>
             <div className="card">
               <span className="num">3</span>
-              <h3>Delivered back, pressed</h3>
-              <p>Track both trips — to the cleaner and back to you. Ready to wear.</p>
+              <h3>Washed, folded, delivered</h3>
+              <p>Track both trips — to the shop and back to you. Folded and ready to put away.</p>
             </div>
           </div>
         </section>
@@ -126,9 +145,10 @@ export default async function Home({
             <div className="card">
               <h3>Nothing charged without you</h3>
               <p>
-                Nobody can price a bag before opening it. If the shop counts more than you picked,
-                we ask you before taking another penny. Cancel before a driver is assigned and you
-                pay nothing.
+                Nobody knows what a bag weighs before it is on the scale. You are charged the
+                shop&rsquo;s weight — $2.00 a pound, $20 minimum — and if it comes in over what you
+                estimated we ask you before taking another penny. Cancel before a driver is
+                assigned and you pay nothing.
               </p>
             </div>
           </div>
@@ -183,7 +203,9 @@ export default async function Home({
             <ul>
               {SERVICES.map((s) => (
                 <li key={s.name}>
-                  <a href={s.href}>{s.name}</a>
+                  {/* A service with nowhere to go is still worth naming — it
+                      answers "do you do dry cleaning?" without promising it. */}
+                  {s.href ? <a href={s.href}>{s.name}</a> : <span>{s.name} · soon</span>}
                 </li>
               ))}
             </ul>
