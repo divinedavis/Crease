@@ -47,6 +47,25 @@ export interface DashboardStats {
   partners: { active: number; payouts_enabled: number };
 }
 
+/**
+ * Accounts whose orders are development, not business.
+ *
+ * Every order in this database was placed by one of three accounts — a seeded
+ * test customer, a throwaway, and the founder's own — while the payment flow
+ * was being built. Reporting 70 orders and $811 collected on a dashboard is
+ * not a rounding error, it is a fiction that gets believed, and the first
+ * thing it hides is the real number: nobody has bought anything yet.
+ *
+ * Listed by id in the environment rather than looked up by email, because
+ * emails live in auth.users where PostgREST cannot reach them, and one admin
+ * API call per dashboard load to re-learn a constant is a strange way to spend
+ * a request. Clearing CREASE_TEST_CUSTOMER_IDS turns the exclusion off.
+ */
+const TEST_CUSTOMER_IDS = (process.env.CREASE_TEST_CUSTOMER_IDS ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+
 /** Rows a range filter applies to, by their own time column. */
 function sinceFor(range: string | undefined): string | null {
   const days: Record<string, number> = { today: 1, month: 30, '3m': 90, '6m': 182 };
@@ -63,6 +82,11 @@ export async function dashboardStats(
   range?: string,
 ): Promise<DashboardStats> {
   const since = sinceFor(range);
+  const testIds = TEST_CUSTOMER_IDS;
+  // PostgREST wants a parenthesised list; an empty one matches nothing, so the
+  // filter is only applied when there is something to exclude.
+  const notTest = (q: any) =>
+    testIds.length ? q.not('customer_id', 'in', `(${testIds.join(',')})`) : q;
 
   // head:true counts server-side. A dashboard tile is a number; pulling rows to
   // produce one would move a customer list across the wire to be thrown away.
@@ -121,21 +145,29 @@ export async function dashboardStats(
   const [orderTotal, delivered, inFlight, cancelled] = await Promise.all([
     // Drafts are not orders. Somebody who opened the app and closed it is
     // demand, and it is counted as demand, not as a sale.
-    count('orders', both(orderWindow, (q) => q.neq('status', 'draft'))),
-    count('orders', both(orderWindow, (q) => q.eq('status', 'delivered'))),
-    count('orders', both(orderWindow, (q) => q.in('status', IN_FLIGHT))),
-    count('orders', both(orderWindow, (q) => q.in('status', ['cancelled', 'failed']))),
+    count('orders', both(orderWindow, (q) => notTest(q.neq('status', 'draft')))),
+    count('orders', both(orderWindow, (q) => notTest(q.eq('status', 'delivered')))),
+    count('orders', both(orderWindow, (q) => notTest(q.in('status', IN_FLIGHT)))),
+    count('orders', both(orderWindow, (q) => notTest(q.in('status', ['cancelled', 'failed'])))),
   ]);
 
   // Realized money, from the view that reconciles what was captured against
   // what the couriers and the shop actually cost.
+  // order_margin carries no customer_id, so the test orders are excluded by
+  // their short codes rather than left to inflate the money tiles.
+  const { data: testOrders } = testIds.length
+    ? await db.from('orders').select('short_code').in('customer_id', testIds)
+    : { data: [] as any[] };
+  const testCodes = new Set(((testOrders ?? []) as any[]).map((r) => r.short_code));
+
   const { data: margins } = await (since
-    ? db.from('order_margin').select('captured_cents, realized_margin_cents').gte('created_at', since)
-    : db.from('order_margin').select('captured_cents, realized_margin_cents'));
+    ? db.from('order_margin').select('short_code, captured_cents, realized_margin_cents').gte('created_at', since)
+    : db.from('order_margin').select('short_code, captured_cents, realized_margin_cents'));
   let captured = 0;
   let margin = 0;
   let paid = 0;
   for (const row of (margins ?? []) as any[]) {
+    if (testCodes.has(row.short_code)) continue;
     const c = Number(row.captured_cents) || 0;
     if (c > 0) paid += 1;
     captured += c;
@@ -145,8 +177,8 @@ export async function dashboardStats(
   // Customers by their orders, not by the auth table: an account created and
   // never used is not a customer, and counting it as one flatters the funnel.
   const { data: buyers } = await (since
-    ? db.from('orders').select('customer_id').neq('status', 'draft').gte('created_at', since)
-    : db.from('orders').select('customer_id').neq('status', 'draft'));
+    ? notTest(db.from('orders').select('customer_id').neq('status', 'draft')).gte('created_at', since)
+    : notTest(db.from('orders').select('customer_id').neq('status', 'draft')));
   const perCustomer = new Map<string, number>();
   for (const row of (buyers ?? []) as any[]) {
     if (!row.customer_id) continue;
