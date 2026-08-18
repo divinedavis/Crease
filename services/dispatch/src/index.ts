@@ -12,6 +12,7 @@ import { registerCustomerRoutes } from './customer.js';
 import { confirmAndDispatch } from './confirm.js';
 import { PushService } from './push.js';
 import { readyWindow } from './ready.js';
+import { dashboardStats } from './stats.js';
 import { buildPaymentProvider, buildConnectProvider, verifyStripeSignature } from '@crease/payments';
 
 const app = Fastify({
@@ -133,6 +134,26 @@ app.post<{ Params: { id: string } }>(
     } catch (err) {
       req.log.error({ err, orderId: req.params.id }, 'payment intent failed');
       return reply.code(402).send({ ok: false, error: (err as Error).message });
+    }
+  },
+);
+
+/**
+ * Everything Crease knows about itself, counted.
+ *
+ * Internal and loopback-only, which is what lets it be candid: the Find A Crib
+ * dashboard on this same box calls it for the Crease tab. Aggregates only —
+ * the tables underneath are lists of where people live.
+ */
+app.get<{ Querystring: { range?: string } }>(
+  '/v1/stats/dashboard',
+  { preHandler: requireInternalKey },
+  async (req, reply) => {
+    try {
+      return { ok: true, stats: await dashboardStats(db, req.query.range) };
+    } catch (err) {
+      req.log.error({ err }, 'dashboard stats failed');
+      return reply.code(503).send({ ok: false, error: 'stats unavailable' });
     }
   },
 );
