@@ -50,7 +50,24 @@ final class Checkout: ObservableObject {
     ///   would take money against a number nobody agreed to, so a higher price
     ///   comes back as `.repriced` and the sheet is never presented — the
     ///   caller asks, and calls again with the new figure if they say yes.
-    func pay(orderId: UUID, accessToken: String, agreedCents: Int) async -> Confirmation? {
+    /// - Parameter stillOnScreen: whether the customer is still looking at the
+    ///   screen they tapped from. Asked at the moment the sheet is about to go
+    ///   up, because minting an intent takes a second or two and a sheet raised
+    ///   over whatever they moved on to books a courier for a booking they
+    ///   walked away from.
+    ///
+    ///   This used to be inferred by capturing the top view controller before
+    ///   the network hop and demanding the same object identity afterwards.
+    ///   That is a proxy for the question, and a brittle one: any rebuild of
+    ///   the presenting controller in between reads as "they left", and the
+    ///   booking fails silently — a first tap that appeared to do nothing and a
+    ///   second that worked. The view layer knows the real answer, so ask it.
+    func pay(
+        orderId: UUID,
+        accessToken: String,
+        agreedCents: Int,
+        stillOnScreen: @MainActor @escaping () -> Bool = { true }
+    ) async -> Confirmation? {
         state = .working
 
         let api = DispatchAPI(accessToken: accessToken)
@@ -59,13 +76,6 @@ final class Checkout: ObservableObject {
             return nil
         }
         let order = "/v1/me/orders/\(orderId.uuidString.lowercased())"
-
-        // The screen the customer tapped from, read before any network hop and
-        // compared against the top of the stack when the sheet is ready. A
-        // booking takes a second or two to mint an intent, and whatever is
-        // topmost after that is not necessarily what they were looking at when
-        // they agreed to pay.
-        let origin = Self.topViewController()
 
         // Whether the card has been charged by the time something goes wrong.
         // Everything after the sheet closes can still fail, and a failure on
@@ -118,16 +128,19 @@ final class Checkout: ObservableObject {
                 config.primaryButtonColor = UIColor(Theme.accent)
                 config.allowsDelayedPaymentMethods = false
 
-                // Two refusals in one. A controller that is off-window or on
-                // its way out never gets a sheet on screen, and Stripe only
-                // calls back from a sheet that made it there — so presenting
-                // into one awaits a continuation nobody will ever resume, and
-                // the button that started it reads "Booking…" until the app is
-                // killed. A controller that is simply not the one they started
-                // from is worse: the sheet does appear, over whatever screen
-                // they moved on to, and paying it books a courier for a
-                // booking they walked away from.
-                guard let presenter = Self.topViewController(), presenter === origin,
+                // Did they stay? A sheet raised over a screen somebody has walked
+                // away from books a courier for a booking they abandoned.
+                guard stillOnScreen() else {
+                    state = .idle
+                    return nil
+                }
+
+                // A controller that is off-window or on its way out never gets
+                // a sheet on screen, and Stripe only calls back from a sheet
+                // that made it there — so presenting into one awaits a
+                // continuation nobody will ever resume, and the button that
+                // started it reads "Booking…" until the app is killed.
+                guard let presenter = Self.topViewController(),
                       presenter.isViewLoaded, presenter.view.window != nil,
                       !presenter.isBeingDismissed
                 else {

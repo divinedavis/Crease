@@ -18,6 +18,11 @@ import SwiftUI
 struct CheckoutView: View {
     @Environment(\.dismiss) private var dismiss
 
+    /// Anything that went wrong while paying. Rendered here rather than on the
+    /// booking screen underneath: a full-screen cover hides its parent, so an
+    /// error written there is an error nobody reads — a tap that looks like it
+    /// did nothing at all.
+    let errorMessage: String?
     let shopName: String
     let serviceLabel: String
     let lines: [(item: ServiceItem, entered: Double)]
@@ -41,6 +46,15 @@ struct CheckoutView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    if let errorMessage {
+                        Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color.red.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
                     shopCard
                     itemCard
                     totals

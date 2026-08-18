@@ -38,6 +38,23 @@ struct ServiceMenuView: View {
 
     private var subtotal: Int { ServicePricing.subtotalCents(lines) }
 
+    /// A service other than the one on screen that already has something in it.
+    ///
+    /// An order carries one service type — the database refuses a line that is
+    /// not the order's own, and a two-hour wash and a two-day dry clean cannot
+    /// share a turnaround anyway. That used to be enforced by emptying the bag
+    /// on every tab tap, which punished looking. Now the clash is shown, and
+    /// it is one tap to resolve.
+    private var conflicting: ServiceKind? {
+        offered.first { candidate in
+            candidate != kind
+                && menu.contains { $0.serviceType == candidate.rawValue && (quantities[$0.id] ?? 0) > 0 }
+        }
+    }
+
+    /// Whether the bag can be taken as one order.
+    var isResolvable: Bool { conflicting == nil }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -50,10 +67,17 @@ struct ServiceMenuView: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
-                    // An order carries one service type, so the count cannot
-                    // survive the switch — and a stale three shirts silently
-                    // priced against a laundry order is worse than a reset.
-                    .onChange(of: kind) { _ in quantities.removeAll() }
+                    // Switching tabs used to empty the bag. An order does carry
+                    // one service type, so that was enforcing something real —
+                    // but it enforced it against somebody who only wanted to
+                    // look at the laundry prices, and three counted shirts
+                    // disappeared with no warning and no way back. The counts
+                    // survive now, and the conflict is raised below where it
+                    // can be seen and undone.
+                }
+
+                if let other = conflicting {
+                    conflictBanner(other)
                 }
 
                 List {
@@ -79,9 +103,42 @@ struct ServiceMenuView: View {
                         .accessibilityLabel("Close")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.fontWeight(.semibold)
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .disabled(!isResolvable)
                 }
             }
+        }
+    }
+
+    private func conflictBanner(_ other: ServiceKind) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("One service per order")
+                    .font(.footnote.weight(.semibold))
+                Text("You've also got \(other.label.lowercased()) in this bag. They're cleaned on different machines and come back on different days, so they have to be booked separately.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Button("Remove") { clear(other) }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.bordered)
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Empty one service, leaving the other exactly as it was.
+    private func clear(_ service: ServiceKind) {
+        for item in menu where item.serviceType == service.rawValue {
+            quantities[item.id] = nil
         }
     }
 

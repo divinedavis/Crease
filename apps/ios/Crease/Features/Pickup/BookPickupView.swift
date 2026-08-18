@@ -124,6 +124,7 @@ struct BookPickupView: View {
         // own a screen whose top it cannot reach.
         .fullScreenCover(isPresented: $reviewing) {
             CheckoutView(
+                errorMessage: error,
                 shopName: cleaner?.name ?? "This shop",
                 serviceLabel: serviceKind.label,
                 lines: declaredLines,
@@ -793,7 +794,10 @@ struct BookPickupView: View {
         let confirmation = await checkout.pay(
             orderId: orderId,
             accessToken: token,
-            agreedCents: agreedCents
+            agreedCents: agreedCents,
+            // The checkout screen is the one they tapped Pay on, so its being
+            // up is the honest answer to "are they still here".
+            stillOnScreen: { reviewing && isPresented }
         )
         switch checkout.state {
         case .paid:

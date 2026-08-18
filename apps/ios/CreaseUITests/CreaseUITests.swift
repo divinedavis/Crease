@@ -396,6 +396,54 @@ final class CreaseUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
+    /// Looking at the laundry prices must not empty the bag.
+    ///
+    /// An order carries one service type, and that was enforced by clearing
+    /// every count the moment somebody tapped another tab — so three counted
+    /// shirts vanished for the crime of checking what wash & fold costs, with
+    /// no warning and no way back.
+    func testSwitchingServiceTabsKeepsWhatWasAlreadyCounted() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        guard pickFirstGarment(in: app) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+
+        // Whatever the first garment came to, the booking screen is now
+        // carrying it.
+        let priced = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(priced.waitForExistence(timeout: 10), "the count should have produced a price")
+        let before = priced.label
+
+        // Go and look at the other service, then come back.
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Dry cleaning'")).firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+        let laundry = app.buttons["Wash & fold"]
+        guard laundry.waitForExistence(timeout: 5) else {
+            app.buttons["Done"].tap()
+            throw XCTSkip("this shop sells one service; nothing to switch between")
+        }
+        laundry.tap()
+        app.buttons["Dry cleaning"].tap()
+        attach(app, "after-tab-switch")
+        app.buttons["Done"].tap()
+
+        XCTAssertTrue(priced.waitForExistence(timeout: 10))
+        XCTAssertEqual(priced.label, before, "the bag was emptied by looking at another tab")
+    }
+
     func testBookingQuotesOnlyTheDriverEta() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
