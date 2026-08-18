@@ -111,7 +111,7 @@ export async function checkCoverage(_prev: unknown, formData: FormData): Promise
   return {
     status: 'outside',
     message: cover.miles
-      ? `Not yet. Our nearest partner is ${cover.miles} miles away, and we only quote inside ${SERVICE_RADIUS_MILES} miles — past that a courier costs more than the fee covers.`
+      ? `Not yet. We collect within ${SERVICE_RADIUS_MILES} miles of ${cover.shop?.name ?? 'our partner'} on Fulton Street, and you are ${cover.miles} miles out — past that band a courier costs more than the fee collects. Leave your email and we will tell you when we reach your street.`
       : `Not yet — we have no partner near you.`,
     miles: cover.miles ?? undefined,
     neighborhood: geo.neighborhood,

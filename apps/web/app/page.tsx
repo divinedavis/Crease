@@ -63,7 +63,7 @@ export default async function Home({
       <main className="wrap">
         <section className="home">
           <div>
-            <span className="area">📍 Brooklyn, NY</span>
+            <span className="area">📍 Clinton Hill, Brooklyn</span>
             {ownerSet !== undefined && (
               <p className="fine">
                 {ownerSet === '0'
@@ -73,8 +73,16 @@ export default async function Home({
             )}
             <h1>Laundry, picked up and delivered.</h1>
             <p className="lede">
-              $2.00 a pound, $20 minimum. A courier collects from your door, a laundromat on your
-              own block washes and folds it, and it comes back to you.
+              $2.00 a pound, $20 minimum. A courier collects from your door, Fulton Cleaners on
+              Fulton Street washes and folds it, and it comes back to you.
+            </p>
+            {/* Said before the address box, not after it. Somebody four miles
+                away should learn that from a sentence rather than from typing
+                their street and being turned down. */}
+            <p className="fine" style={{ marginBottom: 18 }}>
+              We collect and deliver within <b>3 miles of Fulton Cleaners</b>, 909 Fulton Street —
+              Clinton Hill, Fort Greene, Bed-Stuy, Prospect Heights, Crown Heights and the blocks
+              around them. Check your address and we&rsquo;ll tell you either way.
             </p>
             <QuoteBox />
           </div>
@@ -118,10 +126,10 @@ export default async function Home({
             </div>
             <div className="card">
               <span className="num">2</span>
-              <h3>A neighborhood laundromat does the work</h3>
+              <h3>Fulton Cleaners does the work</h3>
               <p>
-                Your bag goes to a shop on your own block, not a warehouse. They weigh it and
-                charge $2.00 a pound for exactly what came in.
+                Your bag goes to a shop on Fulton Street, not a warehouse. They weigh it and charge
+                $2.00 a pound for exactly what came in — $20 minimum.
               </p>
             </div>
             <div className="card">
@@ -222,12 +230,12 @@ export default async function Home({
             </ul>
           </div>
           <div>
-            <h4>Neighborhoods</h4>
+            <h4>Where we collect</h4>
             <ul>
-              <li>Clinton Hill</li>
-              <li>Fort Greene</li>
-              <li>Bed-Stuy</li>
-              <li>Prospect Heights</li>
+              <li>Within 3 miles of</li>
+              <li>909 Fulton Street</li>
+              <li>Clinton Hill · Fort Greene</li>
+              <li>Bed-Stuy · Prospect Heights</li>
             </ul>
           </div>
             <div className="legal">
