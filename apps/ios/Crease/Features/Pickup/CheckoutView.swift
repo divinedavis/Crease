@@ -160,6 +160,12 @@ struct CheckoutView: View {
             Text(holdExplainer)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            // Said before the card is taken, not discovered at cancellation.
+            // A fee somebody meets for the first time on their statement is a
+            // chargeback, however fair it was.
+            Text("Cancel before a driver is assigned and you pay nothing. After that, the trip we've already paid for is kept.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -174,7 +180,7 @@ struct CheckoutView: View {
                 if working {
                     ProgressView().tint(.white)
                 } else {
-                    Text("Pay \(totalCents.asMoney)")
+                    Text(payLabel)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -189,10 +195,22 @@ struct CheckoutView: View {
         .background(.regularMaterial)
     }
 
+    /// What the button can honestly promise.
+    ///
+    /// "Pay $16.95" is a lie on a bag nobody has priced: the courier fee is
+    /// the only part of that order anyone knows, and the cleaning lands on the
+    /// same card as soon as the shop counts. Naming a total that is not the
+    /// total is exactly the surprise this screen exists to remove.
+    private var payLabel: String {
+        cleaningCents > 0
+            ? "Pay \(totalCents.asMoney)"
+            : "Place order · \(deliveryFeeCents.asMoney) + cleaning"
+    }
+
     private var holdExplainer: String {
         cleaningCents > 0
-            ? "\(shopName) counts the bag before anything is taken. You pay the final count — \(totalCents.asMoney) if it matches what you picked — and the rest of the hold is released. If they count more than the hold covers, we ask you first."
-            : "You haven't priced the cleaning, so this holds the courier fee plus room for the shop's count. \(shopName) counts the bag, you pay that plus \(deliveryFeeCents.asMoney) for the courier, and anything left on the hold is released."
+            ? "We hold exactly what this comes to — never more. \(shopName) counts the bag, and if it matches what you picked you pay \(totalCents.asMoney) and nothing else. If they count more, we ask you before taking another penny."
+            : "You haven't priced the cleaning, so this holds the courier fee alone. \(shopName) counts the bag and we'll ask you to approve their price before anything else is taken."
     }
 
     private var itemSummary: String {

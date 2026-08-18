@@ -120,27 +120,21 @@ export function authorizationAmount(estimateCents: number, thresholdCents: numbe
 }
 
 /**
- * What to hold for a whole order.
+ * What to hold for a whole order: what the order is worth, and not a cent more.
  *
- * Headroom belongs only on the part that can still move. The cleaning is an
- * estimate the shop is about to re-count; the courier fee is pinned by the
- * dispatcher when the intent is minted and is never re-priced afterwards, so
- * buffering it holds a customer's credit against a number that cannot change.
- * Running the 25% over the combined figure is what made a $39.43 order hold
- * $49.29 — nearly four dollars of that was headroom on a fixed fee.
+ * There is deliberately no buffer. A hold is a claim on somebody's available
+ * credit, and holding 25% over "in case the shop finds a sock" reserves money
+ * against a bag nobody has opened — on a debit card that is grocery money.
+ * The customer agreed to a number; that number is what we hold.
  *
- * An order with nothing itemised is the one case with no percentage to take:
- * the customer has handed over a bag to be priced at the counter, so it gets
- * the flat threshold as room instead of nothing at all.
+ * The cost is a real one and worth stating: any count above what was declared
+ * now exceeds the authorization, so it stops and asks rather than capturing
+ * silently. That is the trade — a customer is interrupted when the shop finds
+ * more than they said, instead of having extra money held on every order that
+ * never needed it. An order with nothing itemised holds only the courier fee,
+ * and its cleaning is approved after the count by definition, because nobody
+ * has ever named a price for it.
  */
-export function holdForOrder(
-  cleaningCents: number,
-  fixedCents: number,
-  thresholdCents: number,
-): number {
-  const headroom =
-    cleaningCents > 0
-      ? Math.min(Math.ceil(cleaningCents * 0.25), thresholdCents)
-      : thresholdCents;
-  return cleaningCents + fixedCents + headroom;
+export function holdForOrder(cleaningCents: number, fixedCents: number): number {
+  return Math.max(0, cleaningCents) + Math.max(0, fixedCents);
 }

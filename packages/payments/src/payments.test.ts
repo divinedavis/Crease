@@ -209,24 +209,22 @@ test('a small overage captures without a second customer decision', async () => 
   assert.equal(state.capturedCents, actual);
 });
 
-test('headroom sits on the estimate, never on the fee', () => {
+test('a hold is the order, not the order plus a cushion', () => {
   // The screenshot that started this: a $22.48 bag with a $16.95 courier held
-  // $49.29, because 25% was taken over the combined figure. Nearly four
-  // dollars of that was headroom on a fee the dispatcher had already pinned
-  // and would never re-price.
-  assert.equal(holdForOrder(2248, 1695, 1500), 2248 + 1695 + 562);
-  assert.notEqual(holdForOrder(2248, 1695, 1500), authorizationAmount(2248 + 1695, 1500));
+  // $49.29 — 25% over the combined figure, a third of it against a fee the
+  // dispatcher had already pinned. A hold is somebody's available credit; the
+  // number they agreed to is the number we take a claim on.
+  assert.equal(holdForOrder(2248, 1695), 2248 + 1695);
+  assert.ok(holdForOrder(2248, 1695) < authorizationAmount(2248 + 1695, 1500));
 
-  // The cap still binds on a big bag: 25% of $200 is $50, and we never hold
-  // more than we would charge without asking.
-  assert.equal(holdForOrder(20000, 2995, 1500), 20000 + 2995 + 1500);
+  // Big bag, same rule. There is no size at which a cushion reappears.
+  assert.equal(holdForOrder(20000, 2995), 22995);
 
-  // Nothing itemised is the one case with no percentage to take. A bag handed
-  // over to be priced at the counter gets the flat threshold as room, not zero.
-  assert.equal(holdForOrder(0, 1695, 1500), 1695 + 1500);
+  // Nothing itemised holds the courier fee alone. Its cleaning is approved
+  // after the count by definition — nobody has ever named a price for it.
+  assert.equal(holdForOrder(0, 1695), 1695);
 
-  // Whatever the shape, a hold is never less than the money already committed.
-  for (const cleaning of [0, 1, 500, 2248, 9999, 20000]) {
-    assert.ok(holdForOrder(cleaning, 1695, 1500) >= cleaning + 1695);
-  }
+  // Never negative, whatever a caller hands in.
+  assert.equal(holdForOrder(-500, 1695), 1695);
+  assert.equal(holdForOrder(0, 0), 0);
 });

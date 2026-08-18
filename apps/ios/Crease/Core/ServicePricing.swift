@@ -39,25 +39,21 @@ enum ServicePricing {
     /// then asks for is worse than not mentioning it at all.
     static let approvalThresholdCents = 1500
 
-    /// What Stripe is asked to authorize: the bill, plus room for the shop to
-    /// find a sock. A mirror of holdForOrder in packages/payments/src/types.ts
-    /// — the app has to show this number because Stripe's own sheet puts it on
-    /// the Pay button, and a customer meeting it there for the first time
-    /// reads it as an overcharge.
+    /// What Stripe is asked to authorize: what the order is worth, and not a
+    /// cent more. A mirror of holdForOrder in packages/payments/src/types.ts.
     ///
-    /// The headroom sits on the cleaning alone. The courier fee is pinned by
-    /// the dispatcher when the intent is minted and never re-priced after, so
-    /// holding extra against it reserves a customer's credit for a number that
-    /// cannot move.
-    static func holdCents(
-        cleaningCents: Int,
-        fixedCents: Int,
-        threshold: Int = approvalThresholdCents
-    ) -> Int {
-        let headroom = cleaningCents > 0
-            ? min(Int((Double(cleaningCents) * 0.25).rounded(.up)), threshold)
-            : threshold
-        return cleaningCents + fixedCents + headroom
+    /// The app has to show this because Stripe's own sheet puts it on the Pay
+    /// button. It used to carry a buffer — 25% of the bill, so a $39.43 order
+    /// asked for $49.29 — and a hold is a claim on somebody's available
+    /// credit. On a debit card that difference is grocery money, reserved
+    /// against a bag nobody has opened yet.
+    ///
+    /// The trade is that any count above what was declared now has to stop and
+    /// ask rather than capture silently. A bag nobody itemised holds only the
+    /// courier fee, and its cleaning is approved after the count by
+    /// definition — nobody has ever named a price for it.
+    static func holdCents(cleaningCents: Int, fixedCents: Int) -> Int {
+        max(0, cleaningCents) + max(0, fixedCents)
     }
 
     /// Whether the weight floor — not the bag — is setting this line's price.

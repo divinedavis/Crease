@@ -167,14 +167,10 @@ export class PaymentService {
     // is legitimate — a bag handed over to be priced at the counter — and the
     // headroom is what makes that case work without a second charge.
     const cleaning = order.estimate_subtotal_cents ?? 0;
-    // Headroom on the cleaning only. The fee is pinned above and never
-    // re-priced afterwards, so buffering it would hold a customer's credit
-    // against a number that cannot move.
-    const amount = holdForOrder(
-      cleaning,
-      fee + (order.service_fee_cents ?? 0),
-      order.approval_threshold_cents,
-    );
+    // Exactly what the order is worth. No buffer: a hold is a claim on
+    // somebody's available credit, and reserving extra against a bag nobody
+    // has opened is money the customer cannot spend elsewhere.
+    const amount = holdForOrder(cleaning, fee + (order.service_fee_cents ?? 0));
 
     // Ask before writing. The upsert below stamps 'requires_payment_method',
     // so a check made after it can only ever see that — which is how re-tapping
@@ -326,7 +322,6 @@ export class PaymentService {
     const amount = holdForOrder(
       order.estimate_subtotal_cents,
       order.delivery_fee_cents + order.service_fee_cents,
-      order.approval_threshold_cents,
     );
 
     // Insert first so the row id can be the idempotency key: a timeout on the
@@ -743,8 +738,11 @@ export class PaymentService {
    * and does not get back by cancelling — the carrier's cancellation charge
    * once a courier has been engaged, and the card fee on the original capture.
    * It is taken off the first captured payment; anything beyond it is returned.
-   * Uncaptured holds are always released in full: keeping one costs the
-   * customer their credit line and earns Crease nothing.
+   * A hold with a retention owed against it is captured for exactly that
+   * amount rather than cancelled — the provider releases the balance of a
+   * partly captured authorization by itself. A hold with nothing owed is
+   * cancelled outright: keeping one costs the customer their credit line and
+   * earns Crease nothing.
    */
   async voidOrder(
     orderId: string,
@@ -804,6 +802,35 @@ export class PaymentService {
             keep > 0 || alreadyBack > 0
               ? await this.provider.refund(p.provider_intent_ref, giveBack)
               : await this.provider.refund(p.provider_intent_ref);
+        } else if (p.status === 'authorized' && retain > 0) {
+          // A hold with a retention owed against it. Cancelling would release
+          // the whole thing and leave Crease paying for a courier that is
+          // already out driving — which is exactly what happened the moment
+          // checkout moved from an immediate capture to a hold: the money that
+          // used to be captured up front, and refunded minus the retention,
+          // was suddenly never captured at all.
+          //
+          // Capture the retention instead. The provider releases the remainder
+          // of an authorization automatically when it is captured for less, so
+          // this both keeps what the cancellation cost and frees the rest of
+          // the customer's credit in one call.
+          const authorized = p.authorized_cents ?? 0;
+          const keep = Math.min(retain, authorized);
+          retain -= keep;
+          retainedCents += keep;
+
+          if (keep <= 0) {
+            state = await this.provider.cancel(p.provider_intent_ref);
+          } else {
+            state = await this.provider.capture({
+              paymentIntentRef: p.provider_intent_ref,
+              amountCents: keep,
+            });
+            this.log.info(
+              { orderId, paymentId: p.id, keep, authorized },
+              'cancellation retained out of the hold; the balance is released',
+            );
+          }
         } else {
           state = await this.provider.cancel(p.provider_intent_ref);
         }
