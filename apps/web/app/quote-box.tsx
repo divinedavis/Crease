@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
-import { quoteAddress, TIERS, type Quote } from './actions';
+import { quoteAddress, type Quote } from './actions';
+import { TIERS } from '@/lib/tiers';
 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 

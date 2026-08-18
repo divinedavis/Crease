@@ -210,46 +210,6 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
   };
 }
 
-export interface Tier {
-  id: string;
-  name: string;
-  blurb: string;
-  priceCents: number;
-  etaMinutes: number | null;
-}
-
-/**
- * The published price sheet, mirrored from services/dispatch/src/pricing.ts.
- *
- * Every one of these is solved from courier cost plus card fee plus the target
- * margin — a round trip buys two Brooklyn legs at $12.99, a single leg buys
- * one. If that file changes, this changes with it: a website quoting a price
- * the dispatcher will not honour is worse than a website quoting nothing.
- */
-export const TIERS: Tier[] = [
-  {
-    id: 'round_trip',
-    name: 'Round trip',
-    blurb: 'We collect it now and deliver it back when it\u2019s ready',
-    priceCents: 2995,
-    etaMinutes: 30,
-  },
-  {
-    id: 'pickup_only',
-    name: 'Pickup only',
-    blurb: 'We collect it, you fetch it from the shop',
-    priceCents: 1695,
-    etaMinutes: 20,
-  },
-  {
-    id: 'return_only',
-    name: 'Return only',
-    blurb: 'It\u2019s already at the shop \u2014 we bring it home',
-    priceCents: 1695,
-    etaMinutes: null,
-  },
-];
-
 export interface Quote {
   status: 'covered' | 'outside' | 'unknown' | 'error';
   message: string;
