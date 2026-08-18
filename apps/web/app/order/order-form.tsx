@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { AddressField } from '../address-field';
 import { requestPickup, type RequestResult } from '../actions';
 
 export interface ShopOption {
@@ -83,13 +84,9 @@ export function OrderForm({
         placeholder="Email (optional)"
         aria-label="Email, optional"
       />
-      <input
-        name="address"
-        required
-        autoComplete="street-address"
-        defaultValue={initialAddress}
+      <AddressField
         placeholder="Pickup address in Brooklyn"
-        aria-label="Pickup address"
+        defaultValue={initialAddress}
       />
       <input
         name="address_notes"

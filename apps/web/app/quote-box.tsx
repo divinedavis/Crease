@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useState } from 'react';
+import { AddressField } from './address-field';
 import { quoteAddress, type Quote } from './actions';
 import { TIERS } from '@/lib/tiers';
 
@@ -49,16 +50,7 @@ export function QuoteBox() {
       </div>
 
       <form action={ask}>
-        <div className="field">
-          <span className="dot" aria-hidden="true" />
-          <input
-            name="address"
-            required
-            autoComplete="street-address"
-            placeholder="Enter pickup address"
-            aria-label="Pickup address in Brooklyn"
-          />
-        </div>
+        <AddressField placeholder="Enter pickup address" />
         <div className="field muted">
           <span className="sq" aria-hidden="true" />
           <span className="dest">Your nearest partner cleaner — we pick it</span>

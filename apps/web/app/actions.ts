@@ -24,6 +24,17 @@ export interface CheckResult {
  * rather than where anybody wants this. The addresses that come back "not yet"
  * are the ones worth knowing, and they are only ever seen here.
  */
+/** The point attached to a chosen suggestion, if there is one and it is real. */
+function pickedPoint(formData: FormData): { lat: number; lng: number; label: string; neighborhood: string | null } | null {
+  const lat = Number(formData.get('lat'));
+  const lng = Number(formData.get('lng'));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+  // Bounded to the city, because these arrive in a form post: a point in the
+  // Atlantic would otherwise be quoted against whichever shop is least far.
+  if (lat < 40.4 || lat > 41.0 || lng < -74.3 || lng > -73.6) return null;
+  return { lat, lng, label: String(formData.get('address') ?? ''), neighborhood: null };
+}
+
 export async function checkCoverage(_prev: unknown, formData: FormData): Promise<CheckResult> {
   const query = String(formData.get('address') ?? '').trim();
   const sessionRef = String(formData.get('session') ?? '').slice(0, 64) || null;
@@ -36,7 +47,12 @@ export async function checkCoverage(_prev: unknown, formData: FormData): Promise
   }
 
   const db = serviceClient();
-  const geo = await geocodeBrooklyn(query);
+
+  // A suggestion the customer chose already carries its coordinates from the
+  // city's own address file — more accurate than anything a free-text geocode
+  // would return, and one less request to make them wait for.
+  const picked = pickedPoint(formData);
+  const geo = picked ?? (await geocodeBrooklyn(query));
 
   // Shops are read fresh: signing one is exactly the event that changes this
   // answer, and a cached list would keep telling a whole neighbourhood no for
@@ -167,7 +183,7 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
   const db = serviceClient();
   if (!db) return { ok: false, message: 'Something went wrong on our side. Try again in a moment.' };
 
-  const geo = await geocodeBrooklyn(address);
+  const geo = pickedPoint(formData) ?? (await geocodeBrooklyn(address));
 
   let cleanerId = field('cleaner_id', 64) || null;
   let covered = false;

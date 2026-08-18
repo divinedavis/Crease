@@ -213,3 +213,22 @@
     .nav .brand { flex: 1; font-size: 1.15rem; }
     .nav .brand img { width: 30px; height: 30px; }
   }
+
+  /* --- address autocomplete --------------------------------------------- */
+  .ac { position: relative; }
+  .ac-list {
+    position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% - 6px);
+    list-style: none; margin: 0; padding: 6px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+    max-height: 320px; overflow-y: auto;
+  }
+  .ac-list li {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    padding: 11px 12px; border-radius: 9px; cursor: pointer;
+  }
+  .ac-list li.on { background: var(--green-soft); }
+  .ac-label { font-size: 0.95rem; }
+  /* Named only when it is not Brooklyn, because "Brooklyn" on every row is
+     noise and the other boroughs are the ones worth flagging. */
+  .ac-note { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
