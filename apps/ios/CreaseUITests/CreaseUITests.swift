@@ -431,8 +431,13 @@ final class CreaseUITests: XCTestCase {
         // the couriers, so both have to be on screen before the card is taken.
         XCTAssertTrue(app.navigationBars["Checkout"].waitForExistence(timeout: 10),
                       "continuing must reach an itemised checkout, not a charge")
-        let pay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Pay $'")).firstMatch
-        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced pay button")
+        // "Pay $39.43" once the bag is itemised; "Place order · $16.95 +
+        // cleaning" when it is not, because a bag nobody priced has no total to
+        // promise — only the courier fee is known before the shop counts.
+        let pay = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Pay $' OR label BEGINSWITH 'Place order'"))
+            .firstMatch
+        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced action button")
         attach(app, "checkout")
         pay.tap()
 
