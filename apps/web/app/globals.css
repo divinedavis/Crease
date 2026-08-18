@@ -186,7 +186,15 @@
   .qr h3 { font-size: 1.15rem; margin-bottom: 4px; }
   .qr p { color: var(--muted); font-size: 0.92rem; }
 
-  .sitefoot { background: var(--ink); color: var(--bg); margin-top: 40px; padding: 48px 0 40px; }
+  /* display:block is not redundant. The stylesheet inherited from the old
+     landing page styles the bare `footer` element as a flex row, so .wrap
+     became a flex item and shrank to its content — a 158px column with every
+     heading stacked under the last. */
+  .sitefoot {
+    display: block;
+    background: var(--ink); color: var(--bg);
+    margin-top: 40px; padding: 48px 0 40px;
+  }
   /* The grid is an inner element, not .wrap itself. As a grid container .wrap
      resolved its tracks against its own content and laid five 160px columns
      out on a 390px phone — 960px of footer dragging the whole page sideways.

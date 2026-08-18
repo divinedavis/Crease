@@ -17,7 +17,26 @@ const SERVICES = [
   { emoji: '📦', name: 'Return only', note: "It's at the shop — bring it home", href: '/order?tier=return_only' },
 ];
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // /?owner=1 marks this device as yours so the traffic tile stops counting
+  // it; /?owner=0 undoes it. Handled by the route, which owns the file.
+  const params = await searchParams;
+  const ownerFlag = params.owner;
+  if (ownerFlag !== undefined) {
+    const { headers } = await import('next/headers');
+    const h = await headers();
+    const proto = h.get('x-forwarded-proto') ?? 'https';
+    const host = h.get('host') ?? 'creasenyc.com';
+    await fetch(`${proto}://${host}/api/owner?owner=${ownerFlag === '0' ? '0' : '1'}`, {
+      headers: { cookie: h.get('cookie') ?? '', 'x-real-ip': h.get('x-real-ip') ?? '' },
+      cache: 'no-store',
+    }).catch(() => undefined);
+  }
+
   return (
     <>
       <nav className="wrap nav">
