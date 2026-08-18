@@ -202,3 +202,14 @@
   .sitefoot a { color: var(--bg); opacity: 0.75; text-decoration: none; font-size: 0.93rem; }
   .sitefoot a:hover { opacity: 1; }
   .footgrid .legal { grid-column: 1 / -1; opacity: 0.6; font-size: 0.85rem; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.15); }
+
+  /* On a phone the inline nav wrapped into a column down the middle of the
+     header and pushed the call to action off the right edge. Everything in it
+     is a link to a section of this same page, reachable by scrolling — so it
+     is the CTA that has to survive, not the anchors. */
+  @media (max-width: 700px) {
+    .nav { gap: 14px; }
+    .nav .links { display: none; }
+    .nav .brand { flex: 1; font-size: 1.15rem; }
+    .nav .brand img { width: 30px; height: 30px; }
+  }
