@@ -1,0 +1,43 @@
+[Unit]
+Description=Crease customer site (Next.js)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=crease
+WorkingDirectory=/opt/crease/apps/web
+EnvironmentFile=/opt/crease/apps/web/.env.local
+Environment=NODE_ENV=production
+Environment=PORT=3020
+Environment=HOSTNAME=127.0.0.1
+# The box is shared with six other sites. Next is the biggest thing here after
+# the portal, so it gets the same cap for the same reason.
+Environment=NODE_OPTIONS=--max-old-space-size=192
+MemoryMax=320M
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+StandardOutput=append:/var/log/crease/web.log
+StandardError=append:/var/log/crease/web.log
+
+# Same hardening as the dispatch service: this process holds the service-role
+# key and answers the open internet, so it gets nothing it does not need.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

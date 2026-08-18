@@ -69,12 +69,13 @@ for pkg in packages/*/; do
 done
 npx tsc -p services/dispatch/tsconfig.json
 npm run build -w @crease/portal >/dev/null
+npm run build -w @crease/web >/dev/null
 
 echo "==> staging"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-mkdir -p "$STAGE/services/dispatch" "$STAGE/packages" "$STAGE/apps/portal"
+mkdir -p "$STAGE/services/dispatch" "$STAGE/packages" "$STAGE/apps/portal" "$STAGE/apps/web"
 cp -R services/dispatch/dist "$STAGE/services/dispatch/"
 cp services/dispatch/package.json "$STAGE/services/dispatch/"
 
@@ -112,6 +113,16 @@ cp -R apps/portal/.next/static "$STAGE/apps/portal/.next/static"
 if [ -f "$STAGE/apps/portal/apps/portal/server.js" ]; then
   cp -R "$STAGE/apps/portal/apps/portal/." "$STAGE/apps/portal/"
   rm -rf "$STAGE/apps/portal/apps"
+fi
+
+# The customer site, same standalone shape as the portal.
+cp -R apps/web/.next/standalone/. "$STAGE/apps/web/"
+mkdir -p "$STAGE/apps/web/.next"
+cp -R apps/web/.next/static "$STAGE/apps/web/.next/static"
+[ -d apps/web/public ] && cp -R apps/web/public "$STAGE/apps/web/public"
+if [ -f "$STAGE/apps/web/apps/web/server.js" ]; then
+  cp -R "$STAGE/apps/web/apps/web/." "$STAGE/apps/web/"
+  rm -rf "$STAGE/apps/web/apps"
 fi
 
 cp -R deploy "$STAGE/deploy"
@@ -196,10 +207,10 @@ ssh "$HOST" "set -e
   chmod -R u=rwX,g=rX,o= $REMOTE
   # Next writes its incremental cache here at runtime (revalidatePath); without
   # a writable subtree a root-owned code tree turns that into an EACCES.
-  mkdir -p $REMOTE/apps/portal/.next/cache
-  chown -R $SERVICE_USER:$SERVICE_USER $REMOTE/apps/portal/.next/cache
+  mkdir -p $REMOTE/apps/portal/.next/cache $REMOTE/apps/web/.next/cache
+  chown -R $SERVICE_USER:$SERVICE_USER $REMOTE/apps/portal/.next/cache $REMOTE/apps/web/.next/cache
   if [ -d $REMOTE/secrets ]; then chown -R $SERVICE_USER:$SERVICE_USER $REMOTE/secrets; chmod 700 $REMOTE/secrets; fi
-  for f in $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local; do
+  for f in $REMOTE/services/dispatch/.env $REMOTE/apps/portal/.env.local $REMOTE/apps/web/.env.local; do
     if [ -f \"\$f\" ]; then chown $SERVICE_USER:$SERVICE_USER \"\$f\"; chmod 600 \"\$f\"; fi
   done"
 
@@ -209,10 +220,10 @@ echo "==> systemd"
 # release deliberately relies on it: the Stripe ledger now settles on a failed
 # dispatch so the provider stops retrying, and retryable create failures are
 # parked for the sweep to release. Without the timer running, nothing retries.
-scp -q deploy/crease-dispatch.service deploy/crease-portal.service \
+scp -q deploy/crease-dispatch.service deploy/crease-portal.service deploy/crease-web.service \
       deploy/crease-sweep.service deploy/crease-sweep.timer \
       deploy/crease-purge.service deploy/crease-purge.timer "$HOST:/etc/systemd/system/"
-ssh "$HOST" 'systemctl daemon-reload && systemctl enable --now crease-dispatch crease-portal && systemctl restart crease-dispatch crease-portal'
+ssh "$HOST" 'systemctl daemon-reload && systemctl enable --now crease-dispatch crease-portal crease-web && systemctl restart crease-dispatch crease-portal crease-web'
 ssh "$HOST" 'systemctl enable --now crease-sweep.timer crease-purge.timer'
 # The retention job ran from /etc/cron.d as root — the last thing still doing so
 # after the move to an unprivileged service user. The timer above replaces it on
@@ -234,9 +245,11 @@ done
 echo "==> verifying"
 health="$(ssh "$HOST" 'curl -s -m 5 http://127.0.0.1:8011/healthz' || true)"
 portal="$(ssh "$HOST" 'curl -s -o /dev/null -w "%{http_code}" -m 8 http://127.0.0.1:3010/login' || true)"
-units="$(ssh "$HOST" 'systemctl is-active crease-dispatch crease-portal' || true)"
+web="$(ssh "$HOST" 'curl -s -o /dev/null -w "%{http_code}" -m 10 http://127.0.0.1:3020/' || true)"
+units="$(ssh "$HOST" 'systemctl is-active crease-dispatch crease-portal crease-web' || true)"
 echo "    dispatch healthz -> ${health:-<no response>}"
 echo "    portal /login    -> ${portal:-<no response>} (expect 200)"
+echo "    web /            -> ${web:-<no response>} (expect 200)"
 echo "    units            -> $(echo "$units" | tr '\n' ' ')"
 
 echo "$health" | grep -q '"ok":true' || {
@@ -247,6 +260,11 @@ echo "$health" | grep -q '"ok":true' || {
 [ "$portal" = "200" ] || {
   echo "ERROR: portal /login returned '${portal:-<no response>}', expected 200" >&2
   echo "  journalctl -u crease-portal -n 50 --no-pager" >&2
+  exit 1
+}
+[ "$web" = "200" ] || {
+  echo "ERROR: the customer site returned '${web:-<no response>}', expected 200" >&2
+  echo "  journalctl -u crease-web -n 50 --no-pager" >&2
   exit 1
 }
 echo "==> done"

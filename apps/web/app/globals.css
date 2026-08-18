@@ -1,0 +1,111 @@
+:root {
+    --green: #1F705C;
+    --green-soft: #E7F1ED;
+    --ink: #17211E;
+    --muted: #5C6B66;
+    --bg: #F7F8F7;
+    --card: #FFFFFF;
+    --border: #E3E8E6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --green: #3FA587;
+      --green-soft: #1B2A25;
+      --ink: #ECF1EF;
+      --muted: #9AA8A3;
+      --bg: #101514;
+      --card: #1A211F;
+      --border: #29322F;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased; line-height: 1.6;
+  }
+  a { color: var(--green); }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  header { padding: 28px 0; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand img { width: 40px; height: 40px; border-radius: 9px; }
+
+  .hero { display: flex; align-items: center; gap: 48px; padding: 48px 0 72px; flex-wrap: wrap; }
+  .hero-copy { flex: 1 1 420px; }
+  h1 { font-size: clamp(2.1rem, 5vw, 3.2rem); line-height: 1.12; letter-spacing: -0.03em; margin-bottom: 18px; }
+  h1 em { font-style: normal; color: var(--green); }
+  .lede { font-size: 1.15rem; color: var(--muted); max-width: 34em; margin-bottom: 28px; }
+  .badge-soon {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--green); color: #fff; border-radius: 12px;
+    padding: 12px 20px; font-weight: 600; font-size: 1rem;
+  }
+  .badge-soon svg { width: 20px; height: 20px; fill: currentColor; }
+  .badge-note { display: block; margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+
+  .hero-shot { flex: 0 1 300px; margin: 0 auto; }
+  .hero-shot img {
+    display: block; width: 100%; max-width: 300px;
+    border-radius: 34px; border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(23, 33, 30, 0.18);
+  }
+
+  .steps { padding: 24px 0 72px; }
+  h2 { font-size: 1.6rem; letter-spacing: -0.02em; margin-bottom: 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+  }
+  .card .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--green-soft); color: var(--green);
+    font-weight: 700; margin-bottom: 14px;
+  }
+  .card h3 { font-size: 1.08rem; margin-bottom: 6px; }
+  .card p { color: var(--muted); font-size: 0.97rem; }
+
+  .fair {
+    background: var(--green-soft); border-radius: 20px;
+    padding: 36px; margin-bottom: 72px;
+  }
+  .fair h2 { margin-bottom: 10px; }
+  .fair p { color: var(--muted); max-width: 46em; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0 48px; color: var(--muted); font-size: 0.95rem;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+
+  /* --- coverage check ------------------------------------------------- */
+  .check { margin: 26px 0 8px; }
+  .check-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .check input[type="text"], .check input[type="email"] {
+    flex: 1 1 260px; min-width: 0;
+    font: inherit; color: var(--ink); background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  }
+  .check input:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+  .check button {
+    font: inherit; font-weight: 600; cursor: pointer;
+    background: var(--green); color: #fff;
+    border: 0; border-radius: 12px; padding: 14px 22px;
+  }
+  .check button:disabled { opacity: 0.6; cursor: default; }
+  .answer {
+    margin-top: 16px; padding: 16px 18px; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--card);
+  }
+  .answer.yes { border-color: var(--green); background: var(--green-soft); }
+  .answer h3 { font-size: 1.05rem; margin-bottom: 4px; }
+  .answer p { color: var(--muted); font-size: 0.97rem; }
+  .answer .cta { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .answer .cta a {
+    display: inline-block; font-weight: 600; text-decoration: none;
+    background: var(--green); color: #fff; border-radius: 12px; padding: 12px 18px;
+  }
+  .answer .cta a.ghost { background: transparent; color: var(--green); border: 1px solid var(--green); }
+  .fine { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
