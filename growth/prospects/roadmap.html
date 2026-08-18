@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Crease — expansion roadmap</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-title" content="Roadmap" />
+<meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#16161a" media="(prefers-color-scheme: dark)" />
+<style>
+  /* Same palette as the canvass tool next door — this is the planning half of
+     the same founder surface, and two colour systems on one origin reads as
+     two products. Wider shell: this one is read at a desk, not between doors. */
+  :root {
+    --bg: #f6f6f4; --surface: #fff; --border: #e2e0da; --text: #1c1b18;
+    --muted: #6b6862; --accent: #1f6f5c; --accent-fg: #fff;
+    --warn-bg: #fdf3e2; --warn-fg: #8a5a12;
+    --danger-bg: #fdeceb; --danger-fg: #a32b22;
+    --live-bg: #e8f2ef; --live-fg: #1f6f5c;
+    --track: #eceae4; --plan: #d9d6ce;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a; --surface: #1f1f24; --border: #33333b; --text: #f0efec;
+      --muted: #9d9a94; --accent: #3fa587; --accent-fg: #0c1512;
+      --warn-bg: #3a2e18; --warn-fg: #f0c274;
+      --danger-bg: #3b1f1d; --danger-fg: #f19a92;
+      --live-bg: #16302a; --live-fg: #6fd0b4;
+      --track: #26262c; --plan: #3a3a43;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 ui-sans-serif, -apple-system, system-ui, sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 880px; margin: 0 auto; padding: 12px 12px 80px; }
+  h1 { font-size: 18px; margin: 8px 0 2px; }
+  h2 { font-size: 15px; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 16px; }
+  a.btn, button { font: inherit; font-weight: 600; min-height: 40px;
+    padding: 9px 13px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center;
+    -webkit-tap-highlight-color: transparent; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+  input { font: inherit; width: 100%; padding: 10px 12px; min-height: 44px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); }
+  label { font-size: 13px; font-weight: 600; display: block; margin: 0 0 4px; }
+  .field { margin-bottom: 12px; }
+  .notice { border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+  .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
+  .notice.warn { background: var(--warn-bg); color: var(--warn-fg); }
+
+  header.top { display: flex; justify-content: space-between; align-items: center;
+               gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; }
+  header.top .row-actions { display: flex; gap: 8px; }
+
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px;
+          font-weight: 700; vertical-align: 1px; white-space: nowrap; }
+  .chip.now { background: var(--live-bg); color: var(--live-fg); }
+  .chip.next { background: var(--warn-bg); color: var(--warn-fg); }
+  .chip.later { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .chip.late { background: var(--danger-bg); color: var(--danger-fg); }
+  .chip.done { background: var(--live-bg); color: var(--live-fg); }
+
+  /* --- the countdown on the phase that is actually being worked ---------- */
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+          margin-bottom: 14px; }
+  @media (max-width: 560px) { .hero { grid-template-columns: 1fr; } }
+  .hero .big { font-size: 30px; font-weight: 800; line-height: 1.1;
+               font-variant-numeric: tabular-nums; }
+  .hero .stats { display: flex; gap: 18px; flex-wrap: wrap; }
+  .hero .stat .n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .hero .stat .l { font-size: 12px; color: var(--muted); }
+
+  /* --- timeline --------------------------------------------------------- */
+  .tl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+  .tl { min-width: 620px; position: relative; }
+  .tl-axis { display: grid; font-size: 11px; color: var(--muted); font-weight: 600;
+             border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 8px; }
+  .tl-axis span { border-left: 1px solid var(--border); padding-left: 5px; }
+  .tl-axis span:first-child { border-left: 0; padding-left: 0; }
+  .tl-row { position: relative; height: 34px; }
+  .tl-track { position: absolute; inset: 6px 0; background: var(--track); border-radius: 6px; }
+  .tl-bar { position: absolute; top: 6px; bottom: 6px; border-radius: 6px;
+            background: var(--plan); display: flex; align-items: center;
+            padding: 0 8px; font-size: 12px; font-weight: 700; color: var(--text);
+            white-space: nowrap; overflow: hidden; }
+  /* Washed-out is the work still ahead; the solid fill is what is canvassed.
+     The label sits above both, so it needs the darker foreground either way. */
+  .tl-bar.current { background: color-mix(in srgb, var(--accent) 34%, var(--track));
+                    color: var(--accent-fg); }
+  .tl-bar.done { background: var(--live-bg); color: var(--live-fg);
+                 box-shadow: inset 0 0 0 1px var(--live-fg); }
+  /* Progress inside the current bar: how far the canvass has actually got,
+     drawn against how far the calendar has. */
+  .tl-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--danger-fg);
+              z-index: 2; pointer-events: none; }
+  /* Below the bars, not above: at the top it drew straight through the
+     quarter axis, and on a narrow phone the two overlapped illegibly. */
+  .tl-today::after { content: 'today'; position: absolute; bottom: -14px; left: 50%;
+    transform: translateX(-50%); font-size: 10px; font-weight: 700;
+    color: var(--danger-fg); background: var(--bg); padding: 0 3px; }
+  .tl-rows { position: relative; padding-bottom: 18px; }
+  /* The line stops short of the padding so its label has the strip to itself. */
+  .tl-today { bottom: 18px; }
+
+  /* --- phase cards ------------------------------------------------------ */
+  .phases { display: grid; gap: 10px; margin-top: 16px; }
+  .phase { background: var(--surface); border: 1px solid var(--border);
+           border-radius: var(--radius); padding: 14px; }
+  .phase.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .phase .head { display: flex; justify-content: space-between; align-items: baseline;
+                 gap: 10px; flex-wrap: wrap; }
+  .phase .when { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+             gap: 10px; margin: 12px 0 4px; }
+  .metric { background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 10px; }
+  .metric .n { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .metric .l { font-size: 11.5px; color: var(--muted); }
+  .bar { height: 7px; border-radius: 999px; background: var(--track); overflow: hidden;
+         margin-top: 8px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .gates { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+  .gates li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 14px;
+              align-items: start; }
+  .gates li .mark { font-weight: 700; color: var(--muted); }
+  .gates li.met .mark { color: var(--live-fg); }
+  .gates li.met .what { color: var(--muted); text-decoration: line-through; }
+  .gates li .why { color: var(--muted); font-size: 12.5px; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="shell" id="app"></div>
+
+<!-- Vendored for the same reason the canvass tool vendors it: this page shares
+     an origin with the cleaner portal, so an unpinned third-party module here
+     would be a standing handover of those sessions. -->
+<script src="supabase.js"></script>
+<script type="module">
+const { createClient } = window.supabase;
+const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__');
+const app = document.getElementById('app');
+
+const esc = (s) => (s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------------------------------------------------------------------------
+ * THE PLAN. Dates are the founder's commitments, not derived from anything —
+ * edit them here when the plan changes and the whole page follows: the axis,
+ * the today line, the countdown, and which phase is called "current".
+ *
+ * `end` is the date the market is meant to be DONE, inclusive. Phases run
+ * back-to-back because that is how the plan was set; if two ever overlap, the
+ * timeline draws that correctly without any other change.
+ *
+ * The Bronx is deliberately absent — it is not on the plan. The prospects
+ * table can still hold Bronx rows (migration 0036); they just won't appear as
+ * a phase until someone adds one here.
+ * ------------------------------------------------------------------------ */
+const PHASES = [
+  { borough: 'Brooklyn',      start: '2026-01-01', end: '2026-12-31',
+    note: 'The proving market: the canvass list, the first partner shops, and the two-leg courier route running for real.' },
+  { borough: 'Manhattan',     start: '2027-01-01', end: '2027-06-30',
+    note: 'Densest drop-off market and the shortest courier legs; doormen and walk-ups change the pickup story, not the pricing.' },
+  { borough: 'Queens',        start: '2027-07-01', end: '2027-12-31',
+    note: 'Widest spread of the five — routes get longer here, so the per-leg economics get re-checked before the list is worked.' },
+  { borough: 'Staten Island', start: '2028-01-01', end: '2028-06-30',
+    note: 'Smallest list and the only car-first borough; a courier network that is not rideshare-backed has to be proven here first.' },
+  { borough: 'New Jersey',    start: '2028-07-01', end: '2028-12-31',
+    note: 'First market outside NYC: new sales tax handling, a second courier coverage area, and a state line in every route quote.' },
+];
+
+/* The market each shop sits in. `prospects` carries it as a column (0036);
+ * `cleaners` cannot — it is the customer-facing partner table and its columns
+ * are grant-locked — so partner shops are placed by ZIP, which is the one
+ * unambiguous NYC borough key. Three-digit prefixes:
+ *   100/101/102 Manhattan · 103 Staten Island · 104 Bronx
+ *   110/111/113/114/116 Queens · 112 Brooklyn · 07x/08x New Jersey
+ * 115xx is Nassau County, not Queens, and is intentionally not matched. */
+function boroughOfZip(zip, state, city) {
+  const z = String(zip ?? '').trim().slice(0, 5);
+  const p = z.slice(0, 3);
+  if (p === '112') return 'Brooklyn';
+  if (['100', '101', '102'].includes(p)) return 'Manhattan';
+  if (['110', '111', '113', '114', '116'].includes(p)) return 'Queens';
+  if (p === '103') return 'Staten Island';
+  if (p === '104') return 'Bronx';
+  if (/^0[78]/.test(z)) return 'New Jersey';
+  // No usable ZIP: fall back to what the shop typed for itself.
+  if (String(state ?? '').trim().toUpperCase() === 'NJ') return 'New Jersey';
+  const c = String(city ?? '').trim().toLowerCase();
+  if (c === 'brooklyn') return 'Brooklyn';
+  if (c === 'manhattan' || c === 'new york') return 'Manhattan';
+  if (c === 'staten island') return 'Staten Island';
+  if (c === 'bronx' || c === 'the bronx') return 'Bronx';
+  return null;
+}
+
+const DAY = 86400000;
+const day = (s) => new Date(s + 'T00:00:00');
+// The plan is read in New York, so "today" is the local calendar date, not UTC.
+const today = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const fmtFull = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+async function main() {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) return renderLogin();
+
+  // Two reads, both already permitted to this account: the canvass list (RLS
+  // narrows it to the founder) and the active partner list (readable to any
+  // signed-in user, column-locked since 0024 — nothing here asks for a column
+  // outside that grant, and nothing asks for shop contact details at all).
+  const [prospectRes, cleanerRes] = await Promise.all([
+    db.from('prospects').select('id, borough, kind, visited, outcome').limit(2000),
+    db.from('cleaners').select('id, name, city, state, postal_code, active, created_at').limit(500),
+  ]);
+
+  if (prospectRes.error) return renderLogin(`Couldn't load the canvass list: ${prospectRes.error.message}`);
+
+  // A partner-list failure is survivable: the roadmap still has the canvass
+  // half. Losing the whole page over it would be the worse trade.
+  const partnerErr = cleanerRes.error?.message ?? null;
+  render(prospectRes.data ?? [], cleanerRes.data ?? [], partnerErr);
+}
+
+function renderLogin(err) {
+  app.innerHTML = `
+    <h1>Crease — expansion roadmap</h1>
+    <p class="sub">Sign in to see the plan against the numbers.</p>
+    ${err ? `<div class="notice danger">${esc(err)}</div>` : ''}
+    <form class="card" id="login">
+      <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username"
+        value="${esc(localStorage.canvassEmail ?? '')}" required /></div>
+      <div class="field"><label>Password</label><input id="pw" type="password" autocomplete="current-password" required /></div>
+      <button class="primary" style="width:100%">Sign in</button>
+    </form>
+    <p class="foot"><a href="./">← Canvass</a></p>`;
+  document.getElementById('login').onsubmit = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const { error } = await db.auth.signInWithPassword({
+      email, password: document.getElementById('pw').value,
+    });
+    if (error) return renderLogin(error.message);
+    localStorage.canvassEmail = email;
+    main();
+  };
+}
+
+/** Everything the page knows about one market, plan and reality together. */
+function measure(phase, prospects, cleaners) {
+  const list = prospects.filter((r) => (r.borough ?? 'Brooklyn') === phase.borough);
+  const partners = cleaners.filter(
+    (c) => c.active && boroughOfZip(c.postal_code, c.state, c.city) === phase.borough,
+  );
+  const visited = list.filter((r) => r.visited).length;
+  const interested = list.filter((r) => r.outcome === 'interested').length;
+  const followUp = list.filter((r) => r.outcome === 'follow_up').length;
+
+  const start = day(phase.start), end = day(phase.end);
+  const daysLeft = Math.round((end - today) / DAY);
+  const elapsed = Math.min(1, Math.max(0, (today - start) / (end - start)));
+
+  // The gates that decide whether a market is done. Each one is either
+  // observable in the data or it is not on this list — a roadmap whose
+  // checkboxes are ticked by hand is a drawing, not a tracker.
+  const gates = [
+    { met: list.length > 0, what: 'Prospect list seeded',
+      why: list.length > 0 ? `${plural(list.length, 'shop')} on the list` : 'no shops seeded for this borough yet' },
+    { met: list.length > 0 && visited === list.length, what: 'Every shop canvassed',
+      why: list.length > 0 ? `${visited} of ${list.length} visited` : 'nothing to canvass until the list is seeded' },
+    { met: interested > 0, what: 'A shop said yes',
+      why: interested > 0 ? `${plural(interested, 'shop')} interested` : 'no interested shop recorded yet' },
+    { met: partners.length > 0, what: 'A partner is live',
+      why: partners.length > 0 ? partners.map((p) => p.name).join(', ') : 'no active shop in this borough yet' },
+  ];
+  const done = gates.every((g) => g.met);
+
+  return {
+    phase, list, partners, visited, interested, followUp, start, end,
+    daysLeft, elapsed, gates, done,
+    coverage: pct(visited, list.length),
+    // Behind means the canvass has covered less of the list than the phase has
+    // spent of its calendar. It is the only "are we on track" signal the data
+    // can honestly give, so it is the only one drawn.
+    behind: !done && today >= start && pct(visited, list.length) / 100 < elapsed - 0.1,
+    late: !done && today > end,
+  };
+}
+
+function statusOf(m, currentKey) {
+  if (m.done) return { cls: 'done', label: 'Done' };
+  if (m.late) return { cls: 'late', label: `${plural(Math.abs(m.daysLeft), 'day')} over` };
+  if (m.phase.borough === currentKey) return { cls: 'now', label: `${plural(m.daysLeft, 'day')} left` };
+  return { cls: today >= day(m.phase.start) ? 'next' : 'later', label: `by ${fmtFull(m.end)}` };
+}
+
+function render(prospects, cleaners, partnerErr) {
+  const measured = PHASES.map((p) => measure(p, prospects, cleaners));
+
+  // The phase being worked: the first one that isn't finished. An overdue
+  // Brooklyn stays current rather than handing the badge to Manhattan on
+  // January 1st — the calendar does not finish a market, the gates do.
+  const current = measured.find((m) => !m.done) ?? measured[measured.length - 1];
+
+  // The axis spans the whole plan, quarter by quarter.
+  const span0 = day(PHASES[0].start);
+  const span1 = day(PHASES[PHASES.length - 1].end);
+  const at = (d) => Math.max(0, Math.min(100, ((d - span0) / (span1 - span0)) * 100));
+
+  const quarters = [];
+  for (let y = span0.getFullYear(); y <= span1.getFullYear(); y++) {
+    for (let q = 0; q < 4; q++) quarters.push({ label: `Q${q + 1}${q === 0 ? ` ’${String(y).slice(2)}` : ''}` });
+  }
+
+  const todayInSpan = today >= span0 && today <= span1;
+
+  app.innerHTML = `
+    <header class="top">
+      <div>
+        <h1>Expansion roadmap</h1>
+        <div class="sub">Brooklyn → Manhattan → Queens → Staten Island → New Jersey</div>
+      </div>
+      <div class="row-actions">
+        <a class="btn" href="./">Canvass</a>
+        <button id="signout">Sign out</button>
+      </div>
+    </header>
+
+    ${partnerErr ? `<div class="notice warn">Partner shops unavailable (${esc(partnerErr)}) — canvass numbers below are still live.</div>` : ''}
+
+    <section class="card hero">
+      <div>
+        <div class="sub">Current phase · due ${fmtFull(current.end)}</div>
+        <div class="big">${esc(current.phase.borough)}</div>
+        <div class="sub">${current.late
+          ? `${plural(Math.abs(current.daysLeft), 'day')} past the target date`
+          : `${plural(current.daysLeft, 'day')} to go`}</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n">${current.visited}/${current.list.length}</div><div class="l">Canvassed</div></div>
+        <div class="stat"><div class="n">${current.interested}</div><div class="l">Interested</div></div>
+        <div class="stat"><div class="n">${current.partners.length}</div><div class="l">Partners live</div></div>
+      </div>
+    </section>
+
+    ${current.behind ? `<div class="notice warn">
+      ${esc(current.phase.borough)} is ${current.coverage}% canvassed with ${Math.round(current.elapsed * 100)}% of the phase spent.
+      At the current pace the list does not finish by ${esc(fmtFull(current.end))}.
+    </div>` : ''}
+
+    <section class="card" style="margin-top:14px">
+      <h2>Timeline</h2>
+      <div class="sub" style="margin-bottom:12px">Each bar is a market from kickoff to its target date. On the market being worked, the solid stretch is how much of its list has actually been canvassed — compare it to the today line.</div>
+      <div class="tl-scroll">
+        <div class="tl">
+          <div class="tl-axis" style="grid-template-columns: repeat(${quarters.length}, 1fr)">
+            ${quarters.map((q) => `<span>${esc(q.label)}</span>`).join('')}
+          </div>
+          <div class="tl-rows">
+            ${measured.map((m) => {
+              const left = at(m.start), right = at(m.end);
+              const isCurrent = m.phase.borough === current.phase.borough;
+              return `<div class="tl-row">
+                <div class="tl-track"></div>
+                <div class="tl-bar ${m.done ? 'done' : isCurrent ? 'current' : ''}"
+                     style="left:${left}%; width:${Math.max(right - left, 4)}%"
+                     title="${esc(m.phase.borough)} — ${esc(fmtFull(m.start))} to ${esc(fmtFull(m.end))}">
+                  ${isCurrent && m.list.length ? `<i class="tl-fill" style="width:${m.coverage}%"></i>` : ''}
+                  <span style="position:relative">${esc(m.phase.borough)}</span>
+                </div>
+              </div>`;
+            }).join('')}
+            ${todayInSpan ? `<div class="tl-today" style="left:${at(today)}%"></div>` : ''}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="phases">
+      ${measured.map((m) => {
+        const st = statusOf(m, current.phase.borough);
+        const isCurrent = m.phase.borough === current.phase.borough;
+        return `
+        <section class="phase ${isCurrent ? 'current' : ''}">
+          <div class="head">
+            <h2>${esc(m.phase.borough)} <span class="chip ${st.cls}">${esc(st.label)}</span></h2>
+            <span class="when">${esc(fmt(m.start))} – ${esc(fmtFull(m.end))}</span>
+          </div>
+          <div class="sub">${esc(m.phase.note)}</div>
+
+          <div class="metrics">
+            <div class="metric"><div class="n">${m.list.length}</div><div class="l">On the list</div></div>
+            <div class="metric"><div class="n">${m.visited}</div><div class="l">Visited</div></div>
+            <div class="metric"><div class="n">${m.interested}</div><div class="l">Interested</div></div>
+            <div class="metric"><div class="n">${m.followUp}</div><div class="l">Follow up</div></div>
+            <div class="metric"><div class="n">${m.partners.length}</div><div class="l">Partners live</div></div>
+          </div>
+          ${m.list.length ? `<div class="bar"><i style="width:${m.coverage}%"></i></div>
+            <div class="sub" style="margin-top:4px">${m.coverage}% canvassed</div>` : ''}
+
+          <ul class="gates">
+            ${m.gates.map((g) => `<li class="${g.met ? 'met' : ''}">
+              <span class="mark">${g.met ? '✓' : '○'}</span>
+              <span><span class="what">${esc(g.what)}</span><br /><span class="why">${esc(g.why)}</span></span>
+            </li>`).join('')}
+          </ul>
+        </section>`;
+      }).join('')}
+    </div>
+
+    <p class="foot">Dates are the plan; every number on this page is read live from the canvass list and the active partner shops.
+    Partner shops are placed by ZIP — a shop with no usable ZIP counts in no borough.</p>`;
+
+  document.getElementById('signout').onclick = async () => {
+    await db.auth.signOut();
+    renderLogin();
+  };
+}
+
+main();
+</script>
+</body>
+</html>

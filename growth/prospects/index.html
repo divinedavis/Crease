@@ -59,6 +59,8 @@
   .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
 
   header.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0 10px; }
+  header.top .row-actions { display: flex; gap: 8px; }
+  a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .counts { font-variant-numeric: tabular-nums; }
 
   /* The split the pitch depends on: dry cleaner vs laundromat is a mode,
@@ -148,6 +150,9 @@ const OUTCOMES = [['interested', 'Interested'], ['follow_up', 'Follow up'], ['de
 let rows = [];
 const ui = {
   kind: localStorage.canvassKind ?? 'dry_cleaner',
+  // Which market's list is on screen. Only ever offered when the table holds
+  // more than one — a segment with a single button is furniture.
+  borough: localStorage.canvassBorough ?? null,
   q: '',
   // 'all' | 'unvisited' | 'visited'; migrates the old hide-visited checkbox pref.
   visit: localStorage.canvassVisit ?? (localStorage.canvassHide === '1' ? 'unvisited' : 'all'),
@@ -157,6 +162,7 @@ const ui = {
 };
 const persistUi = () => {
   localStorage.canvassKind = ui.kind;
+  if (ui.borough) localStorage.canvassBorough = ui.borough;
   localStorage.canvassVisit = ui.visit;
   localStorage.canvassFull = ui.fullOnly ? '1' : '0';
   localStorage.canvassOpen = JSON.stringify([...ui.open]);
@@ -199,6 +205,14 @@ async function main() {
   if (error) return renderLogin(`Couldn't load the list: ${error.message}`);
   if (!data.length) return renderLogin('Signed in, but this account cannot see the canvass list.');
   rows = data;
+  // Pin the market before anything renders. Left null with two boroughs on the
+  // table, the segment would show with no button lit and the list would mix
+  // both — the exact confusion the segment exists to prevent. A stored
+  // preference for a market that is no longer in the data is not one.
+  const markets = boroughs();
+  ui.borough = markets.length > 1
+    ? (markets.includes(ui.borough) ? ui.borough : markets[0])
+    : null;
   // Unsynced local edits outrank the server copy: they're newer by definition,
   // and they're what the person believes they recorded.
   for (const r of rows) if (pending[r.id]) Object.assign(r, pending[r.id]);
@@ -282,16 +296,28 @@ function wireSyncBar() {
   };
 }
 
+// Rows seeded before the borough column existed are Brooklyn; the column's
+// default says so too, but the page must not depend on a backfill having run.
+const boroughOf = (r) => r.borough ?? 'Brooklyn';
+const boroughs = () => [...new Set(rows.map(boroughOf))].sort();
+
+// The market filter is the outermost one, and search does NOT escape it:
+// unlike the kind tabs, a hit in another borough is not the shop in front of
+// you, it is a shop thirty minutes away with a similar name.
+const inMarket = (r) => !ui.borough || boroughOf(r) === ui.borough;
+
 // A typed search spans every kind: mid-canvass the question is "do we have
 // this shop at all", and a tab-scoped miss reads as a missing row.
 const visible = () => rows.filter((r) =>
+  inMarket(r) &&
   (ui.q || ui.kind === 'all' || r.kind === ui.kind) &&
   (!(ui.fullOnly && ui.kind === 'laundromat') || r.full_service === true) &&
   (ui.q || ui.visit === 'all' || (ui.visit === 'visited') === !!r.visited) &&
   (!ui.q || (r.name + ' ' + (r.address ?? '') + ' ' + r.neighborhood).toLowerCase().includes(ui.q)));
 
 function render() {
-  const inKind = rows.filter((r) => ui.kind === 'all' || r.kind === ui.kind);
+  const market = rows.filter(inMarket);
+  const inKind = market.filter((r) => ui.kind === 'all' || r.kind === ui.kind);
   const list = visible();
 
   const hoods = new Map();
@@ -304,16 +330,22 @@ function render() {
   app.innerHTML = `
     <header class="top">
       <div>
-        <h1>Brooklyn canvass</h1>
+        <h1>${esc(ui.borough ?? boroughs()[0] ?? 'Brooklyn')} canvass</h1>
         <div class="sub counts">${inKind.filter((r) => r.visited).length} of ${inKind.length} visited</div>
       </div>
-      <button id="signout">Sign out</button>
+      <div class="row-actions">
+        <a class="btn" href="roadmap.html">Roadmap</a>
+        <button id="signout">Sign out</button>
+      </div>
     </header>
     <div class="syncbar" id="syncbar">${syncBarHTML()}</div>
     <div class="filters">
+      ${boroughs().length > 1 ? `<div class="seg" id="boroseg">
+        ${boroughs().map((b) => `<button data-b="${esc(b)}" ${ui.borough === b ? 'class="on"' : ''}>${esc(b)}</button>`).join('')}
+      </div>` : ''}
       <div class="seg" id="kindseg">
-        <button data-k="dry_cleaner" ${ui.kind === 'dry_cleaner' ? 'class="on"' : ''}>Dry cleaners · ${rows.filter((r) => r.kind === 'dry_cleaner').length}</button>
-        <button data-k="laundromat" ${ui.kind === 'laundromat' ? 'class="on"' : ''}>Laundromats · ${rows.filter((r) => r.kind === 'laundromat').length}</button>
+        <button data-k="dry_cleaner" ${ui.kind === 'dry_cleaner' ? 'class="on"' : ''}>Dry cleaners · ${market.filter((r) => r.kind === 'dry_cleaner').length}</button>
+        <button data-k="laundromat" ${ui.kind === 'laundromat' ? 'class="on"' : ''}>Laundromats · ${market.filter((r) => r.kind === 'laundromat').length}</button>
         <button data-k="all" ${ui.kind === 'all' ? 'class="on"' : ''}>All</button>
       </div>
       <div class="row2">
@@ -326,7 +358,7 @@ function render() {
       </div>
       ${ui.kind === 'laundromat' ? `<label class="toggle" style="padding:0 2px">
         <input id="fullonly" type="checkbox" ${ui.fullOnly ? 'checked' : ''} />
-        Full service only · ${rows.filter((r) => r.kind === 'laundromat' && r.full_service === true).length} confirmed
+        Full service only · ${market.filter((r) => r.kind === 'laundromat' && r.full_service === true).length} confirmed
       </label>` : ''}
     </div>
     <div id="list">
@@ -535,6 +567,14 @@ function wire() {
     if (pendingCount() && !confirm(`${pendingCount()} edit(s) haven't synced yet. Sign out anyway? They'll sync next time you sign in on this phone.`)) return;
     await db.auth.signOut();
     renderLogin();
+  };
+  const boro = document.getElementById('boroseg');
+  if (boro) boro.onclick = (e) => {
+    const b = e.target.dataset?.b;
+    // Neighbourhoods don't repeat across boroughs, but the open-set is keyed by
+    // name alone, so a switch starts the new market collapsed rather than
+    // half-open on whatever was expanded in the old one.
+    if (b) { ui.borough = b; ui.open = new Set(); ui.expanded = null; persistUi(); render(); }
   };
   document.getElementById('kindseg').onclick = (e) => {
     const k = e.target.dataset?.k;

@@ -62,7 +62,18 @@ services/dispatch Fastify — order state machine, courier webhooks, money
 packages/delivery Carrier abstraction: Uber Direct + a simulator
 packages/payments Stripe + Connect, and a mock enforcing the same rules
 supabase          Schema and RLS policies
+growth/prospects  Founder-only: the street canvass tool and the expansion roadmap
 ```
+
+**The expansion plan is a page, not a document.** Five markets in order —
+Brooklyn by the end of 2026, Manhattan by mid-2027, then Queens, Staten Island
+and New Jersey at six-month steps — and every number on it is read live from
+the canvass list and the active partner shops rather than typed in. A market is
+finished when four observable gates are met (list seeded, list fully canvassed,
+a shop said yes, a partner is live), so the roadmap can say a phase is behind
+schedule on evidence instead of on a feeling. Both pages sit behind HTTP basic
+auth at `portal.usecreaseapp.com/prospects/`, and RLS narrows the canvass data
+to one account on top of that.
 
 **Carriers are behind an interface with an ordered fallback chain.** Coverage
 holes at the edge of a service radius are routine, so falling through to a

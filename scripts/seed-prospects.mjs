@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Load the Brooklyn canvassing list into `prospects`.
+ * Load a borough's canvassing list into `prospects`.
  *
  *   node scripts/seed-prospects.mjs
  *
@@ -9,6 +9,9 @@
  * osm_id, and the working columns — visited, outcome, notes — are never
  * touched on a reseed. A fresher OSM pull must not erase a month of
  * door-knocking.
+ *
+ * Seed rows may carry `borough`; without it the column defaults to Brooklyn,
+ * which is what every row seeded before the expansion roadmap is.
  */
 import { readFileSync } from 'node:fs';
 import { adminClient, ROOT } from './lib/client.mjs';
@@ -19,8 +22,14 @@ const { db } = await adminClient();
 
 let done = 0;
 for (let i = 0; i < rows.length; i += 100) {
-  const batch = rows.map(({ osm_id, kind, name, address, zip, phone, lat, lng, neighborhood }) => ({
+  const batch = rows.map(({ osm_id, kind, name, address, zip, phone, lat, lng, neighborhood, borough }) => ({
     osm_id, kind, name, address, zip, phone, lat, lng, neighborhood,
+    // Written on every row, not just the ones that carry it: PostgREST rejects
+    // a bulk upsert whose objects don't all have the same keys (PGRST102), so
+    // "omit when absent" would break the batch the first time a seed file
+    // mixed them. Brooklyn is the right default — it is what every row seeded
+    // before the expansion roadmap is.
+    borough: borough ?? 'Brooklyn',
   })).slice(i, i + 100);
   const { error } = await db.from('prospects').upsert(batch, { onConflict: 'osm_id' });
   if (error) throw new Error(error.message);
