@@ -11,6 +11,10 @@ import Foundation
 /// $25.98 a round trip, essentially flat under three miles. See
 /// scripts/courier-pricing.mjs.
 ///
+/// Each one is solved from courier + card fee + target margin and rounded to
+/// the next .95 — the same formula the dispatcher prices a real route with, so
+/// this list and pricing.ts cannot drift into two different price sheets.
+///
 /// They are a FLOOR, not the final price. "Essentially flat under three miles"
 /// is the whole caveat: past that band a leg costs $15.99 and a round trip
 /// sold at $29.95 loses money. The dispatcher quotes the real route when it
@@ -46,13 +50,17 @@ struct ServiceOption: Identifiable, Hashable {
             pickupEtaMinutes: 30,
             symbol: "arrow.triangle.2.circlepath",
             legs: 2,
-            isRecommended: false
+            // "Best value" belongs on the tier that is actually the best
+            // value. A round trip buys two courier legs for $14.98 each; every
+            // one-leg tier costs $16.95 for one. The badge sat on Pickup only
+            // and was making a claim that did not survive the arithmetic.
+            isRecommended: true
         ),
         ServiceOption(
             id: "return_only",
             name: "Return only",
             blurb: "You drop it off, we deliver it back when it's ready",
-            priceCents: 1995,
+            priceCents: 1695,
             // Nothing is collected from the customer, so there is no arrival
             // to estimate. Showing one would be inventing a number.
             pickupEtaMinutes: nil,
@@ -64,17 +72,11 @@ struct ServiceOption: Identifiable, Hashable {
             id: "pickup_only",
             name: "Pickup only",
             blurb: "We collect it, you fetch it from the shop",
-            priceCents: 1995,
+            priceCents: 1695,
             pickupEtaMinutes: 20,
             symbol: "arrow.up.circle",
             legs: 1,
-            // The default, and what "Best value" now marks. Same $19.95 as
-            // return only, but a driver comes to the customer instead of the
-            // customer carrying the bag — more for the same money, which is
-            // the only claim that badge can honestly make. It sat on return
-            // only, the one tier that dispatches no courier at all, so the
-            // default tap sent nobody anywhere.
-            isRecommended: true
+            isRecommended: false
         ),
     ]
 

@@ -11,10 +11,18 @@
 // scripts/courier-pricing.mjs). They are a FLOOR, not the whole answer — see
 // feeForCourierCost below, which raises them when the actual route costs more
 // than the flat-rate one they were derived from.
+//
+// Every one of these is solved from the formula in feeForCourierCost against
+// the flat rate, not typed in: courier + card fee + TARGET_MARGIN, rounded to
+// the next .95. The one-leg tiers used to be a flat $19.95 that no rule
+// produced — it earned $6.08 where the round trip earned $2.80, so the same
+// business made double the margin for half the work, and nothing in the code
+// said why. Deriving all three means a change to the target moves the whole
+// sheet instead of one row of it.
 export const DELIVERY_FEE_CENTS: Record<string, number> = {
   round_trip: 2995,
-  return_only: 1995,
-  pickup_only: 1995,
+  return_only: 1695,
+  pickup_only: 1695,
 };
 
 /** Courier trips Crease pays for, per tier. The whole margin turns on this. */

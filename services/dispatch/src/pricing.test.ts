@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   cancellationRetainCents,
   cardFeeCents,
+  DELIVERY_FEE_CENTS,
   deliveryFeeCents,
   feeForCourierCost,
   FLAT_RATE_LEG_COST_CENTS,
@@ -20,8 +21,22 @@ test('a flat-rate route still prices at the published fee', () => {
   // The whole point of deriving TARGET_MARGIN_CENTS from the published price:
   // nothing changes for the common case.
   assert.equal(feeForCourierCost('round_trip', FLAT_LEG), 2995);
-  assert.equal(feeForCourierCost('pickup_only', FLAT_LEG), 1995);
-  assert.equal(feeForCourierCost('return_only', FLAT_LEG), 1995);
+  assert.equal(feeForCourierCost('pickup_only', FLAT_LEG), 1695);
+  assert.equal(feeForCourierCost('return_only', FLAT_LEG), 1695);
+});
+
+test('every published price is the formula, not a number somebody typed', () => {
+  // The one-leg tiers were a flat $19.95 for months: $6.08 of margin against
+  // the round trip's $2.80, from the same formula that was supposed to produce
+  // both. Assert the sheet is derived so the next hand-written price fails here
+  // rather than in a spreadsheet six months later.
+  for (const tier of Object.keys(DELIVERY_FEE_CENTS)) {
+    assert.equal(
+      DELIVERY_FEE_CENTS[tier],
+      feeForCourierCost(tier, FLAT_LEG),
+      `${tier}'s published price is not what the flat rate solves to`,
+    );
+  }
 });
 
 test('a six-mile round trip prices above the published fee instead of at a loss', () => {
@@ -46,7 +61,7 @@ test('every priced fee clears courier plus card across the distance range', () =
 
 test('a cheap route is never priced below the published fee', () => {
   assert.equal(feeForCourierCost('round_trip', 100), 2995);
-  assert.equal(feeForCourierCost('pickup_only', 1), 1995);
+  assert.equal(feeForCourierCost('pickup_only', 1), 1695);
 });
 
 test('an unusable quote falls back to the published fee rather than refusing', () => {
