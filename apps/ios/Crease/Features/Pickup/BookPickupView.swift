@@ -27,12 +27,17 @@ struct BookPickupView: View {
     /// has been charged at that point — it is a question, and the answer either
     /// pays the real price or leaves the draft alone.
     @State private var repricedTo: (orderId: UUID, serviceTier: String, cents: Int)?
-    /// How many pieces are going in the bag, 0 meaning "didn't count".
-    /// Optional on purpose: nobody should have to count socks to book a
-    /// courier, but a number given here is what the shop checks the bag
-    /// against at the counter — the earliest a garment lost in transit can
-    /// be noticed.
-    @State private var itemCount = 0
+    /// Which service this order is: dry cleaning, laundry by the pound, or a
+    /// press. It travels on the order row, so the counter knows what was asked
+    /// for before the bag is opened, and the database refuses any line that
+    /// does not match it.
+    @State private var serviceKind: ServiceKind = .dryClean
+    /// The chosen shop's own price list, refetched whenever the shop changes.
+    @State private var menu: [ServiceItem] = []
+    /// What the customer says is in the bag, keyed by service item. Garments
+    /// for per-piece services, pounds for per-pound ones.
+    @State private var quantities: [UUID: Double] = [:]
+    @State private var choosingItems = false
     @StateObject private var checkout = Checkout()
     @State private var draft: Draft?
     /// Whether this screen is still the one presented.
@@ -47,6 +52,34 @@ struct BookPickupView: View {
     /// appeared, and a flag cleared by that event kills the live booking it
     /// was meant to protect.
     @Environment(\.isPresented) private var isPresented
+
+    /// How many pieces the customer says are in the bag, 0 when the order is
+    /// weighed rather than counted.
+    ///
+    /// Derived from the garments they picked instead of typed into a second
+    /// control. It used to be its own stepper, which asked the same question
+    /// twice and let the two answers disagree — and this number is what the
+    /// shop checks the bag against, the earliest moment a garment lost in
+    /// transit can be noticed.
+    private var declaredPieceCount: Int {
+        declaredLines
+            .filter { !$0.item.isByWeight }
+            .reduce(0) { $0 + Int($1.entered) }
+    }
+
+    /// The lines the customer has actually put something into.
+    private var declaredLines: [(item: ServiceItem, entered: Double)] {
+        menu
+            .filter { $0.serviceType == serviceKind.rawValue }
+            .compactMap { item in
+                let entered = quantities[item.id] ?? 0
+                return entered > 0 ? (item, entered) : nil
+            }
+    }
+
+    /// What the cleaning is expected to cost at this shop's prices. Zero until
+    /// something is picked — and zero is honest there, not a quote of free.
+    private var estimateCents: Int { ServicePricing.subtotalCents(declaredLines) }
 
     /// The order this screen already created, and the choice it was created
     /// for. Kept so a retry can pay for it instead of making another, and
@@ -88,6 +121,15 @@ struct BookPickupView: View {
             }
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $choosingItems) {
+            ServiceMenuView(
+                shopName: cleaner?.name ?? "This shop",
+                menu: menu,
+                kind: $serviceKind,
+                quantities: $quantities
+            )
+            .presentationDetents([.large])
+        }
         // A route outside the flat-rate courier band costs more to drive than
         // the published fee collects. The customer gets the real number and a
         // choice, rather than a card charge that does not match the button they
@@ -125,6 +167,20 @@ struct BookPickupView: View {
                     < ($1.milesFrom(pickup.coordinate) ?? .greatestFiniteMagnitude)
             }
             frameRoute()
+        }
+        // Prices belong to the shop, so the list is refetched when the shop
+        // changes and the counts are dropped with it: three shirts at one
+        // shop's $3.49 are not three shirts at another's, and carrying the
+        // numbers across would quote the new shop's name over the old shop's
+        // price.
+        .task(id: cleaner?.id) {
+            guard let id = cleaner?.id else { menu = []; return }
+            quantities.removeAll()
+            menu = await store.serviceMenu(for: id)
+            if !menu.contains(where: { $0.serviceType == serviceKind.rawValue }),
+               let first = ServiceKind.allCases.first(where: { k in menu.contains { $0.serviceType == k.rawValue } }) {
+                serviceKind = first
+            }
         }
     }
 
@@ -232,12 +288,35 @@ struct BookPickupView: View {
             reviewRow(
                 symbol: selected.symbol,
                 title: selected.name,
-                detail: itemCount > 0
-                    ? "\(itemCount) item\(itemCount == 1 ? "" : "s") · \(selected.blurb)"
-                    : selected.blurb
+                detail: selected.blurb
+            )
+
+            reviewRow(
+                symbol: serviceKind.symbol,
+                title: serviceKind.label,
+                detail: declaredSummary
             )
 
             Divider()
+
+            if estimateCents > 0 {
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Cleaning, estimated")
+                            .font(.subheadline.weight(.medium))
+                        // The shop's number, from the shop's price list, and
+                        // still theirs to correct once the bag is open. Saying
+                        // "estimated" here is what makes the count at the
+                        // counter an expected step rather than a dispute.
+                        Text("\(cleaner.name) confirms this when they count")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Text(estimateCents.asMoney)
+                        .font(.subheadline.weight(.semibold))
+                }
+            }
 
             HStack {
                 VStack(alignment: .leading, spacing: 1) {
@@ -356,7 +435,7 @@ struct BookPickupView: View {
             }
             .padding(.horizontal, 16)
 
-            itemCountRow
+            serviceRow
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
@@ -401,34 +480,66 @@ struct BookPickupView: View {
         }
     }
 
-    /// Costs nothing and promises nothing — it just writes down the number so
-    /// the shop can check the same one at the counter.
-    private var itemCountRow: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "tshirt")
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Items in the bag")
-                    .font(.subheadline.weight(.medium))
-                Text(itemCount == 0 ? "Optional — helps track your garments" : "The cleaner will confirm this count")
-                    .font(.caption)
+    /// What service, and what is in the bag — the question the app never asked.
+    ///
+    /// Before this the booking screen collected a bare piece count and sent
+    /// `estimate_subtotal_cents = 0`, so the hold was the courier fee plus $15
+    /// of headroom and every real cleaning bill blew straight through it into
+    /// the approval flow. The customer found out what their clothes cost after
+    /// they had already left the house.
+    private var serviceRow: some View {
+        Button { choosingItems = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: serviceKind.symbol)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 34, height: 34)
+                    .background(Theme.accentSoft, in: Circle())
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(serviceKind.label)
+                        .font(.subheadline.weight(.semibold))
+                    Text(declaredSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+                if estimateCents > 0 {
+                    Text(estimateCents.asMoney)
+                        .font(.subheadline.weight(.semibold))
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
-            Spacer()
-            Stepper(
-                itemCount == 0 ? "—" : "\(itemCount)",
-                value: $itemCount,
-                in: 0...200
-            )
-            .font(.subheadline.weight(.semibold).monospacedDigit())
-            .fixedSize()
+            .padding(12)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .buttonStyle(.plain)
+        .disabled(menu.isEmpty)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Items in the bag: \(itemCount == 0 ? "not counted" : String(itemCount)). Optional.")
+        .accessibilityLabel("\(serviceKind.label). \(declaredSummary). \(estimateCents > 0 ? "Estimated \(estimateCents.asMoney)." : "")")
+        .accessibilityHint("Choose the service and what is in the bag")
+    }
+
+    /// One line describing the bag: garments counted, or pounds estimated.
+    /// Never a price on its own — the price lives beside it.
+    private var declaredSummary: String {
+        guard !declaredLines.isEmpty else {
+            return menu.isEmpty ? "Loading this shop's prices…" : "Tap to choose what you're sending"
+        }
+        return declaredLines
+            .map { line in
+                line.item.isByWeight
+                    ? "\(formatted(line.entered)) lb \(line.item.label.lowercased())"
+                    : "\(Int(line.entered)) × \(line.item.label.lowercased())"
+            }
+            .joined(separator: ", ")
+    }
+
+    private func formatted(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
     }
 
     private var cleanerRow: some View {
@@ -535,7 +646,8 @@ struct BookPickupView: View {
             // The count is the one field the customer can revise between
             // attempts, so the retry carries whatever the stepper says now —
             // including nothing.
-            await store.setCustomerItemCount(orderId: draft.id, count: itemCount > 0 ? itemCount : nil)
+            await store.setCustomerItemCount(orderId: draft.id, count: declaredPieceCount > 0 ? declaredPieceCount : nil)
+            await store.replaceDeclaredItems(orderId: draft.id, lines: declaredLines)
             await settle(orderId: draft.id, serviceTier: draft.tier, agreedCents: selected.priceCents)
             return
         }
@@ -590,17 +702,28 @@ struct BookPickupView: View {
             cleaner_id: cleaner.id,
             address_id: saved.id,
             status: "draft",
-            estimate_subtotal_cents: 0,
+            // What the customer picked off this shop's price list. It sizes
+            // the hold, so a bag declared honestly is captured without ever
+            // troubling them for an approval — which is what the approval flow
+            // was for, rather than the every-order tollgate a zero made it.
+            estimate_subtotal_cents: estimateCents,
             delivery_fee_cents: selected.priceCents,
             service_tier: selected.id,
+            service_type: serviceKind.rawValue,
             pickup_window_start: now,
             pickup_window_end: now.addingTimeInterval(2 * 3600),
             customer_notes: nil,
-            customer_item_count: itemCount > 0 ? itemCount : nil
+            customer_item_count: declaredPieceCount > 0 ? declaredPieceCount : nil
         )) else {
             error = store.errorMessage ?? "Couldn't book that pickup."
             return
         }
+
+        // The itemised list, so the counter starts from what the customer said
+        // rather than a blank form. Best effort: the estimate is already on the
+        // order and the shop counts the bag regardless, so a failure here costs
+        // a head start, not the booking.
+        await store.replaceDeclaredItems(orderId: created.id, lines: declaredLines)
 
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.

@@ -312,6 +312,63 @@ final class CreaseUITests: XCTestCase {
         app.buttons["Cancel"].tap()
     }
 
+    /// The customer picks the service, then says what is in the bag.
+    ///
+    /// The booking screen used to collect a bare piece count and send an
+    /// estimate of zero, so the shop learned what was coming only by opening
+    /// the bag, and the hold was too small for any real cleaning bill. Both
+    /// halves are asserted here: that the shop's own prices are on screen, and
+    /// that laundry is offered by the pound with its minimum spelled out.
+    func testTheCustomerPicksAServiceAndSeesTheShopsPrices() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        let serviceRow = app.buttons.containing(.staticText, identifier: "Dry cleaning").firstMatch
+        XCTAssertTrue(serviceRow.waitForExistence(timeout: 15), "the booking screen must offer the service")
+        serviceRow.tap()
+
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.staticTexts["What are you sending?"].waitForExistence(timeout: 5),
+            "dry cleaning is counted in garments, and the prompt should say so"
+        )
+        // Prices come from the shop that was picked, not a Crease price list.
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS ' each'")).firstMatch.exists,
+            "per-piece prices must be on screen"
+        )
+        attach(app, "service-menu-dry-clean")
+
+        // Laundry is the other half: sold by weight, with a floor the customer
+        // has to be told about before the bag is weighed, not after.
+        let laundry = app.buttons["Wash & fold"]
+        if laundry.waitForExistence(timeout: 5) {
+            laundry.tap()
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS '/ lb'")).firstMatch
+                    .waitForExistence(timeout: 5),
+                "laundry must be priced by the pound"
+            )
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'minimum'")).firstMatch.exists,
+                "the weight minimum is the most surprising number in laundry pricing — say it"
+            )
+            attach(app, "service-menu-wash-fold")
+        }
+
+        app.buttons["Done"].tap()
+    }
+
     func testBookingQuotesOnlyTheDriverEta() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))

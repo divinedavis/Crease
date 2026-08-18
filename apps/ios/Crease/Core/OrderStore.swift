@@ -114,15 +114,65 @@ final class OrderStore: ObservableObject {
             .value) ?? []
     }
 
+    /// The chosen shop's own price list.
+    ///
+    /// Fetched per shop and never cached across shops: these are the prices the
+    /// customer is about to be quoted, and showing one shop's shirt price under
+    /// another shop's name is the one mistake a marketplace cannot make.
     func serviceMenu(for cleanerId: UUID) async -> [ServiceItem] {
         (try? await client
             .from("service_items")
-            .select("id, code, label, unit_price_cents")
+            .select("id, code, label, unit_price_cents, service_type, unit, minimum_units")
             .eq("cleaner_id", value: cleanerId)
             .eq("active", value: true)
             .order("sort_order")
             .execute()
             .value) ?? []
+    }
+
+    /// Send the customer's own declaration of what is in the bag.
+    ///
+    /// Replaces rather than appends: a customer who backs out and re-picks must
+    /// not have both attempts arrive at the counter. Writable only while the
+    /// order is a draft — RLS and the validate trigger both say so, and the
+    /// trigger also pins every price to the shop's published one, so nothing
+    /// here is taken on trust.
+    ///
+    /// A failure is not fatal to the booking. The estimate is already on the
+    /// order, the hold is sized from it, and the shop counts the bag anyway —
+    /// losing the itemised list costs the counter a head start, not the order.
+    @discardableResult
+    func replaceDeclaredItems(orderId: UUID, lines: [(item: ServiceItem, entered: Double)]) async -> Bool {
+        struct NewLine: Encodable {
+            let order_id: UUID
+            let service_item_id: UUID
+            let label: String
+            let quantity: Double
+            let unit_price_cents: Int
+        }
+
+        do {
+            try await client.from("order_items").delete().eq("order_id", value: orderId).execute()
+            let rows = lines
+                .filter { $0.entered > 0 }
+                .map {
+                    NewLine(
+                        order_id: orderId,
+                        service_item_id: $0.item.id,
+                        label: $0.item.label,
+                        // What they will be billed for, not what they typed: a
+                        // bag under the shop's weight floor bills at the floor,
+                        // and the estimate they just agreed to says so.
+                        quantity: ServicePricing.billableUnits($0.item, entered: $0.entered),
+                        unit_price_cents: $0.item.unitPriceCents
+                    )
+                }
+            guard !rows.isEmpty else { return true }
+            try await client.from("order_items").insert(rows).execute()
+            return true
+        } catch {
+            return false
+        }
     }
 
     struct NewAddress: Encodable {
@@ -166,6 +216,10 @@ final class OrderStore: ObservableObject {
         /// cleaning is settled with the shop.
         var delivery_fee_cents: Int = 0
         var service_tier: String = "round_trip"
+        /// Dry cleaning, laundry by the pound, or a press. Decides the shop's
+        /// turnaround and which half of their price list the order is allowed
+        /// to draw its lines from.
+        var service_type: String = "dry_clean"
         let pickup_window_start: Date
         let pickup_window_end: Date
         let customer_notes: String?

@@ -211,15 +211,72 @@ struct Address: Codable, Identifiable, Hashable {
     }
 }
 
+/// A line on a shop's own price list.
+///
+/// Each shop sets its own, which is the whole shape of the marketplace: the
+/// app quotes the prices of the shop the customer picked, never an average and
+/// never a Crease price list. Two shops two blocks apart can charge different
+/// numbers for a shirt and the booking screen has to say so.
 struct ServiceItem: Codable, Identifiable, Hashable {
     let id: UUID
     let code: String
     let label: String
     let unitPriceCents: Int
+    /// 'dry_clean' | 'wash_fold' | 'press'. An order is one of these, and the
+    /// database refuses a line that is not the order's own.
+    let serviceType: String
+    /// 'piece' or 'pound'. Without it "3" is ambiguous between three shirts
+    /// and three pounds, and a per-pound price rendered per item is off by 10x.
+    let unit: String
+    /// The weight floor a laundry order is billed at however light the bag is.
+    /// Zero for everything sold by the piece.
+    let minimumUnits: Double
 
     enum CodingKeys: String, CodingKey {
-        case id, code, label
+        case id, code, label, unit
         case unitPriceCents = "unit_price_cents"
+        case serviceType = "service_type"
+        case minimumUnits = "minimum_units"
+    }
+
+    var isByWeight: Bool { unit == "pound" }
+}
+
+/// The services a customer chooses between, in the order they are offered.
+///
+/// Derived from what the chosen shop actually sells rather than hardcoded: a
+/// dry cleaner with no laundry service must not be shown a laundry tab that
+/// prices nothing.
+enum ServiceKind: String, CaseIterable, Identifiable {
+    case dryClean = "dry_clean"
+    case washFold = "wash_fold"
+    case press
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .dryClean: return "Dry cleaning"
+        case .washFold: return "Wash & fold"
+        case .press: return "Press only"
+        }
+    }
+
+    /// What the customer is being asked to count.
+    var prompt: String {
+        switch self {
+        case .dryClean: return "What are you sending?"
+        case .washFold: return "About how much laundry?"
+        case .press: return "What needs pressing?"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .dryClean: return "tshirt"
+        case .washFold: return "washer"
+        case .press: return "wand.and.sparkles"
+        }
     }
 }
 
