@@ -66,3 +66,35 @@ final class ServicePricingTests: XCTestCase {
         XCTAssertEqual(ServicePricing.billableUnits(wash, entered: .infinity), 0)
     }
 }
+
+/// The hold, which the customer meets twice: once in our own words and once on
+/// Stripe's Pay button. The two have to be the same number, and both have to
+/// match holdForOrder in packages/payments/src/types.ts.
+extension ServicePricingTests {
+
+    func testHeadroomSitsOnTheCleaningNeverOnTheFee() {
+        // A $22.48 bag with a $16.95 courier held $49.29 when the buffer ran
+        // over the combined figure. Nearly four dollars of that was headroom
+        // on a fee the dispatcher had already pinned.
+        XCTAssertEqual(ServicePricing.holdCents(cleaningCents: 2248, fixedCents: 1695), 2248 + 1695 + 562)
+    }
+
+    func testTheCapStillBindsOnABigBag() {
+        // 25% of $200 is $50, and we never hold more than we would charge
+        // without asking.
+        XCTAssertEqual(ServicePricing.holdCents(cleaningCents: 20000, fixedCents: 2995), 20000 + 2995 + 1500)
+    }
+
+    func testAnUnpricedBagGetsTheFlatRoomRatherThanNone() {
+        XCTAssertEqual(ServicePricing.holdCents(cleaningCents: 0, fixedCents: 1695), 1695 + 1500)
+    }
+
+    func testAHoldNeverDipsUnderWhatIsAlreadyCommitted() {
+        for cleaning in [0, 1, 500, 2248, 9999, 20000] {
+            XCTAssertGreaterThanOrEqual(
+                ServicePricing.holdCents(cleaningCents: cleaning, fixedCents: 1695),
+                cleaning + 1695
+            )
+        }
+    }
+}

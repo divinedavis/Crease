@@ -135,7 +135,10 @@ struct BookPickupView: View {
                 // the checkout does not have to be rewritten to say so.
                 serviceFeeCents: 0,
                 taxCents: 0,
-                holdCents: ServicePricing.holdCents(total: estimateCents + selected.priceCents),
+                holdCents: ServicePricing.holdCents(
+                    cleaningCents: estimateCents,
+                    fixedCents: selected.priceCents
+                ),
                 working: submitting
             ) {
                 Task { await book() }

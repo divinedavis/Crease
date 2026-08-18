@@ -118,3 +118,29 @@ export function authorizationAmount(estimateCents: number, thresholdCents: numbe
   const buffered = Math.ceil(estimateCents * 1.25);
   return Math.min(buffered, estimateCents + thresholdCents);
 }
+
+/**
+ * What to hold for a whole order.
+ *
+ * Headroom belongs only on the part that can still move. The cleaning is an
+ * estimate the shop is about to re-count; the courier fee is pinned by the
+ * dispatcher when the intent is minted and is never re-priced afterwards, so
+ * buffering it holds a customer's credit against a number that cannot change.
+ * Running the 25% over the combined figure is what made a $39.43 order hold
+ * $49.29 — nearly four dollars of that was headroom on a fixed fee.
+ *
+ * An order with nothing itemised is the one case with no percentage to take:
+ * the customer has handed over a bag to be priced at the counter, so it gets
+ * the flat threshold as room instead of nothing at all.
+ */
+export function holdForOrder(
+  cleaningCents: number,
+  fixedCents: number,
+  thresholdCents: number,
+): number {
+  const headroom =
+    cleaningCents > 0
+      ? Math.min(Math.ceil(cleaningCents * 0.25), thresholdCents)
+      : thresholdCents;
+  return cleaningCents + fixedCents + headroom;
+}

@@ -39,13 +39,25 @@ enum ServicePricing {
     /// then asks for is worse than not mentioning it at all.
     static let approvalThresholdCents = 1500
 
-    /// What Stripe is asked to authorize: the estimate plus room for the shop
-    /// to find a sock. A mirror of authorizationAmount in
-    /// packages/payments/src/types.ts — the app has to show this number
-    /// because Stripe's own sheet puts it on the Pay button, and a customer
-    /// meeting it there for the first time reads it as an overcharge.
-    static func holdCents(total: Int, threshold: Int = approvalThresholdCents) -> Int {
-        min(Int((Double(total) * 1.25).rounded(.up)), total + threshold)
+    /// What Stripe is asked to authorize: the bill, plus room for the shop to
+    /// find a sock. A mirror of holdForOrder in packages/payments/src/types.ts
+    /// — the app has to show this number because Stripe's own sheet puts it on
+    /// the Pay button, and a customer meeting it there for the first time
+    /// reads it as an overcharge.
+    ///
+    /// The headroom sits on the cleaning alone. The courier fee is pinned by
+    /// the dispatcher when the intent is minted and never re-priced after, so
+    /// holding extra against it reserves a customer's credit for a number that
+    /// cannot move.
+    static func holdCents(
+        cleaningCents: Int,
+        fixedCents: Int,
+        threshold: Int = approvalThresholdCents
+    ) -> Int {
+        let headroom = cleaningCents > 0
+            ? min(Int((Double(cleaningCents) * 0.25).rounded(.up)), threshold)
+            : threshold
+        return cleaningCents + fixedCents + headroom
     }
 
     /// Whether the weight floor — not the bag — is setting this line's price.

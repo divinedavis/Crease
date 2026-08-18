@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  authorizationAmount,
+  holdForOrder,
   OverAuthorizationError,
   PaymentProviderError,
   type PaymentProvider,
@@ -167,8 +167,12 @@ export class PaymentService {
     // is legitimate — a bag handed over to be priced at the counter — and the
     // headroom is what makes that case work without a second charge.
     const cleaning = order.estimate_subtotal_cents ?? 0;
-    const amount = authorizationAmount(
-      cleaning + fee + (order.service_fee_cents ?? 0),
+    // Headroom on the cleaning only. The fee is pinned above and never
+    // re-priced afterwards, so buffering it would hold a customer's credit
+    // against a number that cannot move.
+    const amount = holdForOrder(
+      cleaning,
+      fee + (order.service_fee_cents ?? 0),
       order.approval_threshold_cents,
     );
 
@@ -316,8 +320,12 @@ export class PaymentService {
     // order creation — price it from the real route before it enters the sum.
     await this.pinDeliveryFee(order, orderId, { reprice: true });
 
-    const amount = authorizationAmount(
-      order.estimate_subtotal_cents + order.delivery_fee_cents + order.service_fee_cents,
+    // Same rule as the customer-facing intent above: the two holds must agree,
+    // or the same order is worth a different amount depending on which door it
+    // came through.
+    const amount = holdForOrder(
+      order.estimate_subtotal_cents,
+      order.delivery_fee_cents + order.service_fee_cents,
       order.approval_threshold_cents,
     );
 
