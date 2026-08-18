@@ -53,7 +53,13 @@ export async function GET(request: Request) {
 
   // Back to the page they were on, so the whole thing is one click and a
   // confirmation they can read rather than a JSON body.
-  const back = new URL('/', request.url);
+  //
+  // Built from the forwarded host, not request.url: behind the proxy the app
+  // knows itself as localhost:3020, and redirecting there sends the visitor to
+  // a machine that is not theirs.
+  const host = request.headers.get('host') ?? 'creasenyc.com';
+  const proto = request.headers.get('x-forwarded-proto') ?? 'https';
+  const back = new URL(`${proto}://${host}/`);
   back.searchParams.set('owner_set', on ? '1' : '0');
   const res = NextResponse.redirect(back, { status: 303 });
   res.cookies.set(COOKIE, on ? '1' : '', {
