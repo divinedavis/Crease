@@ -53,7 +53,7 @@
 
   .steps { padding: 24px 0 72px; }
   h2 { font-size: 1.6rem; letter-spacing: -0.02em; margin-bottom: 28px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 18px; }
   .card {
     background: var(--card); border: 1px solid var(--border);
     border-radius: 16px; padding: 24px;
@@ -187,9 +187,18 @@
   .qr p { color: var(--muted); font-size: 0.92rem; }
 
   .sitefoot { background: var(--ink); color: var(--bg); margin-top: 40px; padding: 48px 0 40px; }
-  .sitefoot .wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 28px; }
+  /* The grid is an inner element, not .wrap itself. As a grid container .wrap
+     resolved its tracks against its own content and laid five 160px columns
+     out on a 390px phone — 960px of footer dragging the whole page sideways.
+     min(160px, 100%) is the second half of the fix: a track floor wider than
+     the screen can never fit, so it must be allowed to shrink to it. */
+  .footgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+    gap: 28px;
+  }
   .sitefoot h4 { font-size: 1rem; margin-bottom: 12px; }
   .sitefoot ul { list-style: none; display: grid; gap: 9px; }
   .sitefoot a { color: var(--bg); opacity: 0.75; text-decoration: none; font-size: 0.93rem; }
   .sitefoot a:hover { opacity: 1; }
-  .sitefoot .legal { grid-column: 1 / -1; opacity: 0.6; font-size: 0.85rem; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.15); }
+  .footgrid .legal { grid-column: 1 / -1; opacity: 0.6; font-size: 0.85rem; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.15); }

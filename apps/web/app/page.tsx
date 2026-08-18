@@ -138,6 +138,7 @@ export default function Home() {
 
       <footer className="sitefoot">
         <div className="wrap">
+          <div className="footgrid">
           <div>
             <h4>Crease</h4>
             <ul>
@@ -182,8 +183,9 @@ export default function Home() {
               <li>Prospect Heights</li>
             </ul>
           </div>
-          <div className="legal">
-            © 2026 Crease · <a href="/privacy.html">Privacy</a>
+            <div className="legal">
+              © 2026 Crease · <a href="/privacy.html">Privacy</a>
+            </div>
           </div>
         </div>
       </footer>
