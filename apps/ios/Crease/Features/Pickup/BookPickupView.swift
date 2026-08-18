@@ -72,7 +72,11 @@ struct BookPickupView: View {
 
     /// The lines the customer has actually put something into.
     private var declaredLines: [(item: ServiceItem, entered: Double)] {
-        menu
+        // A return carries no cleaning: the clothes are at the shop already and
+        // already paid for. Anything counted under another tier stays in the
+        // dictionary and comes back if they switch tiers again.
+        guard selected.carriesCleaning else { return [] }
+        return menu
             .filter { $0.serviceType == serviceKind.rawValue }
             .compactMap { item in
                 let entered = quantities[item.id] ?? 0
@@ -125,6 +129,7 @@ struct BookPickupView: View {
         .fullScreenCover(isPresented: $reviewing) {
             CheckoutView(
                 errorMessage: error,
+                carriesCleaning: selected.carriesCleaning,
                 shopName: cleaner?.name ?? "This shop",
                 serviceLabel: serviceKind.label,
                 lines: declaredLines,
@@ -459,9 +464,11 @@ struct BookPickupView: View {
             }
             .padding(.horizontal, 16)
 
-            serviceRow
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+            if selected.carriesCleaning {
+                serviceRow
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+            }
 
             Text(feeExplainer)
                 .font(.caption)
@@ -476,7 +483,7 @@ struct BookPickupView: View {
                 // the hold cannot cover it, and the customer meets the real
                 // number after their clothes have gone. So the button does the
                 // only useful thing instead of refusing: it opens the list.
-                if declaredLines.isEmpty {
+                if selected.carriesCleaning && declaredLines.isEmpty {
                     choosingItems = true
                 } else {
                     reviewing = true
@@ -486,7 +493,7 @@ struct BookPickupView: View {
                 // charge a card for $29.95 while the customer was also, in the
                 // same transaction, paying for the cleaning — a number that
                 // appeared nowhere until their statement.
-                Text(declaredLines.isEmpty
+                Text(selected.carriesCleaning && declaredLines.isEmpty
                      ? "Choose what you're sending"
                      : "Continue · \(totalCents.asMoney)")
                     .frame(maxWidth: .infinity)
@@ -494,7 +501,7 @@ struct BookPickupView: View {
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent)
             .controlSize(.large)
-            .disabled(cleaner == nil || menu.isEmpty)
+            .disabled(cleaner == nil || (selected.carriesCleaning && menu.isEmpty))
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 18)

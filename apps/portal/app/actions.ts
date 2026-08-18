@@ -74,9 +74,14 @@ export async function saveIntake(orderId: string, _prev: unknown, formData: Form
   // order can be recounted: the line items are replaced, the status is forced
   // back to 'cleaning', and /settle takes a second, larger payment from a
   // customer who is already holding their clothes.
+  //
+  // A return is excluded outright rather than by status: nothing is being
+  // cleaned on that tier, and counting a bag the shop was already paid for at
+  // its own till bills the customer for the same garments twice. Its own
+  // confirm action is what moves it.
   const canIntake =
-    ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status) ||
-    (order.status === 'scheduled' && order.service_tier === 'return_only');
+    order.service_tier !== 'return_only' &&
+    ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status);
   if (!canIntake) {
     return { error: `This order can no longer be counted (status '${order.status}').` };
   }
@@ -293,6 +298,61 @@ export async function markReady(orderId: string) {
   } catch (err) {
     console.error('[portal] markReady: dispatch call failed', { orderId }, err);
     return { error: 'Could not mark this order ready. Try again in a moment.' };
+  }
+
+  revalidatePath('/');
+  revalidatePath(`/orders/${orderId}`);
+  return { ok: true };
+}
+
+/**
+ * A return, confirmed.
+ *
+ * The clothes are at the shop already and already paid for — dropped off in
+ * person, or left behind from a pickup the customer meant to collect
+ * themselves. Nothing is being cleaned, so there is nothing to count and no
+ * bill to settle beyond the trip home. The counter's whole job is to say the
+ * order is here and finished.
+ *
+ * Until now this tier was pushed through the intake form, which asked a shop
+ * to price garments it had already been paid for and put a second cleaning
+ * charge on a customer who had settled at the counter.
+ */
+export async function confirmReturnOrder(orderId: string) {
+  const db = await supabaseServer();
+
+  // Read through the staff session first: callDispatch goes out on the
+  // internal key, which does no per-shop authorization, so RLS here is what
+  // stops one shop confirming another shop's order.
+  const { data: order } = await db
+    .from('orders')
+    .select('id, status, service_tier')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!order) return { error: 'order not found' };
+  if (order.service_tier !== 'return_only') {
+    return { error: 'This order has garments to count — use the intake form.' };
+  }
+  if (!['scheduled', 'ready'].includes(order.status)) {
+    return { error: `This order can no longer be confirmed (status '${order.status}').` };
+  }
+
+  // Capture first, mark ready second. The courier fee is the whole bill on a
+  // return, and marking it ready is what lets the customer book the trip home
+  // — doing that before the money settles offers a delivery that may not be
+  // paid for.
+  try {
+    await callDispatch(`/v1/orders/${orderId}/settle`);
+  } catch (err) {
+    console.error('[portal] confirmReturnOrder: settle failed', { orderId }, err);
+    return { error: 'Could not settle this order. Try again in a moment.' };
+  }
+
+  try {
+    await callDispatch(`/v1/orders/${orderId}/ready`);
+  } catch (err) {
+    console.error('[portal] confirmReturnOrder: ready failed', { orderId }, err);
+    return { error: 'Settled, but could not tell the customer. Try again.' };
   }
 
   revalidatePath('/');

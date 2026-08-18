@@ -108,7 +108,7 @@
 		F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleReturnView.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_E70C3477-F335-429F-8C62-582C7F812D87" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_1E7B4BF2-7BE7-4B07-8B65-04E426357FE1" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -236,10 +236,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_38DF2B9D-D7ED-409F-87C2-C55B9FA9E098" /* ios */ = {
+		"TEMP_82F46874-BFB9-4B52-9618-48A462E4DD15" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_E70C3477-F335-429F-8C62-582C7F812D87" /* Secrets.xcconfig */,
+				"TEMP_1E7B4BF2-7BE7-4B07-8B65-04E426357FE1" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -499,7 +499,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_E70C3477-F335-429F-8C62-582C7F812D87" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_1E7B4BF2-7BE7-4B07-8B65-04E426357FE1" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -648,7 +648,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_E70C3477-F335-429F-8C62-582C7F812D87" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_1E7B4BF2-7BE7-4B07-8B65-04E426357FE1" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

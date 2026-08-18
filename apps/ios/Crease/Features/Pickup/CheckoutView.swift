@@ -23,6 +23,10 @@ struct CheckoutView: View {
     /// error written there is an error nobody reads — a tap that looks like it
     /// did nothing at all.
     let errorMessage: String?
+    /// False for a return: the clothes are at the shop already and already paid
+    /// for, so there is no cleaning line, no itemisation and nothing for the
+    /// counter to price. All this order buys is the trip home.
+    let carriesCleaning: Bool
     let shopName: String
     let serviceLabel: String
     let lines: [(item: ServiceItem, entered: Double)]
@@ -56,7 +60,7 @@ struct CheckoutView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     shopCard
-                    itemCard
+                    if carriesCleaning { itemCard }
                     totals
                     holdNote
                 }
@@ -123,7 +127,7 @@ struct CheckoutView: View {
 
     private var totals: some View {
         VStack(spacing: 10) {
-            totalRow(serviceLabel, cleaningCents)
+            if carriesCleaning { totalRow(serviceLabel, cleaningCents) }
             totalRow(deliveryLabel, deliveryFeeCents)
             if serviceFeeCents > 0 { totalRow("Service fee", serviceFeeCents) }
             if taxCents > 0 { totalRow("Taxes", taxCents) }
@@ -196,10 +200,13 @@ struct CheckoutView: View {
     private var payLabel: String { "Pay \(totalCents.asMoney)" }
 
     private var holdExplainer: String {
-        "We hold exactly what this comes to — never more. \(shopName) counts the bag, and if it matches what you picked you pay \(totalCents.asMoney) and nothing else. If they count more, we ask you before taking another penny."
+        carriesCleaning
+            ? "We hold exactly what this comes to — never more. \(shopName) counts the bag, and if it matches what you picked you pay \(totalCents.asMoney) and nothing else. If they count more, we ask you before taking another penny."
+            : "You've already settled the cleaning with \(shopName), so this is the trip home and nothing else. We ask them to confirm your order is there and finished, and you pick a delivery time once they do."
     }
 
     private var itemSummary: String {
+        guard carriesCleaning else { return "Bringing your finished order home" }
         guard !lines.isEmpty else { return serviceLabel }
         let pieces = lines.filter { !$0.item.isByWeight }.reduce(0.0) { $0 + $1.entered }
         let pounds = lines.filter(\.item.isByWeight).reduce(0.0) { $0 + $1.entered }

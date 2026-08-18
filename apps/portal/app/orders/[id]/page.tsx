@@ -4,6 +4,7 @@ import { currentStaff, supabaseServer } from '@/lib/supabase';
 import { LEG_LABEL, TIER_LABEL, money, statusLabel, statusTone } from '@/lib/status';
 import { DEFAULT_TURNAROUND_HOURS, isPastDue, readyRangeLabel } from '@/lib/ready';
 import { LiveRefresh } from '@/app/live-refresh';
+import { ConfirmReturn } from './confirm-return';
 import { IntakeForm } from './intake-form';
 import { ActionsPanel } from './actions-panel';
 
@@ -82,9 +83,14 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   // walks it in — so the counter counting the bag is the event that proves it
   // arrived. Without this the order sits at 'scheduled' with nothing on the
   // screen that can move it, waiting on a driver that was never booked.
+  // A return has nothing to count. The clothes are here already and already
+  // paid for, so the counter confirms rather than prices — putting this tier
+  // through the intake form asked a shop to bill garments it had been paid for
+  // at its own till, and charged the customer for the cleaning twice.
+  const isReturn = order.service_tier === 'return_only';
+  const showConfirmReturn = isReturn && order.status === 'scheduled';
   const showIntake =
-    ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status) ||
-    (order.status === 'scheduled' && order.service_tier === 'return_only');
+    !isReturn && ['at_cleaner', 'awaiting_approval', 'cleaning'].includes(order.status);
 
   return (
     <div className="shell">
@@ -155,6 +161,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </div>
           {order.customer_notes}
         </div>
+      )}
+
+      {showConfirmReturn && (
+        <section className="group">
+          <h2>Confirm this return</h2>
+          <ConfirmReturn orderId={order.id} shortCode={order.short_code} />
+        </section>
       )}
 
       {showIntake ? (

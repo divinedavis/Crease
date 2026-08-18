@@ -41,6 +41,15 @@ struct ServiceOption: Identifiable, Hashable {
     let legs: Int
     let isRecommended: Bool
 
+    /// Whether this tier sends anything to be cleaned.
+    ///
+    /// Return only does not: the clothes are already at the shop and already
+    /// paid for, either dropped off in person or left behind from a pickup the
+    /// customer meant to collect themselves. There is nothing to itemise, no
+    /// price to estimate and no bill to settle — only a courier to book once
+    /// the shop confirms the order is there and finished.
+    var carriesCleaning: Bool { id != "return_only" }
+
     static let all: [ServiceOption] = [
         ServiceOption(
             id: "round_trip",
@@ -59,7 +68,7 @@ struct ServiceOption: Identifiable, Hashable {
         ServiceOption(
             id: "return_only",
             name: "Return only",
-            blurb: "You drop it off, we deliver it back when it's ready",
+            blurb: "Your order is already at the shop — we bring it home",
             priceCents: 1695,
             // Nothing is collected from the customer, so there is no arrival
             // to estimate. Showing one would be inventing a number.

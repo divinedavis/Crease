@@ -236,12 +236,22 @@ app.post<{ Params: { id: string } }>(
   async (req, reply) => {
     const { data: order } = await db
       .from('orders')
-      .select('status, ready_at')
+      .select('status, ready_at, service_tier')
       .eq('id', req.params.id)
       .maybeSingle();
 
     if (!order) return reply.code(404).send({ ok: false, error: 'order not found' });
-    if (!['cleaning', 'awaiting_approval', 'ready'].includes(order.status)) {
+    // A return has nothing to clean. The clothes are at the shop already and
+    // already paid for — dropped off in person, or left from a pickup the
+    // customer meant to collect themselves — so the shop's only job is to say
+    // the order is there and finished. There is no intake to pass through on
+    // the way, and making one up would put a count and a price on garments
+    // nobody is billing for.
+    const readyFrom =
+      order.service_tier === 'return_only'
+        ? ['scheduled', 'cleaning', 'awaiting_approval', 'ready']
+        : ['cleaning', 'awaiting_approval', 'ready'];
+    if (!readyFrom.includes(order.status)) {
       return reply
         .code(409)
         .send({ ok: false, error: `cannot mark ready from status '${order.status}'` });
@@ -261,7 +271,7 @@ app.post<{ Params: { id: string } }>(
         .from('orders')
         .update({ status: 'ready', ready_at: stamp })
         .eq('id', req.params.id)
-        .in('status', ['cleaning', 'awaiting_approval'])
+        .in('status', readyFrom.filter((s) => s !== 'ready'))
         .select('ready_at')
         .maybeSingle();
       if (error) {
