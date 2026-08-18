@@ -23,19 +23,18 @@ export default async function Home({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // /?owner=1 marks this device as yours so the traffic tile stops counting
-  // it; /?owner=0 undoes it. Handled by the route, which owns the file.
+  // it; /?owner=0 undoes it.
+  //
+  // A redirect rather than a fetch from here. Calling the route server-side
+  // sends the request back through nginx from the box itself, and nginx sets
+  // X-Real-IP from the socket it can see — so the address registered was the
+  // droplet's own. The browser has to knock on that door itself.
   const params = await searchParams;
-  const ownerFlag = params.owner;
-  if (ownerFlag !== undefined) {
-    const { headers } = await import('next/headers');
-    const h = await headers();
-    const proto = h.get('x-forwarded-proto') ?? 'https';
-    const host = h.get('host') ?? 'creasenyc.com';
-    await fetch(`${proto}://${host}/api/owner?owner=${ownerFlag === '0' ? '0' : '1'}`, {
-      headers: { cookie: h.get('cookie') ?? '', 'x-real-ip': h.get('x-real-ip') ?? '' },
-      cache: 'no-store',
-    }).catch(() => undefined);
+  if (params.owner !== undefined) {
+    const { redirect } = await import('next/navigation');
+    redirect(`/api/owner?owner=${params.owner === '0' ? '0' : '1'}`);
   }
+  const ownerSet = params.owner_set;
 
   return (
     <>
@@ -60,6 +59,13 @@ export default async function Home({
         <section className="home">
           <div>
             <span className="area">📍 Brooklyn, NY</span>
+            {ownerSet !== undefined && (
+              <p className="fine">
+                {ownerSet === '0'
+                  ? 'This device counts as a visitor again.'
+                  : 'Noted — visits from this device are no longer counted as traffic.'}
+              </p>
+            )}
             <h1>Dry cleaning, picked up and delivered.</h1>
             <QuoteBox />
           </div>

@@ -51,7 +51,11 @@ export async function GET(request: Request) {
   const next = on ? [...new Set([...ips, ip])] : ips.filter((x) => x !== ip);
   await write(next);
 
-  const res = NextResponse.json({ ok: true, ip, counted: !on });
+  // Back to the page they were on, so the whole thing is one click and a
+  // confirmation they can read rather than a JSON body.
+  const back = new URL('/', request.url);
+  back.searchParams.set('owner_set', on ? '1' : '0');
+  const res = NextResponse.redirect(back, { status: 303 });
   res.cookies.set(COOKIE, on ? '1' : '', {
     httpOnly: true,
     sameSite: 'lax',
