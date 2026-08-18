@@ -7,6 +7,7 @@ import { buildChain } from './deps.js';
 import { OrderService, type LegType } from './orders.js';
 import { PaymentService } from './payments.js';
 import { PayoutService } from './payouts.js';
+import { registerCanvassRoutes } from './canvass.js';
 import { registerCustomerRoutes } from './customer.js';
 import { confirmAndDispatch } from './confirm.js';
 import { PushService } from './push.js';
@@ -45,6 +46,12 @@ const payments = new PaymentService(db, paymentProvider, app.log, (id) =>
 const connectProvider = buildConnectProvider(config.payments);
 const payouts = new PayoutService(db, connectProvider, app.log);
 const push = new PushService(db, app.log);
+
+// Public, unauthenticated, and aggregate-only: the canvass counters the
+// portfolio tile on divinedavis.com renders. Kept off /v1/ deliberately —
+// that prefix is loopback-only in nginx, and this one has to answer the
+// open internet.
+registerCanvassRoutes(app, db);
 
 // Customer-facing routes, authenticated by the caller's own Supabase token.
 // Deliberately separate from /v1/, which stays loopback-only and shared-secret
