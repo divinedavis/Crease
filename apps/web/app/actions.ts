@@ -209,3 +209,76 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
       : "You're just outside our current courier range, so we'll text you about the nearest option — and you're now first in line when we sign a cleaner near you.",
   };
 }
+
+export interface Tier {
+  id: string;
+  name: string;
+  blurb: string;
+  priceCents: number;
+  etaMinutes: number | null;
+}
+
+/**
+ * The published price sheet, mirrored from services/dispatch/src/pricing.ts.
+ *
+ * Every one of these is solved from courier cost plus card fee plus the target
+ * margin — a round trip buys two Brooklyn legs at $12.99, a single leg buys
+ * one. If that file changes, this changes with it: a website quoting a price
+ * the dispatcher will not honour is worse than a website quoting nothing.
+ */
+export const TIERS: Tier[] = [
+  {
+    id: 'round_trip',
+    name: 'Round trip',
+    blurb: 'We collect it now and deliver it back when it\u2019s ready',
+    priceCents: 2995,
+    etaMinutes: 30,
+  },
+  {
+    id: 'pickup_only',
+    name: 'Pickup only',
+    blurb: 'We collect it, you fetch it from the shop',
+    priceCents: 1695,
+    etaMinutes: 20,
+  },
+  {
+    id: 'return_only',
+    name: 'Return only',
+    blurb: 'It\u2019s already at the shop \u2014 we bring it home',
+    priceCents: 1695,
+    etaMinutes: null,
+  },
+];
+
+export interface Quote {
+  status: 'covered' | 'outside' | 'unknown' | 'error';
+  message: string;
+  shopName?: string;
+  shopLine1?: string | null;
+  miles?: number;
+  address?: string;
+  pingId?: string;
+}
+
+/**
+ * What a pickup from this address costs, on every tier.
+ *
+ * The same recording as the coverage check, because it is the same act: a
+ * person typing their street is expressing demand at a location whether or not
+ * they go on to book. Prices are only shown for an address we can actually
+ * serve — quoting $29.95 to somebody four miles from the nearest partner is a
+ * number we would have to take back.
+ */
+export async function quoteAddress(_prev: unknown, formData: FormData): Promise<Quote> {
+  const result = await checkCoverage(_prev, formData);
+  const address = String(formData.get('address') ?? '').trim();
+
+  return {
+    status: result.status,
+    message: result.message,
+    shopName: result.shopName,
+    miles: result.miles,
+    address,
+    pingId: result.pingId,
+  };
+}
