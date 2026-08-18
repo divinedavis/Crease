@@ -52,7 +52,9 @@ const securityHeaders = [
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",
-      ["connect-src 'self'", supabaseOrigin].filter(Boolean).join(' '),
+      ["connect-src 'self'", supabaseOrigin, 'https://api.creasenyc.com', 'https://api.usecreaseapp.com']
+        .filter(Boolean)
+        .join(' '),
     ].join('; '),
   },
 ];
@@ -70,7 +72,11 @@ export default {
   // allowlist takes the header out of the decision entirely.
   experimental: {
     serverActions: {
-      allowedOrigins: ['portal.usecreaseapp.com', 'crease.divinedavis.com'],
+      allowedOrigins: [
+        'portal.creasenyc.com',
+        'portal.usecreaseapp.com',
+        'crease.divinedavis.com',
+      ],
     },
   },
   // Nothing gains from telling a scanner which framework version to look up.

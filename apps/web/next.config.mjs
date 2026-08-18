@@ -72,7 +72,17 @@ export default {
   // allowlist takes the header out of the decision entirely.
   experimental: {
     serverActions: {
-      allowedOrigins: ['usecreaseapp.com', 'www.usecreaseapp.com'],
+      // creasenyc.com is the name the business goes by; usecreaseapp.com is
+      // kept because it is in the wild — links, the App Store record, and
+      // every build already shipped. An origin missing from this list has its
+      // server actions refused, which on this site means the coverage check
+      // silently does nothing.
+      allowedOrigins: [
+        'creasenyc.com',
+        'www.creasenyc.com',
+        'usecreaseapp.com',
+        'www.usecreaseapp.com',
+      ],
     },
   },
   // Nothing gains from telling a scanner which framework version to look up.
