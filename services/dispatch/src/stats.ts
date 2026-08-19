@@ -99,7 +99,12 @@ export async function dashboardStats(
   const sinceOn = (col: string) => (q: any) => (since ? q.gte(col, since) : q);
   const both = (a: (q: any) => any, b: (q: any) => any) => (q: any) => b(a(q));
 
-  const pingWindow = sinceOn('created_at');
+  // Rows written by a device marked with /?owner=1. The owner checking his own
+  // address is not a household in Fort Greene wanting this, and counting it as
+  // one is how a map of demand becomes a map of where he was standing.
+  const notOwner = (q: any) => q.eq('owner', false);
+
+  const pingWindow = both(sinceOn('created_at'), notOwner);
   const [checks, inArea, withEmail] = await Promise.all([
     count('demand_pings', pingWindow),
     count('demand_pings', both(pingWindow, (q) => q.eq('in_service_area', true))),
@@ -109,8 +114,8 @@ export async function dashboardStats(
   // The one place rows are read rather than counted, because "which streets"
   // is the question the map is for — and a neighbourhood name is not a person.
   const { data: hoods } = await (since
-    ? db.from('demand_pings').select('neighborhood').gte('created_at', since)
-    : db.from('demand_pings').select('neighborhood'));
+    ? notOwner(db.from('demand_pings').select('neighborhood')).gte('created_at', since)
+    : notOwner(db.from('demand_pings').select('neighborhood')));
   const tally = new Map<string, number>();
   for (const row of hoods ?? []) {
     const name = (row as any).neighborhood;
@@ -121,7 +126,7 @@ export async function dashboardStats(
     .sort((a, b) => b.checks - a.checks)
     .slice(0, 8);
 
-  const reqWindow = sinceOn('created_at');
+  const reqWindow = both(sinceOn('created_at'), notOwner);
   const [reqTotal, reqNew, reqContacted, reqBooked, reqDeclined] = await Promise.all([
     count('pickup_requests', reqWindow),
     count('pickup_requests', both(reqWindow, (q) => q.eq('status', 'new'))),

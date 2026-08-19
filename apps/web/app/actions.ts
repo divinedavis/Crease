@@ -1,6 +1,6 @@
 'use server';
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { nearestShop, SERVICE_RADIUS_MILES, type Shop } from '@/lib/coverage';
 import { geocodeBrooklyn } from '@/lib/geocode';
 import { serviceClient } from '@/lib/supabase';
@@ -24,6 +24,25 @@ export interface CheckResult {
  * rather than where anybody wants this. The addresses that come back "not yet"
  * are the ones worth knowing, and they are only ever seen here.
  */
+/**
+ * Is this the owner's own browser?
+ *
+ * /?owner=1 leaves this cookie so the nginx traffic count can skip the person
+ * building the site. The rows the site writes need the same mark: six address
+ * checks and "67% inside the courier band" were, on the day this was added,
+ * one man testing his own product from a laptop and then a phone. A dashboard
+ * that reports that as demand is worse than one that reports nothing.
+ */
+async function ownerDevice(): Promise<boolean> {
+  try {
+    return (await cookies()).get('crease_owner')?.value === '1';
+  } catch {
+    // Server actions always have a cookie store; if that ever changes, the
+    // honest default is to count the row rather than silently drop it.
+    return false;
+  }
+}
+
 /** The point attached to a chosen suggestion, if there is one and it is real. */
 function pickedPoint(formData: FormData): { lat: number; lng: number; label: string; neighborhood: string | null } | null {
   const lat = Number(formData.get('lat'));
@@ -82,6 +101,7 @@ export async function checkCoverage(_prev: unknown, formData: FormData): Promise
         nearest_miles: cover.miles,
         session_ref: sessionRef,
         source: 'web',
+        owner: await ownerDevice(),
       })
       .select('id')
       .single();
@@ -139,7 +159,9 @@ export async function joinWaitlist(_prev: unknown, formData: FormData) {
   } else {
     // No address checked first — still worth keeping, still a person in
     // Brooklyn who wants this.
-    await db.from('demand_pings').insert({ query: '(email only)', email, source: 'web' });
+    await db
+      .from('demand_pings')
+      .insert({ query: '(email only)', email, source: 'web', owner: await ownerDevice() });
   }
 
   return { ok: true, message: "You're on the list. We'll email you the day we reach your street." };
@@ -208,6 +230,7 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
     items_note: field('items_note', 1000) || null,
     preferred_when: field('preferred_when', 200) || null,
     cleaner_id: cleanerId,
+    owner: await ownerDevice(),
   });
 
   if (error) {
