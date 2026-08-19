@@ -71,6 +71,32 @@ npx tsc -p services/dispatch/tsconfig.json
 npm run build -w @crease/portal >/dev/null
 npm run build -w @crease/web >/dev/null
 
+# NEXT_PUBLIC_* is baked into the client bundle at build time, on this laptop —
+# the droplet's .env.local only reaches the server half. So a placeholder in
+# the local file ships a browser client pointed at a host that does not exist,
+# and every signed-in portal page dies with "a client-side exception has
+# occurred". That is exactly what happened: apps/portal/.env.local read
+# https://crease.supabase.co while the droplet read the real project.
+#
+# The anon key carries its project ref in its payload, so the two can be
+# checked against each other without knowing either value here.
+echo "==> preflight: public config baked into the client bundles"
+for app in portal web; do
+  env_file="apps/$app/.env.local"
+  [ -f "$env_file" ] || continue
+  url="$(grep -m1 '^NEXT_PUBLIC_SUPABASE_URL=' "$env_file" | cut -d= -f2- || true)"
+  key="$(grep -m1 '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' "$env_file" | cut -d= -f2- || true)"
+  [ -n "$url" ] && [ -n "$key" ] || continue
+  url_ref="$(printf '%s' "$url" | sed -E 's#https?://([^.]+)\..*#\1#')"
+  key_ref="$(printf '%s' "$key" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | sed -E 's/.*"ref":"([^"]+)".*/\1/')"
+  if [ -n "$key_ref" ] && [ "$url_ref" != "$key_ref" ]; then
+    echo "ERROR: apps/$app/.env.local points at project '$url_ref' but its anon key belongs to '$key_ref'." >&2
+    echo "       The client bundle is built from this file; shipping it breaks every signed-in page." >&2
+    exit 1
+  fi
+  echo "    apps/$app -> $url_ref"
+done
+
 echo "==> staging"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
