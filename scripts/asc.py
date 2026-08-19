@@ -12,6 +12,7 @@ after a partial failure resumes rather than duplicating.
     python3 scripts/asc.py status      # what exists right now
     python3 scripts/asc.py setup       # register bundle id + create app record
     python3 scripts/asc.py builds      # TestFlight build processing state
+    python3 scripts/asc.py attach 39   # point the App Store version at a build
 """
 from __future__ import annotations
 
@@ -190,10 +191,22 @@ class ASC:
         )
 
     def builds(self, app_id: str):
-        return self.get(
-            "/builds",
-            **{"filter[app]": app_id, "limit": 10, "sort": "-uploadedDate"},
+        """Every build ASC knows about, newest first — including processing ones.
+
+        Not `/builds?filter[app]`: that query omits a build entirely until
+        Apple finishes processing it, so a fresh upload reads as "never
+        arrived" for the twenty minutes to an hour it sits in the queue. The
+        prerelease version's own relationship lists it from the moment the
+        upload lands, with processingState PROCESSING.
+        """
+        versions = self.get(
+            "/preReleaseVersions", **{"filter[app]": app_id, "limit": 50}
         )["data"]
+        out: list = []
+        for v in versions:
+            out += self.get(f"/preReleaseVersions/{v['id']}/builds", limit=50)["data"]
+        out.sort(key=lambda b: b["attributes"].get("uploadedDate") or "", reverse=True)
+        return out
 
 
 def cmd_status(asc: ASC, cfg: dict):
@@ -269,9 +282,22 @@ def cmd_builds(asc: ASC, cfg: dict):
 
 
 def cmd_attach(asc: ASC, cfg: dict):
-    """Attach the newest processed build to the editable App Store version."""
+    """Attach a build to the editable App Store version.
+
+        python3 scripts/asc.py attach        # newest VALID build
+        python3 scripts/asc.py attach 39     # that build number, and no other
+
+    Prefer naming the build. A freshly uploaded one takes minutes to finish
+    processing, and "newest VALID" during that window is the *previous* build
+    — which then ships under this version's release notes.
+    """
     app_id = cfg["ASC_APP_ID"]
+    wanted = sys.argv[2] if len(sys.argv) > 2 else None
     builds = [b for b in asc.builds(app_id) if b["attributes"].get("processingState") == "VALID"]
+    if wanted:
+        builds = [b for b in builds if b["attributes"]["version"] == wanted]
+        if not builds:
+            raise SystemExit(f"build {wanted} is not VALID yet — check: python3 scripts/asc.py builds")
     if not builds:
         raise SystemExit("no VALID build yet — check: python3 scripts/asc.py builds")
     build = builds[0]
