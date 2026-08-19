@@ -54,7 +54,6 @@ export default async function Home({
           <a href="/order">Order</a>
           <a href="#services">Services</a>
           <a href="#how">How it works</a>
-          <a href="https://portal.creasenyc.com">For cleaners</a>
         </div>
         <a href="/order" style={{ color: 'var(--green)' }}>
           Book a pickup
@@ -74,14 +73,14 @@ export default async function Home({
             )}
             <h1>Laundry, picked up and delivered.</h1>
             <p className="lede">
-              $2.00 a pound, $20 minimum. A courier collects from your door, Fulton Cleaners on
-              Fulton Street washes and folds it, and it comes back to you.
+              $2.00 a pound, $20 minimum. Book now and a driver is on the way — we collect from
+              your door, wash and fold it, and bring it back.
             </p>
             {/* Said before the address box, not after it. Somebody four miles
                 away should learn that from a sentence rather than from typing
                 their street and being turned down. */}
             <p className="fine" style={{ marginBottom: 18 }}>
-              We collect and deliver within <b>3 miles of Fulton Cleaners</b>, 909 Fulton Street —{' '}
+              We collect and deliver within <b>3 miles of Clinton Hill</b> —{' '}
               {HEADLINE_AREAS.join(', ')} and{' '}
               <a href="#areas">{CORE_AREAS.length + EDGE_AREAS.length - HEADLINE_AREAS.length} more
               neighborhoods</a>. Check your address and we&rsquo;ll tell you either way.
@@ -118,8 +117,8 @@ export default async function Home({
         <section className="band" id="areas">
           <h2>Where we collect</h2>
           <p className="lede" style={{ marginBottom: 22 }}>
-            Three miles from Fulton Cleaners at 909 Fulton Street. That is most of brownstone
-            Brooklyn — and a good deal further than people expect.
+            Three miles from Clinton Hill. That is most of brownstone Brooklyn — and a good deal
+            further than people expect.
           </p>
           <div className="two">
             <div className="card">
@@ -166,16 +165,16 @@ export default async function Home({
               <span className="num">1</span>
               <h3>Book a pickup</h3>
               <p>
-                Pick a window that suits you. A courier collects from your door — no bags to drop
-                off, no counter to queue at.
+                Book and a driver heads over — typically 20 to 30 minutes, not a window next
+                Tuesday. No bags to drop off, no counter to queue at.
               </p>
             </div>
             <div className="card">
               <span className="num">2</span>
-              <h3>Fulton Cleaners does the work</h3>
+              <h3>We do the work</h3>
               <p>
-                Your bag goes to a shop on Fulton Street, not a warehouse. They weigh it and charge
-                $2.00 a pound for exactly what came in — $20 minimum.
+                Washed and folded in the neighborhood, not trucked to a warehouse across the city.
+                We weigh your bag and charge $2.00 a pound for exactly what came in — $20 minimum.
               </p>
             </div>
             <div className="card">
@@ -200,7 +199,7 @@ export default async function Home({
               <h3>Nothing charged without you</h3>
               <p>
                 Nobody knows what a bag weighs before it is on the scale. You are charged the
-                shop&rsquo;s weight — $2.00 a pound, $20 minimum — and if it comes in over what you
+                weight we measure — $2.00 a pound, $20 minimum — and if it comes in over what you
                 estimated we ask you before taking another penny. Cancel before a driver is
                 assigned and you pay nothing.
               </p>
@@ -224,11 +223,12 @@ export default async function Home({
               </div>
             </div>
             <div className="qr">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/qr-portal.svg" alt="QR code linking to the Crease cleaner portal" />
               <div>
-                <h3>Run a cleaner?</h3>
-                <p>Scan for the shop portal — count bags, price orders, get paid.</p>
+                <h3>Same day, most days</h3>
+                <p>
+                  Book in the morning and it is usually back the same evening. You pick the
+                  delivery time once it is washed and folded.
+                </p>
               </div>
             </div>
           </div>
@@ -265,21 +265,10 @@ export default async function Home({
             </ul>
           </div>
           <div>
-            <h4>Cleaners</h4>
-            <ul>
-              <li>
-                <a href="https://portal.creasenyc.com">Partner portal</a>
-              </li>
-              <li>
-                <a href="mailto:divinejdavis@gmail.com">Partner with us</a>
-              </li>
-            </ul>
-          </div>
-          <div>
             <h4>Where we collect</h4>
             <ul>
               <li>
-                <a href="#areas">3 miles of 909 Fulton St</a>
+                <a href="#areas">3 miles of Clinton Hill</a>
               </li>
               <li>Clinton Hill · Fort Greene</li>
               <li>Downtown Brooklyn · DUMBO</li>

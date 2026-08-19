@@ -1,5 +1,4 @@
 import { OrderForm } from './order-form';
-import { serviceClient } from '@/lib/supabase';
 
 export const metadata = { title: 'Book a pickup — Crease' };
 
@@ -16,8 +15,7 @@ export const revalidate = 300;
  * auth.uid(), and every policy on it turns on that — so a true self-serve web
  * checkout needs accounts, sign-in and a Stripe Element before it can take a
  * penny. This takes the request instead: everything needed to place the order
- * on somebody's behalf, from a form that costs them twenty seconds and no
- * password.
+ * on somebody's behalf, from a form that costs them twenty seconds.
  *
  * It is also the better instrument. A name, a phone number and a street is a
  * person who wants a pickup on Tuesday; an email on a waitlist is a person who
@@ -38,11 +36,6 @@ export default async function OrderPage({
     return (Array.isArray(v) ? v[0] : v) ?? '';
   };
 
-  const db = serviceClient();
-  const { data: shops } = db
-    ? await db.from('cleaners').select('id, name, line1').eq('active', true).order('name')
-    : { data: [] };
-
   return (
     <>
       <header className="wrap">
@@ -61,11 +54,10 @@ export default async function OrderPage({
             <h1>Book a pickup.</h1>
             <p className="lede">
               Tell us where you are and roughly what you&rsquo;re sending. We confirm by text, a
-              courier collects, and your neighborhood cleaner prices exactly what&rsquo;s in the
-              bag — you approve the total before anything is charged.
+              driver collects, and you are charged $2.00 a pound for what the bag actually weighs —
+              you approve the total before anything is charged.
             </p>
             <OrderForm
-              shops={shops ?? []}
               initialTier={one('tier')}
               initialService={one('service')}
               initialAddress={one('address')}

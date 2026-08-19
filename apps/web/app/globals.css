@@ -83,12 +83,21 @@
   /* --- coverage check ------------------------------------------------- */
   .check { margin: 26px 0 8px; }
   .check-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .check input[type="text"], .check input[type="email"] {
+  /* Every field, not only the ones that declare a type. `input[type="text"]`
+     does not match <input name="x" /> — the default type is text but the
+     attribute is absent — so half the booking form rendered as unstyled white
+     boxes on a dark page. */
+  .check input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  .check select,
+  .check textarea {
     flex: 1 1 260px; min-width: 0;
     font: inherit; color: var(--ink); background: var(--card);
     border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
   }
-  .check input:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+  .check input:focus-visible, .check select:focus-visible, .check textarea:focus-visible {
+    outline: 2px solid var(--green); outline-offset: 1px;
+  }
+  .check select { appearance: none; background-image: none; }
   .check button {
     font: inherit; font-weight: 600; cursor: pointer;
     background: var(--green); color: #fff;

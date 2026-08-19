@@ -48,10 +48,7 @@ export function CoverageCheck({ appStoreUrl }: { appStoreUrl: string | null }) {
 
       {result && <Answer result={result} appStoreUrl={appStoreUrl} />}
 
-      <p className="fine">
-        We check the address against our partner cleaners. Nothing is shared, and you don't
-        need an account to ask.
-      </p>
+
     </div>
   );
 }

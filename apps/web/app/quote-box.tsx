@@ -53,7 +53,7 @@ export function QuoteBox() {
         <AddressField placeholder="Enter pickup address" />
         <div className="field muted">
           <span className="sq" aria-hidden="true" />
-          <span className="dest">Your nearest partner cleaner — we pick it</span>
+          <span className="dest">We collect, wash, fold and bring it back</span>
         </div>
         {when === 'later' && (
           <div className="field">
@@ -87,9 +87,7 @@ function Prices({ quote }: { quote: Quote }) {
 
   return (
     <div className="prices">
-      <p className="fine">
-        {quote.shopName} · {quote.miles} miles away
-      </p>
+      <p className="fine">{quote.miles} miles from our Clinton Hill base</p>
       {TIERS.map((tier) => (
         <a
           key={tier.id}
@@ -107,8 +105,8 @@ function Prices({ quote }: { quote: Quote }) {
         </a>
       ))}
       <p className="fine">
-        Cleaning is priced at {quote.shopName}&rsquo;s own rates and added to this — you pick your
-        garments and see the whole bill before you pay.
+        Laundry is $2.00 a pound with a $20 minimum, added to this — you see the whole bill before
+        you pay.
       </p>
     </div>
   );

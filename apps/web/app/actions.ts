@@ -120,7 +120,7 @@ export async function checkCoverage(_prev: unknown, formData: FormData): Promise
   if (cover.covered && cover.shop) {
     return {
       status: 'covered',
-      message: `Yes — ${cover.shop.name} is ${cover.miles} miles away and takes pickups from your block.`,
+      message: `Yes — you are ${cover.miles} miles from our Clinton Hill base, well inside the band. We collect from your block.`,
       shopName: cover.shop.name,
       miles: cover.miles ?? undefined,
       neighborhood: geo.neighborhood,
@@ -131,7 +131,7 @@ export async function checkCoverage(_prev: unknown, formData: FormData): Promise
   return {
     status: 'outside',
     message: cover.miles
-      ? `Not yet. We collect within ${SERVICE_RADIUS_MILES} miles of ${cover.shop?.name ?? 'our partner'} on Fulton Street, and you are ${cover.miles} miles out — past that band a courier costs more than the fee collects. Leave your email and we will tell you when we reach your street.`
+      ? `Not yet. We collect within ${SERVICE_RADIUS_MILES} miles of Clinton Hill and you are ${cover.miles} miles out — past that band a courier costs more than the fee collects. Leave your email and we will tell you when we reach your street.`
       : `Not yet — we have no partner near you.`,
     miles: cover.miles ?? undefined,
     neighborhood: geo.neighborhood,
@@ -245,7 +245,7 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
     ok: true,
     message: covered
       ? "We'll text you to confirm the pickup window and the price before anything is charged."
-      : "You're just outside our current courier range, so we'll text you about the nearest option — and you're now first in line when we sign a cleaner near you.",
+      : "You're just outside the area we collect from today, so we'll text you about the nearest option — and you're first in line when we reach your street.",
   };
 }
 

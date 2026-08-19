@@ -4,12 +4,6 @@ import { useActionState } from 'react';
 import { AddressField } from '../address-field';
 import { requestPickup, type RequestResult } from '../actions';
 
-export interface ShopOption {
-  id: string;
-  name: string;
-  line1: string | null;
-}
-
 const TIERS = [
   { id: 'round_trip', label: 'Round trip — we collect and deliver back', price: '$29.95' },
   { id: 'pickup_only', label: 'Pickup only — we collect, you fetch it', price: '$16.95' },
@@ -25,13 +19,11 @@ const TIER_IDS = new Set(TIERS.map((t) => t.id));
 const SERVICE_IDS = new Set(SERVICES.map((s) => s.id));
 
 export function OrderForm({
-  shops,
   initialTier = '',
   initialService = '',
   initialAddress = '',
   initialWhen = '',
 }: {
-  shops: ShopOption[];
   initialTier?: string;
   initialService?: string;
   initialAddress?: string;
@@ -107,23 +99,6 @@ export function OrderForm({
       {/* One service, so a picker would be a control with nothing to choose. */}
       <input type="hidden" name="service_type" value={service} />
 
-      {shops.length > 1 && (
-        <>
-          <label className="fine" htmlFor="cleaner_id">
-            Preferred cleaner (optional — we&rsquo;ll pick the nearest otherwise)
-          </label>
-          <select id="cleaner_id" name="cleaner_id" defaultValue="" aria-label="Preferred cleaner">
-            <option value="">Nearest to me</option>
-            {shops.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.line1 ? ` — ${s.line1}` : ''}
-              </option>
-            ))}
-          </select>
-        </>
-      )}
-
       {carriesCleaning && (
         <input
           name="items_note"
@@ -141,9 +116,7 @@ export function OrderForm({
       <button type="submit" disabled={sending}>
         {sending ? 'Sending…' : 'Request a pickup'}
       </button>
-      <p className="fine">
-        No account, no card. We confirm the price with you before a courier is booked.
-      </p>
+      <p className="fine">We confirm the price with you before a driver is booked.</p>
     </form>
   );
 }

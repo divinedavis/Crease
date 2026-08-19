@@ -38,23 +38,23 @@ export function findArea(slug: string): Area | undefined {
 
 /** Comfortably inside the band, centre and edges. */
 export const CORE_AREAS: Area[] = [
-  { note: "Fulton Cleaners is on Fulton Street in Clinton Hill, so this is the shortest trip we make — the bag rarely leaves the neighborhood.", name: 'Clinton Hill', miles: 0 },
+  { note: "We wash in Clinton Hill, so this is the shortest trip we make — the bag rarely leaves the neighborhood.", name: 'Clinton Hill', miles: 0 },
   { note: "A few blocks down Vanderbilt. One of the closest neighborhoods we collect from.", name: 'Prospect Heights', miles: 0.2 },
-  { note: "Across the park from the shop. Most Fort Greene pickups are a five-minute drive each way.", name: 'Fort Greene', miles: 0.4 },
-  { note: "Straight out Fulton Street. Bed-Stuy is one of the largest areas inside our band and every part of the western half is comfortably in it.", name: 'Bedford-Stuyvesant', miles: 0.5 },
+  { note: "Across the park from where we wash. Most Fort Greene pickups are a five-minute drive each way.", name: 'Fort Greene', miles: 0.4 },
+  { note: "Bed-Stuy is one of the largest areas inside our band, and every part of the western half is comfortably in it.", name: 'Bedford-Stuyvesant', miles: 0.5 },
   { note: "Half a mile past the park. All of Park Slope sits inside the three-mile band.", name: 'Park Slope', miles: 0.5 },
-  { note: "Under a mile from the shop, so a Downtown Brooklyn bag is usually the fastest round trip on the board.", name: 'Downtown Brooklyn', miles: 0.7 },
+  { note: "Under a mile out, so a Downtown Brooklyn bag is usually the fastest round trip on the board.", name: 'Downtown Brooklyn', miles: 0.7 },
   { note: "Down the hill and along the water. DUMBO is well inside the band despite feeling like a different borough.", name: 'DUMBO', miles: 0.7 },
   { note: "Between Downtown and Gowanus, and one of the quicker runs we make.", name: 'Boerum Hill', miles: 0.7 },
   { note: "East along Atlantic. Both the north and south sides of Crown Heights are inside the band.", name: 'Crown Heights', miles: 0.7 },
-  { note: "Over the canal and back. A mile from the shop as the courier drives.", name: 'Gowanus', miles: 1.0 },
+  { note: "Over the canal and back. A mile away as the driver drives.", name: 'Gowanus', miles: 1.0 },
   { note: "Past Gowanus, still comfortably inside. Brownstones without in-unit laundry are our most common Carroll Gardens customer.", name: 'Carroll Gardens', miles: 1.0 },
   { note: "A mile out, and one of the densest pockets of buildings with no washer in the apartment.", name: 'Cobble Hill', miles: 1.0 },
   { note: "The far side of the expressway, still inside the band. Red Hook has fewer laundromats per person than almost anywhere we serve.", name: 'Red Hook', miles: 1.0 },
-  { note: "Up by the promenade, about a mile and a half from the shop.", name: 'Brooklyn Heights', miles: 1.4 },
+  { note: "Up by the promenade, about a mile and a half out.", name: 'Brooklyn Heights', miles: 1.4 },
   { note: "South past the park. The whole neighborhood sits inside the band.", name: 'Prospect Lefferts Gardens', miles: 1.4 },
-  { note: "North over the BQE, and closer to the shop than most of Williamsburg proper.", name: 'South Williamsburg', miles: 1.6 },
-  { note: "Behind the park, a straight run down from the shop.", name: 'Windsor Terrace', miles: 1.7 },
+  { note: "North over the BQE, and closer in than most of Williamsburg proper.", name: 'South Williamsburg', miles: 1.6 },
+  { note: "Behind the park, a straight run down.", name: 'Windsor Terrace', miles: 1.7 },
   { note: "The lower end of the Slope, well inside the band.", name: 'South Slope', miles: 1.7 },
 ];
 

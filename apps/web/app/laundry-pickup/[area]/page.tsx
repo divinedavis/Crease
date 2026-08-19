@@ -6,7 +6,7 @@ import { QuoteBox } from '../../quote-box';
 /**
  * A page per neighborhood, because that is how people search.
  *
- * Nobody types "wash and fold three miles from 909 Fulton Street". They type
+ * Nobody types "wash and fold within three miles of Clinton Hill". They type
  * "laundry pickup Park Slope", and a service area is exactly the kind of thing
  * a single home page cannot rank for in eighteen places at once.
  *
@@ -28,7 +28,7 @@ export async function generateMetadata({
   const area = findArea(slug);
   if (!area) return {};
   const title = `Laundry pickup & delivery in ${area.name} — $2.00/lb | Crease`;
-  const description = `Wash and fold pickup and delivery in ${area.name}, Brooklyn. $2.00 a pound, $20 minimum. A courier collects from your door and Fulton Cleaners does the rest.`;
+  const description = `Wash and fold pickup and delivery in ${area.name}, Brooklyn. $2.00 a pound, $20 minimum. A driver collects from your door and we do the rest.`;
   return {
     title,
     description,
@@ -58,7 +58,6 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
         <div className="links">
           <a href="/order">Order</a>
           <a href="/#areas">Where we collect</a>
-          <a href="https://portal.creasenyc.com">For cleaners</a>
         </div>
         <a href="/order" style={{ color: 'var(--green)' }}>
           Book a pickup
@@ -71,12 +70,12 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
             <span className="area">📍 {area.name}, Brooklyn</span>
             <h1>Laundry pickup and delivery in {area.name}.</h1>
             <p className="lede">
-              $2.00 a pound, $20 minimum. A courier collects from your door in {area.name}, Fulton
-              Cleaners washes and folds it, and it comes back to you.
+              $2.00 a pound, $20 minimum. A driver collects from your door in {area.name}, we wash
+              and fold it, and it comes back to you.
             </p>
             <p className="fine" style={{ marginBottom: 18 }}>
               {area.note ??
-                `${area.name} is about ${area.miles} miles from Fulton Cleaners at 909 Fulton Street.`}{' '}
+                `${area.name} is about ${area.miles} miles from where we wash.`}{' '}
               {partial && (
                 <>
                   <b>Part of {area.name} sits outside our three-mile band</b> — check your address
@@ -114,16 +113,16 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
               <span className="num">1</span>
               <h3>Book a pickup</h3>
               <p>
-                Pick a window. A courier collects from your door in {area.name} — no bags to carry,
-                no counter to queue at.
+                Book and a driver heads to {area.name} — usually 20 to 30 minutes. No bags to
+                carry, no counter to queue at.
               </p>
             </div>
             <div className="card">
               <span className="num">2</span>
-              <h3>Fulton Cleaners does the work</h3>
+              <h3>We do the work</h3>
               <p>
-                Your bag goes to a shop on Fulton Street, {area.miles} miles away, not a warehouse.
-                They weigh it and charge $2.00 a pound for exactly what came in.
+                Washed and folded {area.miles} miles from you, in the neighborhood — not trucked to
+                a warehouse. $2.00 a pound for exactly what came in.
               </p>
             </div>
             <div className="card">
@@ -173,14 +172,6 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
                 <li>Dry cleaning · soon</li>
               </ul>
             </div>
-            <div>
-              <h4>Cleaners</h4>
-              <ul>
-                <li>
-                  <a href="https://portal.creasenyc.com">Partner portal</a>
-                </li>
-              </ul>
-            </div>
             <div className="legal">
               © 2026 Crease · <a href="/privacy.html">Privacy</a>
             </div>
@@ -204,7 +195,6 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
               url: 'https://creasenyc.com',
               address: {
                 '@type': 'PostalAddress',
-                streetAddress: '909 Fulton Street',
                 addressLocality: 'Brooklyn',
                 addressRegion: 'NY',
                 addressCountry: 'US',
