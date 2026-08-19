@@ -141,7 +141,17 @@
 <script type="module">
 const { createClient } = window.supabase;
 
-const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__');
+const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__', {
+  auth: {
+    // Google returns here with ?code=; PKCE means the verifier is in this
+    // browser's storage and the exchange happens client-side, which is the
+    // only option for a page nginx serves off disk with no server behind it.
+    flowType: 'pkce',
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 const app = document.getElementById('app');
 
 const KIND_LABEL = { dry_cleaner: 'Dry cleaner', laundromat: 'Laundromat' };
@@ -223,20 +233,27 @@ async function main() {
 function renderLogin(err) {
   app.innerHTML = `
     <h1>Crease — Brooklyn canvass</h1>
+    <p class="sub"><a href="/">← Portal</a> · <a href="/prospects/roadmap.html">Roadmap</a></p>
     <p class="sub">Sign in to work the list.</p>
     ${err ? `<div class="notice danger">${esc(err)}</div>` : ''}
-    <form class="card" id="login">
-      <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username" required /></div>
-      <div class="field"><label>Password</label><input id="pw" type="password" autocomplete="current-password" required /></div>
-      <button class="primary" style="width:100%">Sign in</button>
-    </form>`;
-  document.getElementById('login').onsubmit = async (e) => {
-    e.preventDefault();
-    const { error } = await db.auth.signInWithPassword({
-      email: document.getElementById('email').value.trim(),
-      password: document.getElementById('pw').value,
+    <div class="card">
+      <button class="primary" id="google" style="width:100%">Continue with Google</button>
+      <p class="sub" style="margin:12px 0 0">
+        This list is scoped to one account by the database itself, so signing in
+        with anything else shows an empty page rather than somebody's notes.
+      </p>
+    </div>`;
+  // One tap on a phone in the street, which is where this tool is used. The
+  // password form it replaced meant typing a generated password into a
+  // keyboard while standing outside a laundromat.
+  document.getElementById('google').onclick = async () => {
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'google',
+      // Back to this exact page, not the site root: the canvasser was in the
+      // middle of a list and should land back on it.
+      options: { redirectTo: location.origin + location.pathname },
     });
-    error ? renderLogin(error.message) : main();
+    if (error) renderLogin(error.message);
   };
 }
 
@@ -245,18 +262,15 @@ function renderLogin(err) {
  * (which shop was open, what was typed) is its own kind of data loss.
  *
  * Built once per render and afterwards only *updated* — text swapped, pieces
- * hidden. An innerHTML rewrite here would destroy the password field mid-typing
- * (every keystroke in a note updates this bar), and a blur handler makes that
- * happen at exactly the wrong moment. */
+ * hidden. Every keystroke in a note updates this bar, so an innerHTML rewrite
+ * here would tear out whatever the canvasser was interacting with at exactly
+ * the wrong moment. */
 function syncBarHTML() {
   return `
     <div class="notice" id="syncnotice" hidden>
       <span id="syncmsg"></span>
       <form id="resync" hidden>
-        <input id="reemail" type="email" autocomplete="username" placeholder="Email"
-               value="${esc(localStorage.canvassEmail ?? '')}" required />
-        <input id="repw" type="password" autocomplete="current-password" placeholder="Password" required />
-        <button class="primary">Sync</button>
+        <button class="primary" type="submit">Sign in with Google &amp; sync</button>
       </form>
     </div>`;
 }
@@ -284,15 +298,14 @@ function wireSyncBar() {
   if (!form) return;
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const { error } = await db.auth.signInWithPassword({
-      email: document.getElementById('reemail').value.trim(),
-      password: document.getElementById('repw').value,
+    // Held edits survive the round trip: they live in localStorage and are
+    // flushed on the way back in, which is the whole reason this bar exists
+    // instead of a redirect to the login page.
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname },
     });
-    if (error) { alert(error.message); return; }
-    localStorage.canvassEmail = document.getElementById('reemail').value.trim();
-    authLost = false;
-    renderSyncBar();
-    flush();
+    if (error) alert(error.message);
   };
 }
 

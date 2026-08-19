@@ -115,6 +115,16 @@ export default async function QueuePage() {
           <div className="who">{staff.user.email}</div>
         </div>
         <div className="row-actions">
+          {/* The founder's own tools live on this host too, and until now the
+              only way to reach them was to remember the path. They are plain
+              links rather than app routes because they are static pages nginx
+              serves off disk, sharing the origin and therefore the session. */}
+          <a className="btn" href="/prospects/">
+            Canvass
+          </a>
+          <a className="btn" href="/prospects/roadmap.html">
+            Roadmap
+          </a>
           <Link href="/settings" className="btn">
             Settings
           </Link>
