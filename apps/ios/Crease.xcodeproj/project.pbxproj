@@ -15,6 +15,7 @@
 		2F3FD22A0A96B510AA7CBE53 /* ServicePricingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */; };
 		372A54856F0A7E0DBE6A2B4A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A9740EB7DC2492BCDC52958 /* Models.swift */; };
 		4C646A4E0FC83962FCD5E70E /* CreaseUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */; };
+		4DA89CBA836292B588890351 /* EmailAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA9CDFC3F6250C3E6654B452 /* EmailAuthView.swift */; };
 		5315BCF511CB4837D1B45042 /* CleanerPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */; };
 		5499298ACAF3E49A3BC6EB5A /* AddressEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D432DFD06B6B7CA0BAE6AD67 /* AddressEntryView.swift */; };
 		57924740791051A3E9A53B82 /* AddressSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D63B98765EE93622090BA42 /* AddressSearch.swift */; };
@@ -106,11 +107,12 @@
 		CC7A8FDD347AF1823F8CCFA9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreaseUITests.swift; sourceTree = "<group>"; };
 		D432DFD06B6B7CA0BAE6AD67 /* AddressEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressEntryView.swift; sourceTree = "<group>"; };
+		DA9CDFC3F6250C3E6654B452 /* EmailAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAuthView.swift; sourceTree = "<group>"; };
 		EAA2545435CF9E12FDF457B0 /* ServiceOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceOption.swift; sourceTree = "<group>"; };
 		F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleReturnView.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_B01E872C-9EDC-4869-8AC2-63BF311F81B0" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_FD9DCD0C-748E-4900-B940-DF5F58F9E191" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +150,7 @@
 		754A824F81BAAEB2D7EC385C /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				DA9CDFC3F6250C3E6654B452 /* EmailAuthView.swift */,
 				6C7D10940A818B41F5C7C6F9 /* LockView.swift */,
 				104032AB1B2E2F303B93931F /* OrderDetailView.swift */,
 				9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */,
@@ -239,10 +242,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_9F0A6714-5EAB-4913-923E-E30DC38E414E" /* ios */ = {
+		"TEMP_59BA39D7-7208-4C5A-938B-15B8A0CA9E7B" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_B01E872C-9EDC-4869-8AC2-63BF311F81B0" /* Secrets.xcconfig */,
+				"TEMP_FD9DCD0C-748E-4900-B940-DF5F58F9E191" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -385,6 +388,7 @@
 				5315BCF511CB4837D1B45042 /* CleanerPickerView.swift in Sources */,
 				92B390FAF0CED6D747E33C1B /* CreaseApp.swift in Sources */,
 				FC60CCABC97DB389285ED304 /* DispatchAPI.swift in Sources */,
+				4DA89CBA836292B588890351 /* EmailAuthView.swift in Sources */,
 				669F7E8131B91DF7C219E8DC /* KeychainAuthStorage.swift in Sources */,
 				707D1EB4C562655AED6F23C7 /* LocationProvider.swift in Sources */,
 				BC7303B72935E40C63D86723 /* LockView.swift in Sources */,
@@ -469,7 +473,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -503,7 +507,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_B01E872C-9EDC-4869-8AC2-63BF311F81B0" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_FD9DCD0C-748E-4900-B940-DF5F58F9E191" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -574,7 +578,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -652,7 +656,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_B01E872C-9EDC-4869-8AC2-63BF311F81B0" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_FD9DCD0C-748E-4900-B940-DF5F58F9E191" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

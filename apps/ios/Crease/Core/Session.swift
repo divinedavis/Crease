@@ -7,15 +7,17 @@ private let log = Logger(subsystem: "com.divinedavis.crease", category: "auth")
 
 /// Supabase client + auth state.
 ///
-/// Sign-in is Apple or Google. Nothing here sends the customer to their inbox:
-/// no confirmation link, and no emailed code either. Both put a mail app
-/// between someone and their first order, and a meaningful share of them do
-/// not come back — the emailed code is only marginally better than the
-/// confirmation link it replaced, because it is still a round trip through
-/// another app.
+/// Sign-in is Apple, Google, or email and password. Nothing here sends the
+/// customer to their inbox: no confirmation link, and no emailed code either.
+/// Both put a mail app between someone and their first order, and a meaningful
+/// share of them do not come back — the emailed code is only marginally better
+/// than the confirmation link it replaced, because it is still a round trip
+/// through another app.
 ///
-/// The consequence is that both providers must actually work. There is no
-/// email fallback to hide behind if one of them is misconfigured.
+/// Email carries a password instead, and the Supabase project auto-confirms, so
+/// an account created here is usable the moment it exists. It is also the
+/// fallback the screen used to lack: with only the two providers, one of them
+/// being misconfigured was a locked door with nothing behind it.
 /// Why an account could not be deleted, in terms the customer can act on.
 enum DeleteAccountError: LocalizedError {
     /// A shop's staff account: its orders, payouts and colleagues belong to the
@@ -166,6 +168,102 @@ final class Session: ObservableObject {
         } catch {
             errorMessage = friendly(error)
         }
+    }
+
+    /// Email and password.
+    ///
+    /// The third door, for the customer who has neither an Apple ID they
+    /// actually use nor a Google account — and the fallback the screen used to
+    /// lack entirely, where a misconfigured provider was a locked door.
+    ///
+    /// It still sends nobody to their inbox: the Supabase project auto-confirms
+    /// addresses, so creating an account returns a session immediately and the
+    /// first order is one screen away rather than one mail round trip away.
+    func signInWithEmail(email: String, password: String) async {
+        errorMessage = nil
+        do {
+            let session = try await client.auth.signIn(
+                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                password: password
+            )
+            // Set the state from the session in hand rather than re-reading it
+            // through restore(), which in DEBUG is overridden by the UI-test
+            // launch arguments and would drop a real sign-in on the floor.
+            state = .signedIn(userId: session.user.id)
+        } catch {
+            errorMessage = friendlyEmailSignIn(error)
+        }
+    }
+
+    /// Creates the account and signs straight in.
+    func signUpWithEmail(email: String, password: String, fullName: String) async {
+        errorMessage = nil
+        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let response = try await client.auth.signUp(
+                email: address,
+                password: password,
+                // handle_new_user() copies this into profiles.full_name, so the
+                // name lands with the row the trigger inserts instead of in a
+                // second write that a dropped connection could lose.
+                data: ["full_name": .string(name)]
+            )
+            if let session = response.session {
+                state = .signedIn(userId: session.user.id)
+                return
+            }
+            // A user without a session means the project stopped auto-confirming.
+            // Try the credentials we were just given rather than leaving someone
+            // on a sheet that looks like it worked; if confirmation really is
+            // required, signInWithEmail says so in words they can act on.
+            await signInWithEmail(email: address, password: password)
+        } catch {
+            errorMessage = friendlyEmailSignUp(error)
+        }
+    }
+
+    /// Wrong-password and no-such-account collapse into one message on purpose:
+    /// telling them apart tells anyone with a list of addresses which ones have
+    /// accounts here. Everything else is only surfaced when it is something the
+    /// customer can actually do something about.
+    private func friendlyEmailSignIn(_ error: Error) -> String {
+        let raw = error.localizedDescription.lowercased()
+        if raw.contains("not confirmed") {
+            return "This address needs confirming before you can sign in. Contact support and we'll sort it out."
+        }
+        if raw.contains("rate limit") || raw.contains("too many") {
+            return "Too many attempts. Wait a minute and try again."
+        }
+        if raw.contains("offline") || raw.contains("network") || raw.contains("connection") {
+            return "You appear to be offline."
+        }
+        log.error("email sign-in failed: \(raw)")
+        return "Incorrect email or password."
+    }
+
+    private func friendlyEmailSignUp(_ error: Error) -> String {
+        let raw = error.localizedDescription.lowercased()
+        if raw.contains("already") || raw.contains("registered") || raw.contains("exists") {
+            return "An account with that email already exists. Sign in instead."
+        }
+        if raw.contains("weak") || raw.contains("easy to guess") || raw.contains("breach") || raw.contains("pwned") {
+            return "That password has turned up in a known breach. Please pick another."
+        }
+        if raw.contains("password") && (raw.contains("short") || raw.contains("least")) {
+            return "Use a password of at least 8 characters."
+        }
+        if raw.contains("email") && raw.contains("invalid") {
+            return "That email address isn't accepted. Try another."
+        }
+        if raw.contains("rate limit") || raw.contains("too many") {
+            return "Too many attempts. Wait a minute and try again."
+        }
+        if raw.contains("offline") || raw.contains("network") || raw.contains("connection") {
+            return "You appear to be offline."
+        }
+        log.error("email sign-up failed: \(raw)")
+        return "Something went wrong creating your account. Please try again."
     }
 
     func signOut() async {

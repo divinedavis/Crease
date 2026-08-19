@@ -96,7 +96,7 @@ final class CreaseUITests: XCTestCase {
         add(shot)
     }
 
-    func testSignInOffersBothProvidersAndNoEmailPath() {
+    func testSignInOffersAllThreeDoors() {
         let app = launch(signedIn: false)
 
         XCTAssertTrue(app.staticTexts["Crease"].waitForExistence(timeout: 10))
@@ -104,16 +104,58 @@ final class CreaseUITests: XCTestCase {
                       || app.buttons["Sign in with Apple"].exists,
                       "Apple is the primary sign-in and must be present")
         XCTAssertTrue(app.buttons["Continue with Google"].exists,
-                      "Google is the only alternative, so it must be present")
+                      "Google is the one-tap alternative, so it must be present")
+        XCTAssertTrue(app.buttons["Continue with email"].exists,
+                      "email is the fallback for a customer neither provider fits")
 
-        // Deliberately asserting an absence. With no email path there is no
-        // fallback if a provider breaks, so a stray email field reappearing
-        // would quietly reintroduce the inbox round trip the product rejects.
-        XCTAssertFalse(app.textFields["Email address"].exists,
-                       "no email sign-in: nothing should send a customer to their inbox")
-        XCTAssertEqual(app.textFields.count, 0, "the sign-in screen takes no typed input")
+        // The common case is still one decision — which button. Fields belong
+        // in the sheet, not on this screen.
+        XCTAssertEqual(app.textFields.count, 0, "the sign-in screen itself takes no typed input")
 
         attach(app, "sign-in")
+    }
+
+    /// The email sheet asks for a password and never for a code from an inbox.
+    ///
+    /// The absence is the point of the test: a confirmation link or an emailed
+    /// six-digit code puts a mail app between someone and their first order,
+    /// and re-introducing one is the specific regression worth catching. The
+    /// Supabase project auto-confirms, so signing up here lands in the app.
+    func testEmailSheetTakesAPasswordAndSendsNobodyToTheirInbox() {
+        let app = launch(signedIn: false)
+
+        let emailButton = app.buttons["Continue with email"]
+        XCTAssertTrue(emailButton.waitForExistence(timeout: 10))
+        emailButton.tap()
+
+        XCTAssertTrue(app.textFields["Email"].waitForExistence(timeout: 5),
+                      "the sheet opens on sign-in, which needs an address")
+        XCTAssertTrue(app.secureTextFields["Password"].exists,
+                      "the email path is password-based, not a mailed code")
+        XCTAssertTrue(app.buttons["Sign In"].exists)
+
+        attach(app, "email-sign-in")
+
+        // Same sheet, flipped in place: two more fields, no second screen.
+        app.buttons["Don't have an account? Sign up"].tap()
+        XCTAssertTrue(app.textFields["Full name"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.secureTextFields["Confirm password"].exists)
+        XCTAssertTrue(app.buttons["Create Account"].exists)
+
+        // Phrases that promise a trip, not the word "inbox" on its own — the
+        // sign-in screen behind the sheet says there is nothing to confirm in
+        // one, and that line is the promise being kept.
+        let inboxCopy = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'check your' OR label CONTAINS[c] 'we sent' OR label CONTAINS[c] 'verification' OR label CONTAINS[c] 'confirmation link' OR label CONTAINS[c] 'confirm your email'")
+        )
+        XCTAssertEqual(inboxCopy.count, 0,
+                       "nothing here may send the customer to their inbox to finish signing up")
+
+        attach(app, "email-sign-up")
+
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["Continue with email"].waitForExistence(timeout: 5),
+                      "cancelling returns to the sign-in screen")
     }
 
     /// Nothing may interrupt the order list on arrival. The Face ID lock was

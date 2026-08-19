@@ -7,20 +7,25 @@ import SwiftUI
 /// Laid out the way people already expect a phone sign-in to look: the mark
 /// centred, the choices at the bottom under the thumb, and no fields at all.
 ///
-/// Two taps, both of them OAuth, and nothing that sends anyone to their inbox —
-/// no confirmation link and no emailed code. A mail round trip between someone
-/// and their first order loses a real share of them, and an emailed six-digit
-/// code is barely better than the confirmation link it replaces: it is still a
-/// trip to another app and back.
+/// Three choices, and nothing that sends anyone to their inbox — no
+/// confirmation link and no emailed code. A mail round trip between someone and
+/// their first order loses a real share of them, and an emailed six-digit code
+/// is barely better than the confirmation link it replaces: it is still a trip
+/// to another app and back.
 ///
-/// The cost of that choice is that both providers have to work. There is no
-/// email path to fall back on, so a misconfigured provider is a locked door.
+/// The two providers come first because they are one tap. Email is third and
+/// deliberately present: with OAuth alone, a provider that is misconfigured or
+/// simply not one the customer uses was a locked door with nothing behind it.
+/// It opens a sheet rather than putting fields on this screen, so the common
+/// case still reads as one decision — which button — and nobody is looking at
+/// a keyboard they did not ask for.
 struct SignInView: View {
     @EnvironmentObject private var session: Session
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var busy = false
     @State private var currentNonce = ""
+    @State private var showEmailAuth = false
 
     var body: some View {
         // Centred on the app mark with the buttons low on the screen, the shape
@@ -86,6 +91,29 @@ struct SignInView: View {
                 )
                 .accessibilityLabel("Continue with Google")
 
+                Button {
+                    session.errorMessage = nil
+                    showEmailAuth = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "envelope.fill")
+                            .font(.title3)
+                        Text("Continue with email")
+                            .font(.body.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color(.label))
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color(.separator), lineWidth: 1)
+                )
+                .accessibilityLabel("Continue with email")
+
                 if let error = session.errorMessage {
                     Text(error)
                         .font(.footnote)
@@ -96,7 +124,7 @@ struct SignInView: View {
                         .textSelection(.enabled)   // so a support conversation can quote it
                 }
 
-                Text("No password, and nothing to confirm in your inbox.")
+                Text("Nothing to confirm in your inbox — you're in as soon as you sign up.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
@@ -108,6 +136,11 @@ struct SignInView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
         .overlay { if busy { ProgressView().controlSize(.large) } }
+        .sheet(isPresented: $showEmailAuth) {
+            EmailAuthSheet()
+                .environmentObject(session)
+                .presentationCornerRadius(28)
+        }
     }
 
     private func handleApple(_ result: Result<ASAuthorization, Error>) {
