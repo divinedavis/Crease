@@ -5,10 +5,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold brooklyn",
@@ -16,10 +18,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry service brooklyn",
@@ -27,10 +31,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry delivery brooklyn",
@@ -38,10 +44,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold delivery brooklyn",
@@ -49,10 +57,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup service nyc",
@@ -60,10 +70,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "same day laundry service brooklyn",
@@ -71,10 +83,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup near me",
@@ -82,10 +96,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold near me",
@@ -93,10 +109,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundromat that picks up and delivers brooklyn",
@@ -104,10 +122,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "page exists, 2/4 terms present",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "cheap laundry service brooklyn",
@@ -115,10 +135,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "dry cleaning pickup and delivery brooklyn",
@@ -126,10 +148,12 @@
     "target": "/",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how much does wash and fold cost",
@@ -137,10 +161,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how much does a load of laundry weigh",
@@ -148,10 +174,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold vs dry cleaning",
@@ -159,10 +187,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "is laundry pickup and delivery worth it",
@@ -170,10 +200,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how does laundry pickup and delivery work",
@@ -181,10 +213,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how long does wash and fold take",
@@ -192,10 +226,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry cost per pound nyc",
@@ -203,10 +239,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how to do laundry without a washing machine in your apartment",
@@ -214,10 +252,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "what does a laundromat charge per pound",
@@ -225,10 +265,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how much laundry fits in a bag",
@@ -236,10 +278,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "do laundry services separate colors",
@@ -247,10 +291,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "how to get laundry done in a walk up apartment",
@@ -258,10 +304,12 @@
     "target": "",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": false,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "no page targets this query yet",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup clinton hill",
@@ -269,10 +317,12 @@
     "target": "/laundry-pickup/clinton-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold clinton hill",
@@ -280,10 +330,12 @@
     "target": "/laundry-pickup/clinton-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup prospect heights",
@@ -291,10 +343,12 @@
     "target": "/laundry-pickup/prospect-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold prospect heights",
@@ -302,10 +356,12 @@
     "target": "/laundry-pickup/prospect-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup fort greene",
@@ -313,10 +369,12 @@
     "target": "/laundry-pickup/fort-greene",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold fort greene",
@@ -324,10 +382,12 @@
     "target": "/laundry-pickup/fort-greene",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup bedford-stuyvesant",
@@ -335,10 +395,12 @@
     "target": "/laundry-pickup/bedford-stuyvesant",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold bedford-stuyvesant",
@@ -346,10 +408,12 @@
     "target": "/laundry-pickup/bedford-stuyvesant",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup park slope",
@@ -357,10 +421,12 @@
     "target": "/laundry-pickup/park-slope",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold park slope",
@@ -368,10 +434,12 @@
     "target": "/laundry-pickup/park-slope",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup downtown brooklyn",
@@ -379,10 +447,12 @@
     "target": "/laundry-pickup/downtown-brooklyn",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold downtown brooklyn",
@@ -390,10 +460,12 @@
     "target": "/laundry-pickup/downtown-brooklyn",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup dumbo",
@@ -401,10 +473,12 @@
     "target": "/laundry-pickup/dumbo",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold dumbo",
@@ -412,10 +486,12 @@
     "target": "/laundry-pickup/dumbo",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup boerum hill",
@@ -423,10 +499,12 @@
     "target": "/laundry-pickup/boerum-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold boerum hill",
@@ -434,10 +512,12 @@
     "target": "/laundry-pickup/boerum-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup crown heights",
@@ -445,10 +525,12 @@
     "target": "/laundry-pickup/crown-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold crown heights",
@@ -456,10 +538,12 @@
     "target": "/laundry-pickup/crown-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup gowanus",
@@ -467,10 +551,12 @@
     "target": "/laundry-pickup/gowanus",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold gowanus",
@@ -478,10 +564,12 @@
     "target": "/laundry-pickup/gowanus",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup carroll gardens",
@@ -489,10 +577,12 @@
     "target": "/laundry-pickup/carroll-gardens",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold carroll gardens",
@@ -500,10 +590,12 @@
     "target": "/laundry-pickup/carroll-gardens",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup cobble hill",
@@ -511,10 +603,12 @@
     "target": "/laundry-pickup/cobble-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold cobble hill",
@@ -522,10 +616,12 @@
     "target": "/laundry-pickup/cobble-hill",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup red hook",
@@ -533,10 +629,12 @@
     "target": "/laundry-pickup/red-hook",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold red hook",
@@ -544,10 +642,12 @@
     "target": "/laundry-pickup/red-hook",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup brooklyn heights",
@@ -555,10 +655,12 @@
     "target": "/laundry-pickup/brooklyn-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold brooklyn heights",
@@ -566,10 +668,12 @@
     "target": "/laundry-pickup/brooklyn-heights",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup williamsburg",
@@ -577,10 +681,12 @@
     "target": "/laundry-pickup/williamsburg",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold williamsburg",
@@ -588,10 +694,12 @@
     "target": "/laundry-pickup/williamsburg",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup bushwick",
@@ -599,10 +707,12 @@
     "target": "/laundry-pickup/bushwick",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold bushwick",
@@ -610,10 +720,12 @@
     "target": "/laundry-pickup/bushwick",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup greenpoint",
@@ -621,10 +733,12 @@
     "target": "/laundry-pickup/greenpoint",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold greenpoint",
@@ -632,10 +746,12 @@
     "target": "/laundry-pickup/greenpoint",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "laundry pickup flatbush",
@@ -643,10 +759,12 @@
     "target": "/laundry-pickup/flatbush",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "targeted by title/h1",
+    "coverage_checked": "2026-08-19"
   },
   {
     "query": "wash and fold flatbush",
@@ -654,9 +772,11 @@
     "target": "/laundry-pickup/flatbush",
     "source": "seed",
     "added": "2026-08-19",
-    "covered": null,
+    "covered": true,
     "position": null,
     "impressions": null,
-    "clicks": null
+    "clicks": null,
+    "coverage_detail": "all terms present in body only (weak)",
+    "coverage_checked": "2026-08-19"
   }
 ]

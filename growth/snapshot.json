@@ -1,0 +1,263 @@
+{
+  "generated": "2026-08-19",
+  "site": "https://creasenyc.com",
+  "techniques": [
+    {
+      "id": "T001",
+      "slug": "guides",
+      "name": "Answer one unanswered question a day",
+      "kind": "content",
+      "status": "active",
+      "hypothesis": "The site ranks for 'laundry pickup <neighborhood>' because it has a page per neighborhood, and ranks for nothing else because it has no other pages. The questions people type before they are ready to book \u2014 what wash and fold costs, what a load weighs, whether it is worth it \u2014 have no page here at all. One good page per question should earn impressions on queries the area pages cannot compete for, and give the area pages something to link to.",
+      "prefixes": [
+        "/guides/"
+      ],
+      "metric": "owned_visitors",
+      "source": "seed",
+      "evidence": "Uncovered `explain` queries in growth/keywords.json are the queue.",
+      "added": "2026-08-19",
+      "activated": "2026-08-19",
+      "retired": null,
+      "revisit_on": "2026-09-18",
+      "notes": "One page per run, hard limit. See BUDGET.md and techniques.t_guides.",
+      "verdict": null
+    },
+    {
+      "id": "T002",
+      "slug": "link_mesh",
+      "name": "Keep guides and neighborhood pages linked to each other",
+      "kind": "content",
+      "status": "active",
+      "hypothesis": "A guide nothing links to except the hub is an orphan, and orphans are the pages search engines are slowest to trust. Every guide naming the neighborhoods it is relevant to gives the thirty area pages a reason to link out and the guides a reason to be found.",
+      "prefixes": [
+        "/guides/",
+        "/laundry-pickup/"
+      ],
+      "metric": "owned_visitors",
+      "source": "seed",
+      "evidence": "Costs nothing and calls nothing; runs on every published guide.",
+      "added": "2026-08-19",
+      "activated": "2026-08-19",
+      "retired": null,
+      "revisit_on": "2026-09-18",
+      "notes": "",
+      "verdict": null
+    },
+    {
+      "id": "T003",
+      "slug": "indexnow",
+      "name": "Submit new and changed URLs to IndexNow",
+      "kind": "indexing",
+      "status": "active",
+      "hypothesis": "Bing, Yandex and Seznam crawl on submission. On a site this small the gap between 'indexed this week' and 'indexed next month' is most of the value a new page has in its first month.",
+      "prefixes": [],
+      "metric": "organic_visitors",
+      "source": "seed",
+      "evidence": "Google does not participate; it re-crawls from sitemap <lastmod>.",
+      "added": "2026-08-19",
+      "activated": "2026-08-19",
+      "retired": null,
+      "revisit_on": "2026-09-18",
+      "notes": "Only URLs a run created or changed \u2014 resubmitting the site daily gets a host ignored.",
+      "verdict": null
+    },
+    {
+      "id": "T004",
+      "slug": "search_console",
+      "name": "Verify creasenyc.com in Google Search Console",
+      "kind": "indexing",
+      "status": "candidate",
+      "hypothesis": "Everything this engine measures today is whether we TRIED: a page exists, a link was added, a URL was submitted. Position is the only measurement that says whether any of it worked, and Google is the only source of it. Until this is connected, review.py cannot retire anything on evidence and the loop is an automation rather than a loop.",
+      "prefixes": [],
+      "metric": "organic_visitors",
+      "source": "seed",
+      "evidence": "growth/searchconsole.py is written and waiting; it degrades to measured:False until a key and a verified property exist.",
+      "added": "2026-08-19",
+      "activated": null,
+      "retired": null,
+      "revisit_on": null,
+      "notes": "FIRST STEP: add creasenyc.com as a URL-prefix property in Search Console and verify it (DNS or the HTML file \u2014 the site serves /robots.txt and a sitemap already). Then create a service account, add its client_email as a FULL user on the property (Restricted cannot read Search Analytics), put the JSON on the droplet and set SC_KEY_FILE in growth.env. Do not reuse the findacrib service account: one key held by two engines means revoking either revokes both.",
+      "verdict": null
+    },
+    {
+      "id": "T005",
+      "slug": "google_business_profile",
+      "name": "Google Business Profile for the Clinton Hill operation",
+      "kind": "distribution",
+      "status": "candidate",
+      "hypothesis": "'laundry pickup near me' and the map pack are where local intent actually lands, and neither is reachable from an unverified web page. A profile is the single largest local-search lever available to a service this size.",
+      "prefixes": [],
+      "metric": "organic_visitors",
+      "source": "seed",
+      "evidence": "Local pack results are drawn from Business Profile, not the index.",
+      "added": "2026-08-19",
+      "activated": null,
+      "retired": null,
+      "revisit_on": null,
+      "notes": "FIRST STEP: decide whether Crease has a public address to list. Google requires either a storefront customers can visit or a declared service area with a real business address, and verification is by postcard or video. This is a business decision about what address to publish, not something the engine can take.",
+      "verdict": null
+    },
+    {
+      "id": "T006",
+      "slug": "dry_cleaning_pages",
+      "name": "Pages for dry cleaning, once dry cleaning exists",
+      "kind": "content",
+      "status": "candidate",
+      "hypothesis": "'dry cleaning pickup brooklyn' is already a tracked query and the site cannot answer it, because the service does not exist yet. Writing the page first would rank for a promise we cannot keep.",
+      "prefixes": [],
+      "metric": "organic_visitors",
+      "source": "seed",
+      "evidence": "facts.py: dry cleaning is not offered. keywords.json tracks the query.",
+      "added": "2026-08-19",
+      "activated": null,
+      "retired": null,
+      "revisit_on": null,
+      "notes": "FIRST STEP: sign a partner cleaner who does dry cleaning and turn it on in the app. Until then this stays a candidate on purpose \u2014 a page for a service we do not sell is the one kind of content that costs more than it earns.",
+      "verdict": null
+    }
+  ],
+  "keywords": {
+    "summary": {
+      "total": 60,
+      "covered": 47,
+      "coverage_pct": 78.3,
+      "by_intent": {
+        "buy": {
+          "total": 12,
+          "covered": 11
+        },
+        "explain": {
+          "total": 12,
+          "covered": 0
+        },
+        "local": {
+          "total": 36,
+          "covered": 36
+        }
+      },
+      "ranked_known": 0,
+      "top10": 0,
+      "top3": 0,
+      "share_pct": null,
+      "gaps": [
+        "laundromat that picks up and delivers brooklyn",
+        "how much does wash and fold cost",
+        "how much does a load of laundry weigh",
+        "wash and fold vs dry cleaning",
+        "is laundry pickup and delivery worth it",
+        "how does laundry pickup and delivery work",
+        "how long does wash and fold take",
+        "laundry cost per pound nyc",
+        "how to do laundry without a washing machine in your apartment",
+        "what does a laundromat charge per pound",
+        "how much laundry fits in a bag",
+        "do laundry services separate colors",
+        "how to get laundry done in a walk up apartment"
+      ]
+    },
+    "queue": [
+      "how much does wash and fold cost",
+      "how much does a load of laundry weigh",
+      "wash and fold vs dry cleaning",
+      "is laundry pickup and delivery worth it",
+      "how does laundry pickup and delivery work",
+      "how long does wash and fold take",
+      "laundry cost per pound nyc",
+      "how to do laundry without a washing machine in your apartment",
+      "what does a laundromat charge per pound",
+      "how much laundry fits in a bag",
+      "do laundry services separate colors",
+      "how to get laundry done in a walk up apartment"
+    ]
+  },
+  "series": {
+    "visitors": [
+      {
+        "date": "2026-08-18",
+        "value": 17
+      }
+    ],
+    "pageviews": [
+      {
+        "date": "2026-08-18",
+        "value": 22
+      }
+    ],
+    "organic_visitors": [
+      {
+        "date": "2026-08-18",
+        "value": 0
+      }
+    ],
+    "coverage_checks_total": [
+      {
+        "date": "2026-08-18",
+        "value": 0
+      }
+    ],
+    "in_area_checks_total": [
+      {
+        "date": "2026-08-18",
+        "value": 0
+      }
+    ],
+    "orders_total": [
+      {
+        "date": "2026-08-18",
+        "value": 0
+      }
+    ],
+    "orders_paid_total": [
+      {
+        "date": "2026-08-18",
+        "value": 0
+      }
+    ]
+  },
+  "search_console": {
+    "connected": false,
+    "why": "no service-account key (set SC_KEY_FILE or SC_KEY_JSON)"
+  },
+  "last_run": {
+    "build": {
+      "at": "2026-08-19T18:37:15+00:00",
+      "changed_urls": 0,
+      "date": "2026-08-19",
+      "new_urls": 0,
+      "techniques": {
+        "guides": {
+          "detail": "writer failed: invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+          "ok": false
+        },
+        "indexnow": {
+          "detail": "nothing new to submit",
+          "ok": true
+        },
+        "link_mesh": {
+          "detail": "0 guides, all linked",
+          "ok": true
+        }
+      }
+    },
+    "measure": {
+      "at": "2026-08-19T18:37:15+00:00",
+      "date": "2026-08-18",
+      "visitors": 17
+    }
+  },
+  "api_spend": {},
+  "writer_last": {
+    "date": "2026-08-19",
+    "ok": false,
+    "query": "how much does wash and fold cost",
+    "error": "invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+  },
+  "scout_last": {
+    "date": "2026-08-19",
+    "ok": false,
+    "error": "invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+    "etype": "invalid_request_error",
+    "status": 400
+  },
+  "indexnow_last": null
+}
