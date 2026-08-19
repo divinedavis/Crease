@@ -171,6 +171,7 @@ rm -f "$STAGE"/scripts/e2e*.mjs \
       "$STAGE"/scripts/marketing-shots.sh \
       "$STAGE"/scripts/upload-screenshots.py \
       "$STAGE"/scripts/asc.py \
+      "$STAGE"/scripts/asc-metadata.py \
       "$STAGE"/scripts/asc-config.env*
 
 echo "==> uploading"
