@@ -4,6 +4,9 @@ import SwiftUI
 
 /// Sign-in.
 ///
+/// Laid out the way people already expect a phone sign-in to look: the mark
+/// centred, the choices at the bottom under the thumb, and no fields at all.
+///
 /// Two taps, both of them OAuth, and nothing that sends anyone to their inbox —
 /// no confirmation link and no emailed code. A mail round trip between someone
 /// and their first order loses a real share of them, and an emailed six-digit
@@ -15,23 +18,36 @@ import SwiftUI
 struct SignInView: View {
     @EnvironmentObject private var session: Session
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var busy = false
     @State private var currentNonce = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer(minLength: 64)
+        // Centred on the app mark with the buttons low on the screen, the shape
+        // every consumer app has trained people to expect. Nothing above the
+        // fold to read and nothing to type: on a phone the whole screen is one
+        // decision, which provider.
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            VStack(spacing: 14) {
+                Image("AppIconArt")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 88, height: 88)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
 
                 Text("Crease")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Dry cleaning, picked up and delivered.")
-                    .font(.title3)
+                    .font(.largeTitle.weight(.bold))
+                Text("Laundry, picked up and delivered.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .padding(.top, 6)
+            }
 
-                Spacer(minLength: 52)
+            Spacer(minLength: 0)
 
+            VStack(spacing: 12) {
                 SignInWithAppleButton(.continue) { request in
                     let nonce = Self.randomNonce()
                     currentNonce = nonce
@@ -40,9 +56,9 @@ struct SignInView: View {
                 } onCompletion: { result in
                     handleApple(result)
                 }
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Button {
                     Task {
@@ -51,19 +67,23 @@ struct SignInView: View {
                         busy = false
                     }
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Image(systemName: "g.circle.fill")
                             .font(.title3)
                         Text("Continue with Google")
                             .font(.body.weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 52)
+                    .frame(height: 54)
                 }
-                .buttonStyle(.bordered)
-                .tint(.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.top, 12)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color(.label))
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color(.separator), lineWidth: 1)
+                )
                 .accessibilityLabel("Continue with Google")
 
                 if let error = session.errorMessage {
@@ -71,19 +91,22 @@ struct SignInView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 18)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 4)
                         .textSelection(.enabled)   // so a support conversation can quote it
                 }
-
-                Spacer(minLength: 44)
 
                 Text("No password, and nothing to confirm in your inbox.")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 6)
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 28)
         }
-        .background(Color(.systemGroupedBackground))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
         .overlay { if busy { ProgressView().controlSize(.large) } }
     }
 
