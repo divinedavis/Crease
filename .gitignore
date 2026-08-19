@@ -52,3 +52,7 @@ growth/*.tmp
 # and cannot be rebuilt from this repo. deploy/deploy.sh excludes the same path
 # from its rsync --delete for the same reason.
 apps/web/content/
+
+# Python bytecode from the droplet checkout.
+__pycache__/
+*.pyc
