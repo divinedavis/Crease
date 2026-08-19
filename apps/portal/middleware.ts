@@ -33,7 +33,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // /auth/callback is where Google returns to, carrying the code that becomes
+  // the session. Bouncing it to /login for not having a session yet would make
+  // signing in impossible — the one request that cannot require being signed
+  // in already.
+  const path = request.nextUrl.pathname;
+  const isPublic = path.startsWith('/login') || path.startsWith('/auth/');
+
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
 
