@@ -17,6 +17,40 @@ import { NextResponse } from 'next/server';
 const STORE = process.env.CREASE_OWNER_FILE ?? '/var/lib/crease/owner-ips.json';
 const COOKIE = 'crease_owner';
 const MAX_IPS = 50;
+// An address is remembered for a fortnight, not forever.
+//
+// A marked device re-registers on every visit, so a machine still in use never
+// falls off this list. What does fall off is the address it borrowed: an
+// iPhone on iCloud Private Relay leaves through a Cloudflare or Fastly node
+// shared with thousands of other people, and a permanent entry would go on
+// hiding whichever stranger inherits it next week. Forgetting is the only
+// thing that keeps this list about devices rather than about networks.
+const TTL_DAYS = 14;
+
+interface Entry {
+  ip: string;
+  at: string;
+}
+
+/** Tolerates the original shape, a bare array of addresses with no dates. */
+function normalise(body: unknown, now: number): Entry[] {
+  const raw = Array.isArray((body as any)?.ips) ? (body as any).ips : [];
+  const cutoff = now - TTL_DAYS * 86400_000;
+  const out: Entry[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string') {
+      out.push({ ip: item, at: new Date(now).toISOString() });
+      continue;
+    }
+    const ip = String((item as any)?.ip ?? '');
+    const at = String((item as any)?.at ?? '');
+    if (!ip) continue;
+    const seen = Date.parse(at);
+    if (Number.isFinite(seen) && seen < cutoff) continue;
+    out.push({ ip, at: Number.isFinite(seen) ? at : new Date(now).toISOString() });
+  }
+  return out;
+}
 
 function callerIp(request: Request): string | null {
   // nginx sets both; the left-most X-Forwarded-For entry is caller-controlled,
@@ -27,19 +61,17 @@ function callerIp(request: Request): string | null {
   return null;
 }
 
-async function read(): Promise<string[]> {
+async function read(now: number): Promise<Entry[]> {
   try {
-    const raw = await fs.readFile(STORE, 'utf8');
-    const body = JSON.parse(raw);
-    return Array.isArray(body.ips) ? body.ips.map(String) : [];
+    return normalise(JSON.parse(await fs.readFile(STORE, 'utf8')), now);
   } catch {
     return [];
   }
 }
 
-async function write(ips: string[]) {
+async function write(entries: Entry[]) {
   await fs.mkdir(path.dirname(STORE), { recursive: true });
-  await fs.writeFile(STORE, JSON.stringify({ ips: ips.slice(-MAX_IPS) }, null, 2));
+  await fs.writeFile(STORE, JSON.stringify({ ips: entries.slice(-MAX_IPS) }, null, 2));
 }
 
 export async function GET(request: Request) {
@@ -47,9 +79,12 @@ export async function GET(request: Request) {
   const ip = callerIp(request);
   if (!ip) return NextResponse.json({ ok: false, reason: 'no_ip' }, { status: 400 });
 
-  const ips = await read();
-  const next = on ? [...new Set([...ips, ip])] : ips.filter((x) => x !== ip);
-  await write(next);
+  const now = Date.now();
+  const entries = await read(now);
+  const others = entries.filter((e) => e.ip !== ip);
+  // Re-registering refreshes the date, which is what keeps a device in use on
+  // the list while the addresses it has stopped using drop off it.
+  await write(on ? [...others, { ip, at: new Date(now).toISOString() }] : others);
 
   // Back to the page they were on, so the whole thing is one click and a
   // confirmation they can read rather than a JSON body.
