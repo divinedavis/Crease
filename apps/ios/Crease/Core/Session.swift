@@ -251,7 +251,7 @@ final class Session: ObservableObject {
             return "That password has turned up in a known breach. Please pick another."
         }
         if raw.contains("password") && (raw.contains("short") || raw.contains("least")) {
-            return "Use a password of at least 8 characters."
+            return "Use a password of at least 6 characters."
         }
         if raw.contains("email") && raw.contains("invalid") {
             return "That email address isn't accepted. Try another."

@@ -40,10 +40,15 @@ struct EmailAuthSheet: View {
 
     private var canSubmit: Bool {
         let emailOk = !email.trimmingCharacters(in: .whitespaces).isEmpty
-        // Matches the server policy (Supabase Auth: minimum 8 plus the
-        // leaked-password check). Keeping it in step means the button is never
-        // enabled for a password the server is about to refuse.
-        let pwOk = password.count >= 8
+        // Matches the server policy, so the button is never enabled for a
+        // password the server is about to refuse.
+        //
+        // TEMPORARY, 2026-08-19: relaxed to 6 with Supabase's leaked-password
+        // (HIBP) check switched off, at the owner's request, so throwaway
+        // passwords work while testing. Put both back — 8 here, and
+        // password_min_length 8 + password_hibp_enabled true on the Supabase
+        // project — before the App Store submission.
+        let pwOk = password.count >= 6
         let nameOk = mode == .signIn || !fullName.trimmingCharacters(in: .whitespaces).isEmpty
         return emailOk && pwOk && nameOk && passwordsMatch
     }
