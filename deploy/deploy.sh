@@ -184,9 +184,14 @@ ssh "$HOST" "mkdir -p $REMOTE /var/log/crease && chown $SERVICE_USER:adm /var/lo
 # sailed straight past them and put the App Store Connect key and issuer IDs on
 # a public-facing box that has no use for them. The globs cover every future
 # *.env and any signing key that lands in the tree.
+#
+# apps/web/content/ is where the growth engine publishes: every guide page the
+# site has ever had lives there and nowhere else — it is written on the box, is
+# not in this repo, and cannot be rebuilt from it. Without this exclude a
+# routine deploy silently deletes the entire published corpus.
 rsync -az --delete \
   --exclude '.env' --exclude '.env.local' --exclude '*.env' --exclude '*.p8' \
-  --exclude 'secrets/' \
+  --exclude 'secrets/' --exclude 'apps/web/content/' \
   "$STAGE/" "$HOST:$REMOTE/"
 
 # An rsync --exclude also protects the matching file on the receiver from

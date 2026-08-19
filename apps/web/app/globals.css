@@ -265,3 +265,19 @@
     background: var(--green-soft); color: var(--green);
     border-radius: 999px; padding: 6px 12px; font-size: 0.88rem; font-weight: 600;
   }
+
+/* Long-form guide bodies. The rest of the site is cards and short blocks, so
+   nothing here had a paragraph rhythm — an engine-written guide dropped into
+   the existing styles ran as one unbroken wall. */
+.prose p {
+  color: var(--muted);
+  max-width: 38em;
+  margin-bottom: 14px;
+}
+.prose h3 {
+  font-size: 1.05rem;
+  margin: 22px 0 6px;
+}
+.prose > div:first-child h3 {
+  margin-top: 0;
+}

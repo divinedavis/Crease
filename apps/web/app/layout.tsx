@@ -10,9 +10,10 @@ export const metadata: Metadata = {
     title: 'Crease — Laundry, picked up and delivered in Brooklyn',
     description:
       'Wash & fold pickup and delivery in Brooklyn. $2.00 a pound, $20 minimum.',
-    url: 'https://usecreaseapp.com/',
+    url: 'https://creasenyc.com/',
     type: 'website',
   },
+  alternates: { canonical: 'https://creasenyc.com/' },
   icons: { icon: '/assets/icon.svg' },
 };
 

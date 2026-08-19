@@ -1,17 +1,53 @@
 import type { MetadataRoute } from 'next';
+import { allGuides } from '@/lib/guides';
 import { CORE_AREAS, EDGE_AREAS, slugFor } from '@/lib/neighborhoods';
 
+/**
+ * Re-read rather than baked, because the guides are written on the droplet
+ * after this app was built. A sitemap that only lists what existed at build
+ * time is a sitemap that never mentions anything the engine published.
+ */
+export const revalidate = 60;
+
+const SITE = 'https://creasenyc.com';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Static and short by design: two pages and a policy. A sitemap padded with
-  // anchors is a sitemap nobody trusts.
   const areas = [...CORE_AREAS, ...EDGE_AREAS].map((a) => ({
-    url: `https://creasenyc.com/laundry-pickup/${slugFor(a)}`,
+    url: `${SITE}/laundry-pickup/${slugFor(a)}`,
     changeFrequency: 'monthly' as const,
     priority: 0.8,
   }));
+
+  const guides = allGuides();
+  // lastmod is the date the content actually changed, not today's date. A
+  // sitemap that claims every page changed this morning is one Google stops
+  // believing, and lastmod is the only signal that makes it re-crawl.
+  const guideEntries = guides.map((g) => ({
+    url: `${SITE}/guides/${g.slug}`,
+    lastModified: g.updated || g.published || undefined,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }));
+  const newestGuide = guides
+    .map((g) => g.updated || g.published)
+    .filter(Boolean)
+    .sort()
+    .pop();
+
   return [
-    { url: 'https://creasenyc.com/', changeFrequency: 'weekly', priority: 1 },
+    { url: `${SITE}/`, changeFrequency: 'weekly', priority: 1 },
     ...areas,
-    { url: 'https://creasenyc.com/privacy.html', changeFrequency: 'yearly', priority: 0.3 },
+    ...(guides.length
+      ? [
+          {
+            url: `${SITE}/guides`,
+            lastModified: newestGuide,
+            changeFrequency: 'weekly' as const,
+            priority: 0.6,
+          },
+        ]
+      : []),
+    ...guideEntries,
+    { url: `${SITE}/privacy.html`, changeFrequency: 'yearly', priority: 0.3 },
   ];
 }

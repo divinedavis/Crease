@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CORE_AREAS, EDGE_AREAS, findArea, slugFor } from '@/lib/neighborhoods';
+import { allGuides } from '@/lib/guides';
+import { SiteFooter, SiteNav } from '../../chrome';
 import { QuoteBox } from '../../quote-box';
 
 /**
@@ -15,6 +17,8 @@ import { QuoteBox } from '../../quote-box';
  * same paragraph with the name swapped, which is what search engines
  * (correctly) treat as one page repeated.
  */
+export const revalidate = 60;
+
 export function generateStaticParams() {
   return [...CORE_AREAS, ...EDGE_AREAS].map((a) => ({ area: slugFor(a) }));
 }
@@ -45,24 +49,15 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
   const partial = EDGE_AREAS.some((a) => slugFor(a) === slug);
   const others = [...CORE_AREAS, ...EDGE_AREAS].filter((a) => slugFor(a) !== slug);
 
+  // Guides that name this neighborhood, then the newest few, so a page in the
+  // mesh is never a dead end. Capped: a wall of links reads as a link farm and
+  // dilutes the one link on the page that matters, which is /order.
+  const named = allGuides().filter((g) => g.areas.includes(slug));
+  const guides = (named.length ? named : allGuides()).slice(0, 3);
+
   return (
     <>
-      <nav className="wrap nav">
-        <div className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/icon.svg" alt="" width={34} height={34} />
-          <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-            Crease
-          </a>
-        </div>
-        <div className="links">
-          <a href="/order">Order</a>
-          <a href="/#areas">Where we collect</a>
-        </div>
-        <a href="/order" style={{ color: 'var(--green)' }}>
-          Book a pickup
-        </a>
-      </nav>
+      <SiteNav />
 
       <main className="wrap">
         <section className="home">
@@ -133,6 +128,24 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
           </div>
         </section>
 
+        {guides.length > 0 && (
+          <section className="band">
+            <h2>Laundry in {area.name}, answered</h2>
+            <div className="grid">
+              {guides.map((g) => (
+                <article className="card" key={g.slug}>
+                  <h3>
+                    <a href={`/guides/${g.slug}`} style={{ color: 'inherit' }}>
+                      {g.title}
+                    </a>
+                  </h3>
+                  <p>{g.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="band">
           <h2>Other neighborhoods we collect from</h2>
           <ul className="areas">
@@ -147,37 +160,7 @@ export default async function AreaPage({ params }: { params: Promise<{ area: str
         </section>
       </main>
 
-      <footer className="sitefoot">
-        <div className="wrap">
-          <div className="footgrid">
-            <div>
-              <h4>Crease</h4>
-              <ul>
-                <li>
-                  <a href="/order">Book a pickup</a>
-                </li>
-                <li>
-                  <a href="/#areas">Where we collect</a>
-                </li>
-                <li>
-                  <a href="mailto:divinejdavis@gmail.com">Contact</a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4>Service</h4>
-              <ul>
-                <li>Wash &amp; fold · $2.00/lb</li>
-                <li>$20 minimum</li>
-                <li>Dry cleaning · soon</li>
-              </ul>
-            </div>
-            <div className="legal">
-              © 2026 Crease · <a href="/privacy.html">Privacy</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* Structured data so a search engine can read the service, the area and
           the price without inferring them from prose. */}
