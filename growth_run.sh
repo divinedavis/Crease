@@ -111,8 +111,14 @@ fi
 # and the API spend ledger, and snapshot.json republishes the parts of it that
 # are safe. growth.env is gitignored and would be a live credential in a public
 # repo.
-git add -A growth/snapshot.json growth/techniques.json growth/keywords.json \
-            growth/last_run.json growth/gsc_pages.json "$BEAT" 2>/dev/null
+# One at a time, and only what exists. `git add` fails the WHOLE invocation on
+# a pathspec that matches nothing, so listing gsc_pages.json — which does not
+# exist until Search Console is connected — silently staged nothing at all and
+# the first run pushed no state whatsoever.
+for f in growth/snapshot.json growth/techniques.json growth/keywords.json \
+         growth/last_run.json growth/gsc_pages.json "$BEAT"; do
+  [ -e "$f" ] && git add -- "$f"
+done
 if ! git diff --cached --quiet 2>/dev/null; then
   git -c user.name="crease-growth" -c user.email="divinejdavis@gmail.com" \
       commit -q -m "growth: $(date -u +%Y-%m-%d) run ($JOB, rc=$rc)"

@@ -1,4 +1,8 @@
+# /var/log on this droplet is group-writable by syslog, which logrotate refuses
+# to rotate into without being told whose privileges to drop to. Without `su`
+# it skips the file silently and the log grows forever.
 /var/log/crease-growth.log {
+    su root adm
     weekly
     rotate 8
     compress
