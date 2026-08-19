@@ -80,6 +80,25 @@ struct AddressEntryView: View {
                             .foregroundStyle(.secondary)
                             .listRowSeparator(.hidden)
                     }
+
+                    // Where the couriers actually reach, said before somebody
+                    // types a street we cannot serve. Three miles from Fulton
+                    // Street is most of brownstone Brooklyn and further than
+                    // people assume — naming only the two nearest
+                    // neighbourhoods sold the area short.
+                    if search.query.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Where we collect", systemImage: "mappin.and.ellipse")
+                                .font(.footnote.weight(.semibold))
+                            Text(ServiceArea.blurb)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 8)
+                        .listRowSeparator(.hidden)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
                 .listStyle(.plain)
                 .animation(.easeOut(duration: 0.18), value: search.results.count)

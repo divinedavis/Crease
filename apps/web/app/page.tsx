@@ -1,3 +1,4 @@
+import { CORE_AREAS, EDGE_AREAS, HEADLINE_AREAS } from '@/lib/neighborhoods';
 import { QuoteBox } from './quote-box';
 
 /**
@@ -80,9 +81,10 @@ export default async function Home({
                 away should learn that from a sentence rather than from typing
                 their street and being turned down. */}
             <p className="fine" style={{ marginBottom: 18 }}>
-              We collect and deliver within <b>3 miles of Fulton Cleaners</b>, 909 Fulton Street —
-              Clinton Hill, Fort Greene, Bed-Stuy, Prospect Heights, Crown Heights and the blocks
-              around them. Check your address and we&rsquo;ll tell you either way.
+              We collect and deliver within <b>3 miles of Fulton Cleaners</b>, 909 Fulton Street —{' '}
+              {HEADLINE_AREAS.join(', ')} and{' '}
+              <a href="#areas">{CORE_AREAS.length + EDGE_AREAS.length - HEADLINE_AREAS.length} more
+              neighborhoods</a>. Check your address and we&rsquo;ll tell you either way.
             </p>
             <QuoteBox />
           </div>
@@ -109,6 +111,36 @@ export default async function Home({
                   </div>
                 ),
               )}
+            </div>
+          </div>
+        </section>
+
+        <section className="band" id="areas">
+          <h2>Where we collect</h2>
+          <p className="lede" style={{ marginBottom: 22 }}>
+            Three miles from Fulton Cleaners at 909 Fulton Street. That is most of brownstone
+            Brooklyn — and a good deal further than people expect.
+          </p>
+          <div className="two">
+            <div className="card">
+              <h3>All of it is inside the band</h3>
+              <ul className="areas">
+                {CORE_AREAS.map((a) => (
+                  <li key={a.name}>{a.name}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="card">
+              <h3>Partly inside — check your street</h3>
+              <ul className="areas">
+                {EDGE_AREAS.map((a) => (
+                  <li key={a.name}>{a.name}</li>
+                ))}
+              </ul>
+              <p className="fine" style={{ marginTop: 12 }}>
+                These stretch past the band at the far end. Type your address and you get a yes or
+                a no about your own block, not your neighborhood.
+              </p>
             </div>
           </div>
         </section>
@@ -232,10 +264,15 @@ export default async function Home({
           <div>
             <h4>Where we collect</h4>
             <ul>
-              <li>Within 3 miles of</li>
-              <li>909 Fulton Street</li>
+              <li>
+                <a href="#areas">3 miles of 909 Fulton St</a>
+              </li>
               <li>Clinton Hill · Fort Greene</li>
-              <li>Bed-Stuy · Prospect Heights</li>
+              <li>Downtown Brooklyn · DUMBO</li>
+              <li>Park Slope · Bed-Stuy</li>
+              <li>
+                <a href="#areas">and {CORE_AREAS.length + EDGE_AREAS.length - 6} more</a>
+              </li>
             </ul>
           </div>
             <div className="legal">

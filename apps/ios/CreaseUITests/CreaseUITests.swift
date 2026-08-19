@@ -57,7 +57,7 @@ final class CreaseUITests: XCTestCase {
     @discardableResult
     private func pickFirstGarment(in app: XCUIApplication) -> Bool {
         let opener = app.buttons
-            .matching(NSPredicate(format: "label CONTAINS 'Choose what' OR label BEGINSWITH 'Dry cleaning'"))
+            .matching(NSPredicate(format: "label CONTAINS 'Choose what' OR label BEGINSWITH 'Wash & fold'"))
             .firstMatch
         guard opener.waitForExistence(timeout: 15) else { return false }
         opener.tap()
@@ -360,38 +360,34 @@ final class CreaseUITests: XCTestCase {
         }
         home.tap()
 
-        let serviceRow = app.buttons.containing(.staticText, identifier: "Dry cleaning").firstMatch
+        // The row is labelled with whichever service the shop actually sells,
+        // so it is matched by what it does rather than by today's only answer.
+        let serviceRow = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Wash & fold' OR label CONTAINS 'Choose what'"))
+            .firstMatch
         XCTAssertTrue(serviceRow.waitForExistence(timeout: 15), "the booking screen must offer the service")
         serviceRow.tap()
 
         XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
-        XCTAssertTrue(
-            app.staticTexts["What are you sending?"].waitForExistence(timeout: 5),
-            "dry cleaning is counted in garments, and the prompt should say so"
-        )
-        // Prices come from the shop that was picked, not a Crease price list.
-        XCTAssertTrue(
-            app.staticTexts.matching(NSPredicate(format: "label CONTAINS ' each'")).firstMatch.exists,
-            "per-piece prices must be on screen"
-        )
-        attach(app, "service-menu-dry-clean")
 
-        // Laundry is the other half: sold by weight, with a floor the customer
-        // has to be told about before the bag is weighed, not after.
-        let laundry = app.buttons["Wash & fold"]
-        if laundry.waitForExistence(timeout: 5) {
-            laundry.tap()
-            XCTAssertTrue(
-                app.staticTexts.matching(NSPredicate(format: "label CONTAINS '/ lb'")).firstMatch
-                    .waitForExistence(timeout: 5),
-                "laundry must be priced by the pound"
-            )
-            XCTAssertTrue(
-                app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'minimum'")).firstMatch.exists,
-                "the weight minimum is the most surprising number in laundry pricing — say it"
-            )
-            attach(app, "service-menu-wash-fold")
-        }
+        // Laundry is what Crease sells: by weight, with a floor the customer
+        // has to be told about before the bag is weighed rather than after.
+        // Dry cleaning is deliberately absent — no shop has published a price
+        // list for it, and offering a service nobody can quote is how an order
+        // reaches a counter as a question.
+        XCTAssertTrue(
+            app.staticTexts["About how much laundry?"].waitForExistence(timeout: 5),
+            "laundry is weighed, and the prompt should say so"
+        )
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS '/ lb'")).firstMatch.exists,
+            "laundry must be priced by the pound"
+        )
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'minimum'")).firstMatch.exists,
+            "the weight minimum is the most surprising number in laundry pricing — say it"
+        )
+        attach(app, "service-menu-wash-fold")
 
         app.buttons["Done"].tap()
     }
@@ -428,15 +424,15 @@ final class CreaseUITests: XCTestCase {
         let before = priced.label
 
         // Go and look at the other service, then come back.
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Dry cleaning'")).firstMatch.tap()
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Wash & fold'")).firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
-        let laundry = app.buttons["Wash & fold"]
-        guard laundry.waitForExistence(timeout: 5) else {
+        let other = app.buttons["Press only"]
+        guard other.waitForExistence(timeout: 4) else {
             app.buttons["Done"].tap()
             throw XCTSkip("this shop sells one service; nothing to switch between")
         }
-        laundry.tap()
-        app.buttons["Dry cleaning"].tap()
+        other.tap()
+        app.buttons["Wash & fold"].tap()
         attach(app, "after-tab-switch")
         app.buttons["Done"].tap()
 
