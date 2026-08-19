@@ -1,4 +1,4 @@
-import { CORE_AREAS, EDGE_AREAS, HEADLINE_AREAS } from '@/lib/neighborhoods';
+import { CORE_AREAS, EDGE_AREAS, HEADLINE_AREAS, slugFor } from '@/lib/neighborhoods';
 import { QuoteBox } from './quote-box';
 
 /**
@@ -126,7 +126,14 @@ export default async function Home({
               <h3>All of it is inside the band</h3>
               <ul className="areas">
                 {CORE_AREAS.map((a) => (
-                  <li key={a.name}>{a.name}</li>
+                  <li key={a.name}>
+                    <a
+                      href={`/laundry-pickup/${slugFor(a)}`}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                    >
+                      {a.name}
+                    </a>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -134,7 +141,14 @@ export default async function Home({
               <h3>Partly inside — check your street</h3>
               <ul className="areas">
                 {EDGE_AREAS.map((a) => (
-                  <li key={a.name}>{a.name}</li>
+                  <li key={a.name}>
+                    <a
+                      href={`/laundry-pickup/${slugFor(a)}`}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                    >
+                      {a.name}
+                    </a>
+                  </li>
                 ))}
               </ul>
               <p className="fine" style={{ marginTop: 12 }}>
