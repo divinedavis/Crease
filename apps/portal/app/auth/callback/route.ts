@@ -46,7 +46,20 @@ export async function GET(request: Request) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=exchange_failed`);
+    // The most common cause is not a bad code but a code redeemed on the wrong
+    // host: PKCE stores its verifier in a cookie on the origin the flow began
+    // from, so a provider that returns to a different one arrives with a valid
+    // code and no way to prove it asked for it. Say which host is complaining,
+    // because that is the whole diagnosis.
+    console.error('[portal] oauth exchange failed', {
+      host,
+      reason: error.message,
+      hasVerifierCookie: jar.getAll().some((c) => c.name.includes('code-verifier')),
+    });
+    const why = jar.getAll().some((c) => c.name.includes('code-verifier'))
+      ? 'exchange_failed'
+      : 'wrong_host';
+    return NextResponse.redirect(`${origin}/login?error=${why}`);
   }
 
   // Signed in, but is this person staff anywhere? RLS answers honestly: a

@@ -42,6 +42,13 @@ export default function LoginPage() {
         {oauthError === 'exchange_failed' && (
           <div className="notice danger">Google sign-in didn&rsquo;t complete. Try again.</div>
         )}
+        {oauthError === 'wrong_host' && (
+          <div className="notice danger">
+            Google sent you back to a different address than you started from, so the sign-in
+            couldn&rsquo;t be completed here. Start again from{' '}
+            <a href="https://portal.creasenyc.com/login">portal.creasenyc.com</a>.
+          </div>
+        )}
         <button
           type="button"
           className="primary"
