@@ -165,8 +165,12 @@ class _Ptr:
     but re-asking a resolver the same unanswerable question every morning is.
     """
 
-    def __init__(self, budget=PTR_LOOKUPS_PER_RUN):
-        self.budget = budget
+    def __init__(self, budget=None):
+        # Read the module global at call time, not as a default argument: a
+        # default is bound once at import, so setting PTR_LOOKUPS_PER_RUN — the
+        # obvious way to turn lookups off in a test or on a resolver-less box —
+        # silently did nothing.
+        self.budget = PTR_LOOKUPS_PER_RUN if budget is None else budget
         self.dirty = False
         try:
             with open(PTR_FILE) as f:

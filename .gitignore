@@ -30,3 +30,25 @@ apps/ios/*.ipa
 # whatever test data happened to be seeded that day.
 apps/ios/marketing/raw/
 *.tsbuildinfo
+
+# Growth engine runtime.
+#
+# growth.env holds live credentials and this repository is PUBLIC.
+# results.jsonl and state.json are the droplet's own measurement history: it is
+# their only writer, they are republished in aggregate as growth/snapshot.json,
+# and a stale checkout pushing over them would erase the record the whole
+# review loop is judged on.
+#
+# techniques.json and keywords.json are deliberately NOT here. They are the
+# ledger, and the ledger is how the cloud review agent steers the engine —
+# flipping a technique to retired is a one-line commit with no deploy.
+growth.env
+growth/results.jsonl
+growth/state.json
+growth/.anthropic_key
+growth/*.tmp
+
+# The site's published guides live on the droplet, are written by the engine,
+# and cannot be rebuilt from this repo. deploy/deploy.sh excludes the same path
+# from its rsync --delete for the same reason.
+apps/web/content/

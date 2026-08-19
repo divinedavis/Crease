@@ -1,0 +1,27 @@
+# Crease — daily growth engine. Installed at /etc/cron.d/crease-growth.
+#
+# This droplet keeps per-project crons in /etc/cron.d/, NOT in root's user
+# crontab. Never pipe to `crontab -` here: it clobbers the other five sites'
+# jobs (nemo-growth, nemo-seo, rentmap-growth, rentmap-scrape, rentmap-*).
+#
+# CRON_TZ matters. The droplet runs UTC, and without it the job drifts an hour
+# at every daylight-saving change and stops being "the morning run".
+#
+# 05:20 America/New_York, chosen against the neighbours rather than for itself:
+# rentmap-growth runs at 05:00 ET and nemo-growth at 06:00 ET, and this box has
+# roughly 800MB free. Three Python engines and a model call at the same minute
+# is how a 1GB box OOM-kills a live site.
+#
+# Credentials are NOT sourced here — growth_run.sh reads growth.env itself,
+# because that file holds values a shell `.` in a cron line would mangle.
+CRON_TZ=America/New_York
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+20 5 * * * root cd /root/Crease-growth && ./growth_run.sh daily --email divinejdavis@gmail.com >> /var/log/crease-growth.log 2>&1
+
+# Watchdog, from its own entry so it survives the engine failing. If the 05:20
+# run stops happening the failure mode is an empty inbox, which looks exactly
+# like a quiet week. This makes silence loud: it reports on the state the
+# morning run left behind, whatever that state is.
+40 11 * * * root cd /root/Crease-growth && python3 growth_daily.py report --email divinejdavis@gmail.com >> /var/log/crease-growth.log 2>&1
