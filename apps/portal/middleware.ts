@@ -40,6 +40,18 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = path.startsWith('/login') || path.startsWith('/auth/');
 
+  // An OAuth code that arrives anywhere other than the callback is still a
+  // valid code, and dropping it strands somebody on the sign-in page with no
+  // error and no session — which is exactly what happened: the provider
+  // returned to /login?code=... and the page it landed on had nothing to do
+  // with it. Forward it to the one route that knows how to spend it.
+  const code = request.nextUrl.searchParams.get('code');
+  if (code && !path.startsWith('/auth/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/callback';
+    return NextResponse.redirect(url);
+  }
+
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
