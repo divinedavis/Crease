@@ -147,9 +147,18 @@
      an origin with the cleaner portal, so an unpinned third-party module here
      would be a standing handover of those sessions. -->
 <script src="supabase.js"></script>
+<!-- Shares the portal's session cookie so this page does not ask for a
+     second login. Must load before the module below. -->
+<script src="session-cookie.js"></script>
 <script type="module">
 const { createClient } = window.supabase;
-const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__');
+const db = createClient('__SUPABASE_URL__', '__SUPABASE_ANON_KEY__', {
+  // Same drawer as the portal and the canvass page. Without this the
+  // default is localStorage and this page asks for its own login while a
+  // perfectly good session sits in the cookie beside it.
+  auth: { persistSession: true, autoRefreshToken: true,
+          storage: window.creaseCookieStorage },
+});
 const app = document.getElementById('app');
 
 const esc = (s) => (s ?? '').replace(/[&<>"']/g, (c) =>

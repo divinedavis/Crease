@@ -23,6 +23,10 @@ done
 # tool is a blank screen.
 cp "$ROOT/growth/prospects/supabase.js" "$STAGE/supabase.js"
 
+# Both pages share one sign-in with the cleaner portal through this. Ship it
+# or every page here goes back to asking for its own login.
+cp "$ROOT/growth/prospects/session-cookie.js" "$STAGE/session-cookie.js"
+
 # The tab icon. Without them the browser falls back to a letter from the
 # domain, which is how this page spent its life labelled "U".
 cp "$ROOT/growth/prospects/icon.svg" "$STAGE/icon.svg"
@@ -30,7 +34,8 @@ cp "$ROOT/growth/prospects/apple-touch-icon.png" "$STAGE/apple-touch-icon.png"
 
 # /var/www, not /root: nginx's workers cannot traverse root's home.
 ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
-scp -q "$STAGE/index.html" "$STAGE/roadmap.html" "$STAGE/supabase.js" "$STAGE/icon.svg" \
+scp -q "$STAGE/index.html" "$STAGE/roadmap.html" "$STAGE/supabase.js" \
+  "$STAGE/session-cookie.js" "$STAGE/icon.svg" \
   "$STAGE/apple-touch-icon.png" "$HOST:/var/www/crease-prospects/"
 
 # Check the canonical host. usecreaseapp.com now 301s to creasenyc.com, so
@@ -47,12 +52,19 @@ done
 # A 200 only proves nginx served a file. Prove it served THIS build: the
 # placeholders must be gone and the shared-session adapter must be present,
 # or the page silently asks for a second login again.
-body="$(curl -sL "https://portal.creasenyc.com/prospects/")"
-case "$body" in
-  *__SUPABASE_URL__*) echo "  FAIL: placeholders not substituted"; fail=1 ;;
-esac
-case "$body" in
-  *"storage: cookieStorage"*) echo "  ok: shares the portal session" ;;
-  *) echo "  FAIL: cookie session adapter missing"; fail=1 ;;
-esac
+for page in "" roadmap.html; do
+  body="$(curl -sL "https://portal.creasenyc.com/prospects/$page")"
+  case "$body" in
+    *__SUPABASE_URL__*) echo "  FAIL /$page: placeholders not substituted"; fail=1 ;;
+  esac
+  # Both pages must carry it. The first cut of this fix landed on index.html
+  # only and roadmap.html went on asking for a second login, so check each.
+  case "$body" in
+    *"window.creaseCookieStorage"*) echo "  ok /$page: shares the portal session" ;;
+    *) echo "  FAIL /$page: cookie session adapter missing"; fail=1 ;;
+  esac
+done
+
+code="$(curl -sL -o /dev/null -w '%{http_code}' "https://portal.creasenyc.com/prospects/session-cookie.js")"
+[ "$code" = "200" ] || { echo "  FAIL: session-cookie.js not served ($code)"; fail=1; }
 exit $fail
