@@ -58,8 +58,11 @@
   .notice { border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
   .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
 
-  header.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0 10px; }
-  header.top .row-actions { display: flex; gap: 8px; }
+  /* Wraps because this is used one-handed on a phone in the street, and the
+     title plus three buttons does not fit on one line at 390px. */
+  header.top { display: flex; justify-content: space-between; align-items: center;
+               gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; }
+  header.top .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .counts { font-variant-numeric: tabular-nums; }
 
@@ -351,6 +354,7 @@ function render() {
         <div class="sub counts">${inKind.filter((r) => r.visited).length} of ${inKind.length} visited</div>
       </div>
       <div class="row-actions">
+        <a class="btn" href="/">Portal</a>
         <a class="btn" href="roadmap.html">Roadmap</a>
         <button id="signout">Sign out</button>
       </div>

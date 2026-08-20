@@ -60,7 +60,7 @@
 
   header.top { display: flex; justify-content: space-between; align-items: center;
                gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; }
-  header.top .row-actions { display: flex; gap: 8px; }
+  header.top .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px;
           font-weight: 700; vertical-align: 1px; white-space: nowrap; }
@@ -342,10 +342,13 @@ function render(prospects, cleaners, partnerErr) {
     <header class="top">
       <div>
         <h1>Expansion roadmap</h1>
-    <p class="sub"><a href="/">← Portal</a> · <a href="/prospects/">Canvass</a></p>
         <div class="sub">Brooklyn → Manhattan → Queens → Staten Island → New Jersey</div>
       </div>
+      <!-- Every route off this page is a button here, not a line of underlined
+           text under the title. Canvass was already both — a link on the left
+           and a button on the right — which is two controls for one thing. -->
       <div class="row-actions">
+        <a class="btn" href="/">Portal</a>
         <a class="btn" href="./">Canvass</a>
         <button id="signout">Sign out</button>
       </div>
