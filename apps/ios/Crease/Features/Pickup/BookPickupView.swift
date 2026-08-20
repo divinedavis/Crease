@@ -13,15 +13,31 @@ struct BookPickupView: View {
     @EnvironmentObject private var store: OrderStore
     @Environment(\.dismiss) private var dismiss
 
-    let pickup: ResolvedAddress
-    let accessNotes: String
+    /// The door, and the note that tells a courier which one.
+    ///
+    /// State rather than constants: checkout can move the pin and rewrite the
+    /// instructions, and both have to survive back into this screen — a booking
+    /// corrected at the last step must not be dispatched to the address it was
+    /// corrected away from.
+    @State private var pickup: ResolvedAddress
+    @State private var dropoffNotes: String
+
+    init(pickup: ResolvedAddress, accessNotes: String) {
+        _pickup = State(initialValue: pickup)
+        _dropoffNotes = State(initialValue: accessNotes)
+    }
 
     @State private var camera: MapCameraPosition = .automatic
     @State private var selected: ServiceOption = .recommended
     @State private var cleaner: Cleaner?
     @State private var submitting = false
     @State private var error: String?
-    @State private var pickupDay = Date()
+    /// When the courier should come, or nil for "as soon as one can get here".
+    ///
+    /// Every booking used to be the latter with no way to say otherwise: the
+    /// order was stamped now → now+2h whatever the customer wanted, so a bag
+    /// booked at midnight asked for a driver at midnight.
+    @State private var scheduledPickup: Date?
     @State private var choosingCleaner = false
     /// Set when the server priced this route above the published fee. Nothing
     /// has been charged at that point — it is a question, and the answer either
@@ -128,27 +144,32 @@ struct BookPickupView: View {
         // own a screen whose top it cannot reach.
         .fullScreenCover(isPresented: $reviewing) {
             CheckoutView(
-                errorMessage: error,
-                carriesCleaning: selected.carriesCleaning,
-                shopName: cleaner?.name ?? "This shop",
-                serviceLabel: serviceKind.label,
+                pickup: $pickup,
+                dropoffNotes: $dropoffNotes,
+                cleaner: $cleaner,
+                selected: $selected,
+                serviceKind: $serviceKind,
+                quantities: $quantities,
+                scheduledPickup: $scheduledPickup,
+                addressLabel: addressLabel,
+                menu: menu,
                 lines: declaredLines,
                 cleaningCents: estimateCents,
-                deliveryLabel: "\(selected.name) courier",
-                deliveryFeeCents: selected.priceCents,
                 // Both are always zero today. Rendered from the order's own
-                // fields rather than hidden, so the day either becomes real
-                // the checkout does not have to be rewritten to say so.
+                // fields rather than hidden, so the day either becomes real the
+                // checkout does not have to be rewritten to say so.
                 serviceFeeCents: 0,
                 taxCents: 0,
                 holdCents: ServicePricing.holdCents(
                     cleaningCents: estimateCents,
                     fixedCents: selected.priceCents
                 ),
+                errorMessage: error,
                 working: submitting
             ) {
                 Task { await book() }
             }
+            .environmentObject(store)
         }
         .sheet(isPresented: $choosingItems) {
             ServiceMenuView(
@@ -187,6 +208,10 @@ struct BookPickupView: View {
                 "\(cleaner?.name ?? "This shop") is farther than our standard rate covers, so this trip is \(priced.cents.asMoney) instead of \(selected.priceCents.asMoney). Nothing has been charged."
             )
         }
+        // Checkout can move the pin, and the map underneath is stale the moment
+        // it does — a route drawn to the door the customer just corrected away
+        // from.
+        .onChange(of: pickup) { _, _ in frameRoute() }
         .task {
             if store.cleaners.isEmpty { await store.loadCleaners() }
             // Nearest, not first alphabetically — but the customer can change
@@ -273,139 +298,6 @@ struct BookPickupView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
-    }
-
-    /// What the customer is about to be charged for, shown while the payment
-    /// sheet is up.
-    ///
-    /// Stripe's sheet has no room for it — there is no supported way to put
-    /// custom content inside PaymentSheet — and what showed through behind it
-    /// was the tier list, still offering the two options they had just chosen
-    /// between. So the screen underneath becomes the receipt: the shop, where
-    /// it is going, when a driver arrives, and what the number on the Pay
-    /// button actually buys.
-    private func reviewCard(cleaner: Cleaner) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Review your order")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 10) {
-                Image(systemName: "building.2.fill")
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 30, height: 30)
-                    .background(Theme.accentSoft, in: Circle())
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(cleaner.name)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    Text(turnaroundLine(for: cleaner))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-
-            reviewRow(
-                symbol: "mappin.and.ellipse",
-                title: selected.legs == 1 && selected.id == "return_only"
-                    ? "Deliver to \(pickup.line1)"
-                    : "Collect from \(pickup.line1)",
-                detail: etaLine
-            )
-
-            reviewRow(
-                symbol: selected.symbol,
-                title: selected.name,
-                detail: selected.blurb
-            )
-
-            reviewRow(
-                symbol: serviceKind.symbol,
-                title: serviceKind.label,
-                detail: declaredSummary
-            )
-
-            Divider()
-
-            if estimateCents > 0 {
-                HStack {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Cleaning, estimated")
-                            .font(.subheadline.weight(.medium))
-                        // The shop's number, from the shop's price list, and
-                        // still theirs to correct once the bag is open. Saying
-                        // "estimated" here is what makes the count at the
-                        // counter an expected step rather than a dispute.
-                        Text("\(cleaner.name) confirms this when they count")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    Text(estimateCents.asMoney)
-                        .font(.subheadline.weight(.semibold))
-                }
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Courier fee")
-                        .font(.subheadline.weight(.medium))
-                    // Restating this here matters more than anywhere else on
-                    // the screen: it is the last thing seen before a card is
-                    // charged, and the one number people would otherwise
-                    // mistake for the price of the cleaning.
-                    Text("Cleaning billed separately by the shop")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Text(selected.priceCents.asMoney)
-                    .font(.title3.weight(.semibold))
-            }
-        }
-        .padding(14)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .padding(.horizontal, 16)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func reviewRow(symbol: String, title: String, detail: String?) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                if let detail {
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func turnaroundLine(for cleaner: Cleaner) -> String {
-        if let miles = cleaner.milesFrom(pickup.coordinate) {
-            return String(format: "%.1f mi away · %dh turnaround", miles, cleaner.turnaroundHours)
-        }
-        return "\(cleaner.turnaroundHours)h turnaround"
-    }
-
-    /// Only the driver's arrival is quotable at booking, and only on the tiers
-    /// that actually send one to the customer — the same rule the tier rows
-    /// follow. Inventing a whole-order ETA here would be the one promise this
-    /// screen has never made.
-    private var etaLine: String? {
-        guard let minutes = selected.pickupEtaMinutes else { return nil }
-        return "Driver arrives in about \(minutes) min"
     }
 
     private var optionsSheet: some View {
@@ -586,6 +478,13 @@ struct BookPickupView: View {
         value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
     }
 
+    /// What the saved address is called, when this pickup point is one of
+    /// them. "Home" is the label the first saved address gets, so most of the
+    /// time this is the word the customer chose for their own door.
+    private var addressLabel: String {
+        store.addresses.first { $0.isSamePlace(as: pickup) }?.label ?? "Pickup address"
+    }
+
     private var cleanerRow: some View {
         Button { choosingCleaner = true } label: {
             HStack(spacing: 12) {
@@ -714,6 +613,21 @@ struct BookPickupView: View {
         let existing = store.addresses.first { $0.isSamePlace(as: pickup) }
         let saved: Address
         if let existing {
+            // Same place, possibly a different door. Checkout can move the pin
+            // and rewrite the instructions, and reusing the row without folding
+            // those in sends the courier to the point the customer just
+            // corrected away from.
+            let notes = dropoffNotes.isEmpty ? nil : dropoffNotes
+            if notes != existing.accessNotes
+                || existing.lat != pickup.coordinate.latitude
+                || existing.lng != pickup.coordinate.longitude {
+                await store.updateAddressDetails(
+                    id: existing.id,
+                    accessNotes: notes,
+                    lat: pickup.coordinate.latitude,
+                    lng: pickup.coordinate.longitude
+                )
+            }
             saved = existing
         } else {
             // First address someone saves is almost always where they live, so
@@ -727,7 +641,7 @@ struct BookPickupView: View {
                 city: pickup.city,
                 state: pickup.state,
                 postal_code: pickup.postalCode,
-                access_notes: accessNotes.isEmpty ? nil : accessNotes,
+                access_notes: dropoffNotes.isEmpty ? nil : dropoffNotes,
                 lat: pickup.coordinate.latitude,
                 lng: pickup.coordinate.longitude
             )) else {
@@ -737,7 +651,12 @@ struct BookPickupView: View {
             saved = created
         }
 
-        let now = Date()
+        // The slot they picked, or the next driver. Twenty minutes wide either
+        // way: it is the width the checkout quotes, and an order whose window
+        // disagrees with the screen that sold it is an order the dispatcher
+        // prices against a promise nobody made.
+        let windowStart = scheduledPickup ?? Date()
+        let windowEnd = windowStart.addingTimeInterval(20 * 60)
         // Priced at the tier the customer actually chose. Previously this was
         // always zero, so every booking was free — the screen promised a price
         // the order did not carry.
@@ -754,8 +673,8 @@ struct BookPickupView: View {
             delivery_fee_cents: selected.priceCents,
             service_tier: selected.id,
             service_type: serviceKind.rawValue,
-            pickup_window_start: now,
-            pickup_window_end: now.addingTimeInterval(2 * 3600),
+            pickup_window_start: windowStart,
+            pickup_window_end: windowEnd,
             customer_notes: nil,
             customer_item_count: declaredPieceCount > 0 ? declaredPieceCount : nil
         )) else {

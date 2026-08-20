@@ -674,3 +674,33 @@ extension Address {
         )
     }
 }
+
+/// The signed-in customer's own row.
+///
+/// Only the fields a person edits about themselves are here. The two Stripe
+/// references on the same table are deliberately absent: migration 0032 revoked
+/// the client's write grant on them precisely so this app can never touch them,
+/// and a struct that names them is a struct that will eventually try.
+struct Profile: Codable, Identifiable, Hashable {
+    let id: UUID
+    var fullName: String?
+    /// The number a courier dials from the doorstep. Optional because it is
+    /// asked for at checkout rather than at sign-up — the first booking is the
+    /// first moment it means anything.
+    var phone: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, phone
+        case fullName = "full_name"
+    }
+
+    /// The number as a person reads it, so someone checking their own contact
+    /// details recognises them at a glance.
+    var formattedPhone: String? {
+        guard let phone, !phone.isEmpty else { return nil }
+        let digits = phone.filter(\.isNumber)
+        let local = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+        guard local.count == 10 else { return phone }
+        return "(\(local.prefix(3))) \(local.dropFirst(3).prefix(3))-\(local.suffix(4))"
+    }
+}

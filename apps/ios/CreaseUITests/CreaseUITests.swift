@@ -552,16 +552,23 @@ final class CreaseUITests: XCTestCase {
 
         // The bill, before any money moves. One charge covers the cleaning and
         // the couriers, so both have to be on screen before the card is taken.
-        XCTAssertTrue(app.navigationBars["Checkout"].waitForExistence(timeout: 10),
+        // The title is a static text, not a navigation bar: the screen draws
+        // its own header so the total can sit as high as possible, above
+        // whatever height Stripe decides its sheet should be.
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10),
                       "continuing must reach an itemised checkout, not a charge")
-        let pay = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Pay $'")).firstMatch
-        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced pay button")
+        let pay = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Place Order' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(pay.waitForExistence(timeout: 5), "checkout must offer a priced place-order button")
         attach(app, "checkout")
         pay.tap()
 
         // Stripe mints the intent and loads the sheet over the network, so this
         // is slow by nature. It either arrives or the flow is dead — which is
         // precisely the failure being guarded.
+        // Stripe's own button, which still says "Pay $" — the app's button is
+        // the one that now says "Place Order".
         let payButton = app.buttons
             .matching(NSPredicate(format: "label BEGINSWITH 'Pay $'"))
             .firstMatch
@@ -575,12 +582,12 @@ final class CreaseUITests: XCTestCase {
         // be readable with the sheet up — that is the whole reason checkout is
         // not a card floating over the map.
         XCTAssertTrue(
-            app.staticTexts["Total"].waitForExistence(timeout: 10),
+            app.staticTexts["TOTAL"].waitForExistence(timeout: 10),
             "the itemised total must be visible behind the payment sheet"
         )
         XCTAssertTrue(
-            app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'courier'")).firstMatch.exists,
-            "the bill must name the courier line, not just a total"
+            app.staticTexts["Delivery Fee"].exists,
+            "the bill must name the transport line, not just a total"
         )
 
         XCTAssertTrue(
@@ -590,6 +597,118 @@ final class CreaseUITests: XCTestCase {
                 + " · texts: "
                 + app.staticTexts.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
         )
+    }
+
+    /// Checkout is where the order is finished, not just read.
+    ///
+    /// It used to be a receipt: every choice on it — the tier, the door, the
+    /// bag, the shop — could only be corrected by backing out to the booking
+    /// screen, which discards the draft that was built. This drives the two
+    /// choices that move money and time, because a control that looks live and
+    /// changes nothing is worse than no control at all.
+    func testCheckoutRepricesWhenTheTierIsSwitched() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        guard pickFirstGarment(in: app) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 15))
+        proceed.tap()
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
+
+        // Both halves of the control, each carrying the price it would charge.
+        let delivery = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Delivery.'")).firstMatch
+        let pickup = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Pickup.'")).firstMatch
+        XCTAssertTrue(delivery.waitForExistence(timeout: 5), "checkout must offer the delivery tier")
+        XCTAssertTrue(pickup.exists, "checkout must offer the collect-it-yourself tier")
+
+        guard let roundTrip = totalOnPlaceOrder(app) else {
+            return XCTFail("the place-order button must carry the total")
+        }
+
+        pickup.tap()
+        // One courier leg costs less than two, so the total on the button has to
+        // fall. A toggle that reprices nothing is a toggle that charged the
+        // customer for a service they did not pick.
+        let dropped = NSPredicate(format: "label != %@", "Place Order · " + money(roundTrip))
+        expectation(for: dropped, evaluatedWith: placeOrderButton(app))
+        waitForExpectations(timeout: 5)
+
+        guard let oneLeg = totalOnPlaceOrder(app) else {
+            return XCTFail("the place-order button must still carry the total")
+        }
+        XCTAssertLessThan(oneLeg, roundTrip, "collecting it yourself must cost less than delivery")
+        attach(app, "checkout-pickup")
+
+        // And the time the driver is asked for is a choice, not a stamp. Every
+        // booking used to be "now" whatever the customer wanted.
+        pickup.tap() // no-op re-tap keeps the tier; the cards below are the point
+        XCTAssertTrue(
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Standard'")).firstMatch.exists,
+            "checkout must offer the next available driver"
+        )
+        let schedule = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Schedule'")).firstMatch
+        XCTAssertTrue(schedule.exists, "checkout must offer a scheduled slot")
+        schedule.tap()
+        XCTAssertTrue(
+            app.navigationBars["Pickup time"].waitForExistence(timeout: 5),
+            "the schedule card must open a slot picker"
+        )
+        app.buttons["Cancel"].tap()
+
+        // The money half, below the fold. Every line the customer is being
+        // charged has to be reachable on the screen that takes the card — the
+        // hold especially, because Stripe's own sheet will show that figure and
+        // meeting it there for the first time reads as an overcharge.
+        app.swipeUp()
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["TOTAL"].waitForExistence(timeout: 5),
+                      "checkout must total the bill")
+        XCTAssertTrue(app.staticTexts["Delivery Fee"].exists,
+                      "checkout must name the transport line")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'held, not charged'")).firstMatch.exists,
+            "the hold must be explained before the card is taken, not after"
+        )
+        attach(app, "checkout-money")
+    }
+
+    private func placeOrderButton(_ app: XCUIApplication) -> XCUIElement {
+        app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Place Order' AND label CONTAINS '$'"))
+            .firstMatch
+    }
+
+    /// The dollars on the button, which is the number the customer is agreeing
+    /// to — deliberately read off the control itself rather than recomputed
+    /// here, so a screen that displays one price and charges another fails.
+    private func totalOnPlaceOrder(_ app: XCUIApplication) -> Double? {
+        let button = placeOrderButton(app)
+        guard button.waitForExistence(timeout: 10),
+              let tail = button.label.split(separator: "$").last
+        else { return nil }
+        return Double(tail.filter { $0.isNumber || $0 == "." })
+    }
+
+    private func money(_ value: Double) -> String {
+        String(format: "$%.2f", value)
     }
 
     /// What the screen says once the bag is at the shop.

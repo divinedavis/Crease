@@ -14,6 +14,10 @@ final class OrderStore: ObservableObject {
     @Published private(set) var orders: [Order] = []
     @Published private(set) var cleaners: [Cleaner] = []
     @Published private(set) var addresses: [Address] = []
+    /// The signed-in customer's own row. Only the contact number is read from
+    /// it today — checkout needs a number a courier can dial, and the profile
+    /// is where that lives rather than on every order.
+    @Published private(set) var profile: Profile?
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
 
@@ -50,7 +54,8 @@ final class OrderStore: ObservableObject {
         async let o: () = loadOrders()
         async let c: () = loadCleaners()
         async let a: () = loadAddresses()
-        _ = await (o, c, a)
+        async let p: () = loadProfile()
+        _ = await (o, c, a, p)
     }
 
     /// The statuses that put an order in the past — the mirror of
@@ -112,6 +117,56 @@ final class OrderStore: ObservableObject {
             .order("created_at")
             .execute()
             .value) ?? []
+    }
+
+    /// The customer's own profile row.
+    ///
+    /// Scoped by RLS rather than by a filter — `profiles_self` is `id =
+    /// auth.uid()`, so this select can only ever return one row, and asking for
+    /// it by id would be belt on top of the braces. Failure is silent because
+    /// nothing on screen depends on it: the phone row simply reads "Add a phone
+    /// number", which is the honest thing to show when we do not have one.
+    func loadProfile() async {
+        let rows: [Profile] = (try? await client
+            .from("profiles")
+            .select("id, full_name, phone")
+            .limit(1)
+            .execute()
+            .value) ?? []
+        profile = rows.first
+    }
+
+    /// Save the number a courier dials from the doorstep.
+    ///
+    /// Stored as digits with a leading `+1`, not as the customer typed it: the
+    /// dispatcher hands this to a carrier API that wants E.164, and a string
+    /// with brackets and dashes in it is a driver who cannot call.
+    ///
+    /// `phone` is one of the four columns migration 0032 left client-writable
+    /// after revoking the full-table UPDATE grant, so this is the whole of what
+    /// this call is allowed to touch — a request that tried for anything else
+    /// would be refused by the grant, not by this code.
+    @discardableResult
+    func saveContactPhone(_ entered: String) async -> Bool {
+        let digits = entered.filter(\.isNumber)
+        let local = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+        guard local.count == 10 else { return false }
+        let e164 = "+1\(local)"
+
+        struct Patch: Encodable { let phone: String }
+        do {
+            let saved: Profile = try await client
+                .from("profiles")
+                .update(Patch(phone: e164))
+                .select("id, full_name, phone")
+                .single()
+                .execute()
+                .value
+            profile = saved
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// The chosen shop's own price list.
@@ -203,6 +258,50 @@ final class OrderStore: ObservableObject {
         } catch {
             errorMessage = "Couldn't save that address."
             return nil
+        }
+    }
+
+    /// Fold a correction back into the address the customer already has saved.
+    ///
+    /// Checkout can move the pin and rewrite the door instructions, and a
+    /// booking that reuses a saved row would otherwise throw both away: the
+    /// courier is sent to the old point with the old note, and the correction
+    /// looks to the customer like it was accepted. Sent as an explicit null
+    /// when the note is cleared — a deleted instruction has to actually delete.
+    @discardableResult
+    func updateAddressDetails(
+        id: UUID,
+        accessNotes: String?,
+        lat: Double?,
+        lng: Double?
+    ) async -> Bool {
+        struct Patch: Encodable {
+            let access_notes: String?
+            let lat: Double?
+            let lng: Double?
+            enum CodingKeys: String, CodingKey { case access_notes, lat, lng }
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(access_notes, forKey: .access_notes)
+                try c.encodeIfPresent(lat, forKey: .lat)
+                try c.encodeIfPresent(lng, forKey: .lng)
+            }
+        }
+        do {
+            let saved: Address = try await client
+                .from("addresses")
+                .update(Patch(access_notes: accessNotes, lat: lat, lng: lng))
+                .eq("id", value: id)
+                .select("id, label, line1, line2, city, state, postal_code, access_notes, lat, lng")
+                .single()
+                .execute()
+                .value
+            if let index = addresses.firstIndex(where: { $0.id == saved.id }) {
+                addresses[index] = saved
+            }
+            return true
+        } catch {
+            return false
         }
     }
 
