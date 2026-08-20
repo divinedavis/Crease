@@ -20,7 +20,7 @@ Environment=PORT=3010
 Environment=NODE_ENV=production
 # The only origin the portal trusts for redirects and Stripe return URLs.
 # Unset, both fall back to request headers, which a caller controls.
-Environment=PORTAL_PUBLIC_URL=https://portal.usecreaseapp.com
+Environment=PORTAL_PUBLIC_URL=https://portal.creasenyc.com
 
 Environment=NODE_OPTIONS=--max-old-space-size=256
 MemoryMax=420M
