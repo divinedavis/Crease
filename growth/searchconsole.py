@@ -6,23 +6,35 @@ link was added, a URL was submitted. This is the only module that can say
 whether any of it *worked*, because position is a fact only Google holds.
 Scraping the results page is against its terms and is blocked anyway.
 
-**creasenyc.com is not verified in Search Console yet.** Until it is, every
-function here returns `measured: False` and the engine runs on coverage, which
-is a proxy and is labelled as one everywhere it is printed. That is deliberate:
-the alternative — inventing a position, or treating "no data" as "position 0" —
-would make review.py retire pages for failing a measurement that never ran.
+**Connected 2026-08-20.** https://creasenyc.com/ is a verified URL-prefix
+property and SC_KEY_FILE is set on the droplet, so these functions return rows.
+Expect them to be *empty* rows until roughly 2026-08-23: Search Console only
+begins accumulating data from the day a property is verified, and backfills
+nothing from before it. An empty result is therefore not a fault to chase.
 
-To connect it (technique `search_console` in the ledger, one manual step):
+The degraded path below is kept because it is still reachable — a revoked key,
+a deleted property or a droplet without the JSON all land there. When it is
+taken, every function returns `measured: False` and the engine runs on
+coverage, which is a proxy and is labelled as one everywhere it is printed.
+That is deliberate: the alternative — inventing a position, or treating
+"no data" as "position 0" — would make review.py retire pages for failing a
+measurement that never ran.
 
-  1. Add creasenyc.com in Search Console as a URL-prefix property and verify
-     it. The site already serves /robots.txt and a sitemap, so the HTML-file or
-     DNS method both work.
-  2. Add the service account's client_email as a **Full** user on the property.
-     A Restricted user cannot read Search Analytics.
-  3. Put the service-account JSON on the droplet and point SC_KEY_FILE at it.
+Two things about how it was connected, both of which will matter later:
 
-The account that reads findacrib.com is not reused: one property's key held by
-two engines means revoking either revokes both.
+  - **The findacrib service account IS reused** (search-console-reader@
+    find-a-crib.iam.gserviceaccount.com), against the advice this docstring
+    used to give. It is a verified *owner* here, not a Full user. The warning
+    still holds — revoking that one key takes findacrib.com down with it — but
+    divinejdavis@gmail.com was added as a second owner, so the property itself
+    cannot be orphaned by losing the key.
+  - **Ownership is proved by a file nginx serves**, not by anything in
+    apps/web/public/. Next bakes its list of public files at build time, so a
+    file dropped in afterwards 404s until the next build, and the droplet
+    cannot run `next build` without risking the five other sites on it. The
+    token lives in a `location =` block in deploy/nginx-creasenyc.conf.
+    Google re-checks it periodically and un-verifies the property if it stops
+    answering, so that block is load-bearing.
 """
 import base64
 import datetime

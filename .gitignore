@@ -56,3 +56,11 @@ apps/web/content/
 # Python bytecode from the droplet checkout.
 __pycache__/
 *.pyc
+
+# Service-account keys and APNs certificates. The droplet keeps these under
+# secrets/ and deploy.sh already excludes the directory from rsync, but nothing
+# stopped git from committing one — and this repository is public.
+secrets/
+*.p8
+.gsc_key.json
+gsc-service-account.json
