@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-19",
+  "generated": "2026-08-20",
   "site": "https://creasenyc.com",
   "techniques": [
     {
@@ -175,17 +175,29 @@
       {
         "date": "2026-08-18",
         "value": 17
+      },
+      {
+        "date": "2026-08-19",
+        "value": 47
       }
     ],
     "pageviews": [
       {
         "date": "2026-08-18",
         "value": 22
+      },
+      {
+        "date": "2026-08-19",
+        "value": 54
       }
     ],
     "organic_visitors": [
       {
         "date": "2026-08-18",
+        "value": 0
+      },
+      {
+        "date": "2026-08-19",
         "value": 0
       }
     ],
@@ -193,11 +205,19 @@
       {
         "date": "2026-08-18",
         "value": 0
+      },
+      {
+        "date": "2026-08-19",
+        "value": 0
       }
     ],
     "in_area_checks_total": [
       {
         "date": "2026-08-18",
+        "value": 0
+      },
+      {
+        "date": "2026-08-19",
         "value": 0
       }
     ],
@@ -205,11 +225,19 @@
       {
         "date": "2026-08-18",
         "value": 0
+      },
+      {
+        "date": "2026-08-19",
+        "value": 0
       }
     ],
     "orders_paid_total": [
       {
         "date": "2026-08-18",
+        "value": 0
+      },
+      {
+        "date": "2026-08-19",
         "value": 0
       }
     ]
@@ -220,9 +248,9 @@
   },
   "last_run": {
     "build": {
-      "at": "2026-08-19T18:37:15+00:00",
+      "at": "2026-08-20T05:20:06+00:00",
       "changed_urls": 0,
-      "date": "2026-08-19",
+      "date": "2026-08-20",
       "new_urls": 0,
       "techniques": {
         "guides": {
@@ -240,20 +268,20 @@
       }
     },
     "measure": {
-      "at": "2026-08-19T18:37:15+00:00",
-      "date": "2026-08-18",
-      "visitors": 17
+      "at": "2026-08-20T05:20:06+00:00",
+      "date": "2026-08-19",
+      "visitors": 47
     }
   },
   "api_spend": {},
   "writer_last": {
-    "date": "2026-08-19",
+    "date": "2026-08-20",
     "ok": false,
     "query": "how much does wash and fold cost",
     "error": "invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
   },
   "scout_last": {
-    "date": "2026-08-19",
+    "date": "2026-08-20",
     "ok": false,
     "error": "invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
     "etype": "invalid_request_error",
