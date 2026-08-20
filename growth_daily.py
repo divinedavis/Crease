@@ -36,7 +36,8 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from growth import (facts, keywords, ledger, metrics, report, review,   # noqa: E402
+from growth import (facts, indexstatus, keywords, ledger, metrics,   # noqa: E402
+                    report, review,
                     scout, searchconsole, seed, snapshot, techniques)
 
 # Where the running site reads guides from. On the droplet the customer app's
@@ -124,6 +125,19 @@ def cmd_measure(args):
         log(f"  search console: not connected ({e})")
     except Exception as e:
         log(f"  search console FAILED: {e}")
+
+    # Impressions cannot tell "not indexed" from "indexed, nobody searched",
+    # and on a site this new almost everything is zero. This asks Google
+    # directly. The whole sitemap fits inside one day's quota, so there is no
+    # sampling and no cohort to keep stable.
+    try:
+        ix = indexstatus.summary(indexstatus.run(dry_run=args.dry_run))
+        log(f"  indexing: {ix['indexed']}/{ix['inspected']} indexed, "
+            f"{ix['unknown_to_google']} never seen by Google")
+    except searchconsole.NotConnected as e:
+        log(f"  indexing: not connected ({e})")
+    except Exception as e:
+        log(f"  indexing FAILED: {e}")
 
     if not args.dry_run:
         ledger.write_last_run("measure", {"date": data["date"], "visitors": data["visitors"]})
