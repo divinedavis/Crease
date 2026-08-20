@@ -33,10 +33,26 @@ ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
 scp -q "$STAGE/index.html" "$STAGE/roadmap.html" "$STAGE/supabase.js" "$STAGE/icon.svg" \
   "$STAGE/apple-touch-icon.png" "$HOST:/var/www/crease-prospects/"
 
-# 401 is the pass here, not a failure: /prospects sits behind HTTP basic auth,
-# so an unauthenticated probe proving nginx is serving the path is all this can
-# check from outside.
+# Check the canonical host. usecreaseapp.com now 301s to creasenyc.com, so
+# probing it only ever proved the redirect existed — a green code that said
+# nothing about whether the page deployed. Basic auth is gone from /prospects
+# too (RLS is what scopes the notes), so 200 is now the real pass.
+fail=0
 for page in "" roadmap.html; do
-  echo -n "deployed /prospects/$page: "
-  curl -s -o /dev/null -w '%{http_code}\n' "https://portal.usecreaseapp.com/prospects/$page"
+  code="$(curl -sL -o /dev/null -w '%{http_code}' "https://portal.creasenyc.com/prospects/$page")"
+  echo "deployed /prospects/$page: $code"
+  [ "$code" = "200" ] || { echo "  UNEXPECTED — wanted 200"; fail=1; }
 done
+
+# A 200 only proves nginx served a file. Prove it served THIS build: the
+# placeholders must be gone and the shared-session adapter must be present,
+# or the page silently asks for a second login again.
+body="$(curl -sL "https://portal.creasenyc.com/prospects/")"
+case "$body" in
+  *__SUPABASE_URL__*) echo "  FAIL: placeholders not substituted"; fail=1 ;;
+esac
+case "$body" in
+  *"storage: cookieStorage"*) echo "  ok: shares the portal session" ;;
+  *) echo "  FAIL: cookie session adapter missing"; fail=1 ;;
+esac
+exit $fail
