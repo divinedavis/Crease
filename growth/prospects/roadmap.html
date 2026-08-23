@@ -138,6 +138,32 @@
   .gates li.met .what { color: var(--muted); text-decoration: line-through; }
   .gates li .why { color: var(--muted); font-size: 12.5px; }
   .foot { color: var(--muted); font-size: 12px; margin-top: 18px; }
+
+  /* ---- market read ----
+     Static research, not live data. Every number here carries its source in
+     the row, because the whole point of the section is that the intuition it
+     replaces felt obvious and was wrong. */
+  .mkt { margin-top: 14px; }
+  .mkt h3 { font-size: 13px; margin: 16px 0 6px; letter-spacing: .04em;
+            text-transform: uppercase; color: var(--muted); }
+  .mkt h3:first-of-type { margin-top: 10px; }
+  .mkt p { font-size: 14px; margin: 0 0 8px; }
+  .mkt .lede { font-size: 15px; }
+  .mkt table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .mkt th, .mkt td { text-align: left; padding: 7px 8px;
+                     border-bottom: 1px solid var(--border); vertical-align: top; }
+  .mkt th { font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase;
+            color: var(--muted); font-weight: 600; }
+  .mkt tr:last-child td { border-bottom: 0; }
+  .mkt td.n { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .mkt td.src { color: var(--muted); font-size: 12px; }
+  .mkt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch;
+                margin: 0 -4px; padding: 0 4px; }
+  .mkt-scroll table { min-width: 460px; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 999px;
+         font-size: 11px; font-weight: 700; letter-spacing: .03em; }
+  .tag.measured { background: var(--live-bg); color: var(--live-fg); }
+  .tag.inferred { background: var(--warn-bg); color: var(--warn-fg); }
 </style>
 </head>
 <body>
@@ -402,6 +428,108 @@ function render(prospects, cleaners, partnerErr) {
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="card mkt" style="margin-top:14px">
+      <h2>The market — and why it is not food delivery</h2>
+      <div class="sub" style="margin-bottom:10px">Desk research, August 2026. Static: nothing on this card is read live. Sources are on every row.</div>
+
+      <p class="lede"><b>The food-delivery analogy inverts.</b> The intuition is that people
+      with money to spend on delivery will use the app, so target the neighbourhoods with the
+      highest incomes. In this category the opposite is closer to true, for two separate
+      reasons that stack.</p>
+
+      <h3>Reason one — delivery usage falls as income rises</h3>
+      <p>A nationwide survey of 2,928 US consumers found households under $10,000 a year
+      ordered restaurant delivery the most, at <b>51.6%</b>, and that usage declines as
+      household income goes up. Convenience is worth more to the time-poor than to the
+      cash-rich. Read the caveat: that measures <i>whether</i> a household orders, not how
+      much it spends, and it is national rather than NYC. But it is the opposite of the
+      premise.</p>
+
+      <h3>Reason two — in this category, money buys the machine</h3>
+      <p>Roughly <b>34%</b> of NYC apartments listed on StreetEasy now include an in-unit
+      washer-dryer, up from 27% in 2021 and 23% in 2019, and those units carry about
+      <b>12% higher rent</b> than comparable apartments without them. The households with
+      the most disposable income are the ones buying their way out of the problem entirely.
+      A restaurant has no equivalent — nobody installs a kitchen to avoid Uber Eats.</p>
+
+      <p><b>So the target is not "rich".</b> It is the narrower band where three things are
+      true at once: enough disposable income to pay a delivery premium, <i>no</i> in-unit
+      laundry, and a local shop that does not already deliver free. Every one of those cuts
+      into the same pool.</p>
+
+      <h3>Size, for scale</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Market</th><th>Size</th><th>Source</th></tr>
+        <tr><td>US food delivery</td><td class="n">$130.3B</td><td class="src">2026 forecast · Market Data Forecast</td></tr>
+        <tr><td>US laundry facilities &amp; dry cleaning</td><td class="n">$14.8B</td><td class="src">2026 · Grand View / MarkWide</td></tr>
+        <tr><td>US dry cleaners only</td><td class="n">$9.6B</td><td class="src">2026 · IBISWorld</td></tr>
+        <tr><td>New York State laundromats</td><td class="n">$1.1B</td><td class="src">2026 · IBISWorld · 4,240 businesses, shrinking 0.1%/yr</td></tr>
+      </table></div>
+      <p style="margin-top:8px">Food delivery is about <b>nine times</b> the entire US laundry
+      and dry-cleaning services market. The category is not small, but it is not the one the
+      analogy imagines, and it is not growing the way food delivery grew.</p>
+
+      <h3>Who is already here</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Player</th><th>Position</th><th>Note</th></tr>
+        <tr><td>Rinse</td><td>National, owned ops</td><td class="src">Bought Brooklyn's Room Service Laundry Jan 2023; also bought Washio's assets in 2016</td></tr>
+        <tr><td>Poplin (was SudShare)</td><td>Marketplace, gig washers</td><td class="src">500+ cities, 3M+ loads a year</td></tr>
+        <tr><td>Hamperapp</td><td>NYC pickup &amp; delivery</td><td class="src">Direct consumer app, city pages live</td></tr>
+        <tr><td>The shop with a van</td><td>Free, bundled</td><td class="src">The real competitor — see canvass note below</td></tr>
+      </table></div>
+      <p style="margin-top:8px">For contrast, NYC food delivery is a settled three-way race —
+      DoorDash <b>37.1%</b>, Uber Eats <b>34.9%</b>, Grubhub <b>21.8%</b> (late 2024). Nobody
+      holds a comparable position in NYC laundry delivery, which reads as opportunity and is
+      partly a graveyard.</p>
+
+      <h3>The graveyard is specific to this city and this model</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Company</th><th>Fate</th><th>Note</th></tr>
+        <tr><td>Washio</td><td>Dead 2016</td><td class="src">Raised $16.8M, three years, no buyer found</td></tr>
+        <tr><td>FlyCleaners</td><td>Collapsed 2019</td><td class="src">NYC; closed the Long Island City plant, 116 laid off</td></tr>
+        <tr><td>Cleanly</td><td>Gone</td><td class="src">NYC on-demand laundry, same cohort</td></tr>
+      </table></div>
+      <p style="margin-top:8px">The recorded post-mortem is that on-demand is not an efficient
+      way to run cleaning, and that once more than three services compete, per-order margin
+      cannot carry the business. Crease's own margin is <b>$2.80</b> a round trip and
+      <b>$6.08</b> one-leg, transport only.</p>
+
+      <h3>The price problem, stated plainly</h3>
+      <p>Brooklyn wash-and-fold runs about <b>$1.35–$1.89 a pound</b>, so a 20lb bag is
+      roughly <b>$27–$38</b> of cleaning. Crease charges <b>$19.95–$29.95</b> to move it.
+      The transport fee is <b>55–100% of the cleaning bill itself</b>. Where incumbents charge
+      for delivery at all it averages $10–$20, and several bundle it free. Yes Cleaners
+      declined on courier trust, not price; Atlantic Dry Cleaners already runs its own
+      ordering app.</p>
+
+      <h3>Neighbourhoods</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Neighbourhood</th><th>Median HH income</th><th>Read</th></tr>
+        <tr><td>DUMBO / Vinegar Hill</td><td class="n">$200,000+</td><td class="src">Highest in Brooklyn — but mostly new construction, so mostly in-unit laundry. Wrong target despite the income.</td></tr>
+        <tr><td>Brooklyn Heights</td><td class="n">$171,395</td><td class="src">Pre-war stock, high income — the shape that fits</td></tr>
+        <tr><td>Cobble Hill</td><td class="n">Top 3 in Brooklyn</td><td class="src">Same shape</td></tr>
+        <tr><td>Park Slope, Boerum Hill, Carroll Gardens</td><td class="n">High</td><td class="src">Brownstone stock, walk-ups, few in-unit hookups</td></tr>
+      </table></div>
+      <p style="margin-top:8px">
+        <span class="tag measured">Measured</span> the income figures (ACS 2018–22 via
+        BestNeighborhood / Brooklyn Bridge Parents) and the 34% in-unit share (StreetEasy via Gothamist).
+        <span class="tag inferred">Inferred</span> the mapping from housing age to in-unit laundry
+        at neighbourhood level. Nobody publishes in-unit laundry by Brooklyn neighbourhood, so
+        the ranking above is reasoning about building stock, not a measurement. The honest way
+        to settle it is to count listings with and without the amenity per neighbourhood before
+        committing a canvass route to it.
+      </p>
+
+      <h3>What this changes</h3>
+      <p>The borough-wide ceiling already estimated is 5,000–12,000 households who would pay a
+      $20–30 premium, against roughly 9,000 needed for the $50k/month case. This research does
+      not raise that ceiling — it explains why it is low, and says the best-served slice of it
+      is <b>wash-and-fold in high-income pre-war Brooklyn</b>, not dry cleaning borough-wide.
+      That matches the one clear yes in the canvass so far: a laundromat, not a dry cleaner.
+      333 laundromats against 146 dry cleaners are on the list, and laundromats mostly do not
+      run their own vans.</p>
     </section>
 
     <div class="phases">
