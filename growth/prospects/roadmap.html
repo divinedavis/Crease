@@ -179,6 +179,12 @@
   .mkt ul ul li { padding-left: 16px; font-size: 13px; color: var(--muted); }
   .mkt ul ul li::before { width: 7px; height: 1px; background: var(--border);
                           transform: none; top: .82em; left: 2px; }
+  /* Table names, file paths and SQL, so a reader can tell the thing to type
+     from the prose around it. Wraps rather than scrolls: these appear inside
+     table cells that are already narrow on a phone. */
+  .mkt code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+              font-size: .92em; background: var(--bg); border: 1px solid var(--border);
+              border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -537,7 +543,7 @@ function render(prospects, cleaners, partnerErr) {
         cleaning</b>.</li>
         <li>And that once more than three services compete, per-order margin cannot carry the
         business.</li>
-        <li>Crease's own margin is <b>$2.80</b> a round trip and <b>$6.08</b> one-leg,
+        <li>Crease's own margin is <b>$2.80</b> a round trip and <b>$3.17</b> one-leg,
         transport only.</li>
       </ul>
 
@@ -545,8 +551,8 @@ function render(prospects, cleaners, partnerErr) {
       <ul>
         <li>Brooklyn wash-and-fold runs about <b>$1.35–$1.89 a pound</b>, so a 20lb bag is
         roughly <b>$27–$38</b> of cleaning.</li>
-        <li>Crease charges <b>$19.95–$29.95</b> to move it.</li>
-        <li><b>The transport fee is 55–100% of the cleaning bill itself.</b></li>
+        <li>Crease charges <b>$16.95–$29.95</b> to move it.</li>
+        <li><b>The transport fee is 45–110% of the cleaning bill itself.</b></li>
         <li>Where incumbents charge for delivery at all it averages $10–$20, and several
         bundle it free.</li>
         <li>Yes Cleaners declined on courier trust, not price.</li>
@@ -584,6 +590,104 @@ function render(prospects, cleaners, partnerErr) {
         cleaner.</li>
         <li>333 laundromats against 146 dry cleaners are on the list, and laundromats mostly do
         not run their own vans.</li>
+      </ul>
+    </section>
+
+    <section class="card mkt" style="margin-top:14px">
+      <h2>Demand — what is actually measured</h2>
+      <div class="sub" style="margin-bottom:10px">Read straight out of production on 24 Aug 2026. Static: nothing on this card is live, and every number below stops being true the moment somebody books. The right-hand column is how to re-read each one.</div>
+
+      <ul class="lede">
+        <li><b>No stranger has ever booked, checked coverage, or found this site through
+        search.</b></li>
+        <li>Every order in the database belongs to a test account or to the founder. There is
+        no demand curve to price against yet, because nothing is reaching the page to be shown
+        a price.</li>
+      </ul>
+
+      <h3>Every signal there is</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Signal</th><th>Value</th><th>How to re-read it</th></tr>
+        <tr><td>pickup_requests — the web order form</td><td class="n">0 rows, ever</td><td class="src">select count(*) from pickup_requests</td></tr>
+        <tr><td>demand_pings — coverage checks</td><td class="n">6, all owner</td><td class="src">…where owner is false — that count is the real one, and it is zero</td></tr>
+        <tr><td>orders</td><td class="n">133 / 2 people</td><td class="src">testcustomer@crease.local (97) and the founder (36). No third customer exists</td></tr>
+        <tr><td>Search Console, 28-day window</td><td class="n">0 impressions</td><td class="src">0 queries across all 30 /laundry-pickup/ pages — growth/gsc_pages.json</td></tr>
+        <tr><td>creasenyc.com, real browser sessions</td><td class="n">6–26 / day</td><td class="src">growth/traffic.py, and see the row below before quoting it</td></tr>
+      </table></div>
+      <ul style="margin-top:8px">
+        <li><span class="tag measured">Measured</span> all five, from the production database
+        and the droplet's own nginx log on 24 Aug 2026.</li>
+      </ul>
+
+      <h3>The visitor count is not visitors</h3>
+      <ul>
+        <li>nginx reports <b>30–42 a day</b>. Almost none of them are people:
+        <code>/wp-admin/install.php</code> probes, SemrushBot, and a Tencent Cloud
+        user-agent farm (49.51.x, 170.106.x) presenting as iOS 13.2.3.</li>
+        <li>The tell that separates a person from a scanner is whether the session also
+        fetched <code>/_next/static/…</code>. A real browser does; a scanner asks for
+        <code>/</code> and leaves.</li>
+        <li><b>traffic.py's asset filter hides that tell from <code>by_path</code></b>, so the
+        raw rows have to be read to see it. Anyone quoting the visitor number without doing
+        that will overstate demand by roughly ten times.</li>
+      </ul>
+
+      <h3>What $1,000 of free pickup and delivery buys</h3>
+      <div class="mkt-scroll"><table>
+        <tr><th>Offer</th><th>Cost to Crease</th><th>Orders for $1,000</th></tr>
+        <tr><td>Free round trip</td><td class="n">$25.98</td><td class="src">~38 — the whole courier fare, not the $2.80 margin</td></tr>
+        <tr><td>Free single leg</td><td class="n">$12.99</td><td class="src">~77</td></tr>
+        <tr><td>$10 off a round trip</td><td class="n">$10.00</td><td class="src">~100, and it buys a price rather than a giveaway</td></tr>
+      </table></div>
+      <ul style="margin-top:8px">
+        <li>Spread across five neighbourhoods, the free-round-trip option is <b>eight orders
+        each</b>. No area can be ranked above another on eight versus six.</li>
+        <li><b>It would be offered to an empty room.</b> A subsidy converts budget into orders
+        only where a channel is already delivering people, and there is no channel yet — which
+        is the constraint the money should be spent on instead.</li>
+        <li><b>Free delivery is not a differentiator here.</b> The canvass found incumbents
+        bundle pickup and delivery into the per-pound price. Free is the incumbent's price, not
+        a promotion.</li>
+        <li><b>It also tests the wrong number.</b> At $0 transport you learn demand at $0. The
+        business needs demand at $29.95 transport on a ~$33 ticket, and a cohort bought at free
+        churns when the price comes back.</li>
+      </ul>
+
+      <h3>Where the physical advertising goes</h3>
+      <div class="sub" style="margin-bottom:8px">Ranked by intent × dwell time. Artwork is in <code>marketing/signage/</code>: the counter card goes where somebody is standing still, the window cling on glass facing a pavement. Both scan to /r and /w, which resolve at request time — see apps/web/lib/scan.ts.</div>
+      <div class="mkt-scroll"><table>
+        <tr><th>#</th><th>Place</th><th>Piece</th><th>Why it is there</th></tr>
+        <tr><td class="n">1</td><td>Jane Laundromat</td><td class="src">Counter card</td><td class="src">The one clear yes in the canvass. Its customers already pay for wash &amp; fold — the only new question is whether they will pay for transport</td></tr>
+        <tr><td class="n">2</td><td>909 Fulton, the partner cleaner</td><td class="src">Card + cling</td><td class="src">If the partner's own counter does not convert, nothing downstream will</td></tr>
+        <tr><td class="n">3</td><td>Building laundry rooms — Fort Greene, Clinton Hill, DUMBO, Downtown</td><td class="src">Counter card</td><td class="src">Somebody in front of a busy machine is the highest-intent person in Brooklyn. Needs the super; a private laundry room is not a posting violation</td></tr>
+        <tr><td class="n">4</td><td>Lobby boards of buildings with no laundry room at all</td><td class="src">Counter card</td><td class="src">Same buildings, and these households have no alternative</td></tr>
+        <tr><td class="n">5</td><td>Laundromats with no wash &amp; fold and no van</td><td class="src">Window cling</td><td class="src">Complementary, not competitive — they turn this customer away today</td></tr>
+        <tr><td class="n">6</td><td>Barbershops and nail salons</td><td class="src">Counter card</td><td class="src">30–60 minutes of forced idleness with a phone already in hand. Best scan rate per card on the list</td></tr>
+        <tr><td class="n">7</td><td>Coffee shops with community boards</td><td class="src">Cling or card</td><td class="src">Clinton Hill, Fort Greene, Prospect Heights</td></tr>
+        <tr><td class="n">8</td><td>Gyms, boxing and yoga studios</td><td class="src">Window cling</td><td class="src">Towels and kit are pure wash-and-fold volume, and it is the outsource-the-chore customer</td></tr>
+        <tr><td class="n">9</td><td>Storage units, U-Haul counters, leasing offices</td><td class="src">Counter card</td><td class="src">Somebody who moved last week has no laundry routine yet — the cheapest habit to win</td></tr>
+        <tr><td class="n">10</td><td>Weekend farmers markets and block parties</td><td class="src">A table, not a sticker</td><td class="src">With zero customers, ten people explaining why not is worth more than a thousand impressions</td></tr>
+      </table></div>
+      <ul style="margin-top:8px">
+        <li><span class="tag measured">Measured</span> the neighbourhoods worth going to first:
+        of the 293 canvassed shops inside the three-mile band, the fewest laundromats sit in
+        <b>Fort Greene (2)</b>, <b>Brooklyn Heights (3)</b>, <b>Downtown Brooklyn–DUMBO–Boerum
+        Hill (4)</b> and <b>Clinton Hill (4)</b>.</li>
+        <li><span class="tag inferred">Inferred</span> that those are therefore the best
+        targets. Few laundromats means the least walk-to substitute, so pickup is worth most
+        there — but shop density is a substitute signal, not a demand signal, and it is the
+        closest thing to a demand ranking that exists today.</li>
+      </ul>
+
+      <h3>What must never be posted</h3>
+      <ul>
+        <li><b>Nothing on a lamppost, pole, scaffold, bus shelter, tree pit, hydrant or public
+        bin.</b> NYC Administrative Code § 10-119 makes it unlawful, <b>each poster is a
+        separate violation carrying its own fine</b>, and the fine follows the brand printed on
+        the paper — not whoever stuck it up.</li>
+        <li><b>Nothing inside a mailbox.</b> 18 U.S.C. § 1725 makes unstamped matter in a USPS
+        box a federal offence, priced per item.</li>
+        <li>Door hangers on the knob are fine. The mailbox is the line.</li>
       </ul>
     </section>
 
