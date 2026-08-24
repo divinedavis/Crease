@@ -101,8 +101,24 @@ def _search():
                      f"{kw['ranked_known']} of {kw['total']}"))
         rows.append(("in the top 10:", f"{kw['top10']} (top 3: {kw['top3']})"))
     else:
-        rows.append(("rank:", "unknown — Search Console is not connected, "
-                              "so nothing here is a position"))
+        # Zero known ranks has two very different causes and they need
+        # opposite responses. An unconnected property is a job to go and do; a
+        # connected one with no impressions yet is the expected state of a new
+        # site and searchconsole.py's own docstring says so — "an empty result
+        # is not a fault to chase". Printing "not connected" for both sent a
+        # reader off to fix a connection that had been working since 20 Aug.
+        sc = searchconsole.status()
+        if not sc.get("connected"):
+            rows.append(("rank:", "unknown — Search Console is not connected, "
+                                  "so nothing here is a position"))
+        else:
+            serving = sc.get("serving_pages")
+            rows.append(("rank:", "no impressions yet — Search Console is "
+                                  "connected and returning zero rows, which is "
+                                  "what a site Google has barely crawled looks "
+                                  "like. Not a fault."))
+            if serving is not None:
+                rows.append(("pages serving in search:", str(serving)))
     if kw["gaps"]:
         rows.append(("unanswered questions next:", ", ".join(kw["gaps"][:6])))
     return rows
