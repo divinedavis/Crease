@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#2E876F"/>
+      <stop offset="1" stop-color="#15503C"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)"/>
+
+  <!-- The hanger from apps/web/public/assets/icon.svg, scaled out of its 1024 box. -->
+  <g transform="translate(-83.2,-45.7) scale(0.78)"
+     fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 512 452 L 512 348 A 70 70 0 0 0 372 348 L 372 396" stroke-width="50"/>
+    <path d="M 512 452 L 258 694 L 766 694 Z" stroke-width="72"/>
+  </g>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#FFFFFF">
+    <text x="614" y="322" font-size="118" font-weight="700" letter-spacing="-3">Crease</text>
+    <text x="617" y="380" font-size="34" font-weight="500" opacity="0.93">Laundry, picked up and delivered.</text>
+    <text x="617" y="430" font-size="27" font-weight="400" opacity="0.72">Wash &amp; fold across Brooklyn</text>
+  </g>
+</svg>
