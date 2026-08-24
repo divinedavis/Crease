@@ -1,4 +1,5 @@
 import { CORE_AREAS, EDGE_AREAS, HEADLINE_AREAS, slugFor } from '@/lib/neighborhoods';
+import { homeJsonLd, PER_POUND_LABEL } from '@/lib/pricing';
 import { QuoteBox } from './quote-box';
 
 /**
@@ -17,7 +18,7 @@ const APP_STORE_URL = process.env.CREASE_APP_STORE_URL ?? null;
 // a service when a shop has given real prices for it — until then it is named
 // as what it is, which is not yet.
 const SERVICES: Array<{ emoji: string; name: string; note: string; href: string | null }> = [
-  { emoji: '🧺', name: 'Wash & fold', note: '$2.00/lb · $20 minimum', href: '/order?service=wash_fold' },
+  { emoji: '🧺', name: 'Wash & fold', note: PER_POUND_LABEL, href: '/order?service=wash_fold' },
   { emoji: '🛏️', name: 'Bedding & towels', note: 'Weighed in with the rest', href: '/order?service=wash_fold' },
   { emoji: '📦', name: 'Return only', note: "It's at the shop — bring it home", href: '/order?tier=return_only' },
   { emoji: '👔', name: 'Dry cleaning', note: 'Coming next', href: null },
@@ -284,6 +285,15 @@ export default async function Home({
           </div>
         </div>
       </footer>
+
+      {/* The area pages have carried a Service node since they were written;
+          the homepage — the only page Googlebot actually fetches — had none.
+          See lib/pricing.ts for why this is a GeoCircle and why it claims no
+          address, hours or rating. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd()) }}
+      />
     </>
   );
 }

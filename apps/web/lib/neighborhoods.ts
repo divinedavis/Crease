@@ -21,6 +21,17 @@ export interface Area {
   note?: string;
 }
 
+/**
+ * When the area list or the area-page copy last actually changed.
+ *
+ * The sitemap needs a <lastmod> — it is the signal Google re-crawls from, and
+ * without one these thirty pages have gone uncrawled since they were
+ * published. It has to be a real date: a sitemap that stamps today on every
+ * page every morning is one Google stops reading. So this is bumped by hand,
+ * here, when the copy or the list changes, and not otherwise.
+ */
+export const AREAS_UPDATED = '2026-08-24';
+
 /** Lowercase, hyphenated, no punctuation — stable enough to be a URL forever. */
 export function slugFor(area: Area): string {
   return (
