@@ -1,12 +1,12 @@
 {
   "build": {
-    "at": "2026-08-23T05:23:34+00:00",
+    "at": "2026-08-24T05:24:05+00:00",
     "changed_urls": 0,
-    "date": "2026-08-23",
+    "date": "2026-08-24",
     "new_urls": 0,
     "techniques": {
       "guides": {
-        "detail": "writer failed: invalid_request_error: You have reached your specified API usage limits. You will regain access on 2026-09-01 at 00:00 UTC.",
+        "detail": "draft refused: draft states the price per pound as '$4.00', which is not what we charge",
         "ok": false
       },
       "indexnow": {
@@ -20,8 +20,8 @@
     }
   },
   "measure": {
-    "at": "2026-08-23T05:23:34+00:00",
-    "date": "2026-08-22",
-    "visitors": 42
+    "at": "2026-08-24T05:23:29+00:00",
+    "date": "2026-08-23",
+    "visitors": 30
   }
 }
