@@ -1,10 +1,23 @@
 {
-  "checked": "2026-08-24",
+  "checked": "2026-08-25",
   "window": [
-    "2026-07-25",
-    "2026-08-22"
+    "2026-07-26",
+    "2026-08-23"
   ],
-  "pages": [],
+  "pages": [
+    {
+      "url": "https://creasenyc.com/laundry-pickup/gowanus",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 60
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 11
+    }
+  ],
   "queries_matched": 0,
   "queries_total_in_gsc": 0
 }
