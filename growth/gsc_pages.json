@@ -1,8 +1,8 @@
 {
-  "checked": "2026-08-25",
+  "checked": "2026-08-26",
   "window": [
-    "2026-07-26",
-    "2026-08-23"
+    "2026-07-27",
+    "2026-08-24"
   ],
   "pages": [
     {
@@ -12,6 +12,12 @@
       "position": 60
     },
     {
+      "url": "https://creasenyc.com/laundry-pickup/greenpoint",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 56
+    },
+    {
       "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
       "impressions": 1,
       "clicks": 0,
@@ -19,5 +25,5 @@
     }
   ],
   "queries_matched": 0,
-  "queries_total_in_gsc": 0
+  "queries_total_in_gsc": 1
 }
