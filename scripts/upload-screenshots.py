@@ -21,9 +21,11 @@ from asc import ASC, load_config  # noqa: E402
 import requests  # noqa: E402
 
 PANELS = pathlib.Path(__file__).resolve().parent.parent / "apps/ios/marketing/panels"
-# 1284x2778 belongs to the 6.5" slot, which App Store Connect still uses as the
-# baseline and scales down from for smaller devices.
-DISPLAY_TYPE = "APP_IPHONE_65"
+# The 6.9" slot (1320x2868). Apple's screenshot specification makes 6.5" the
+# fallback — "required if screenshots for 6.9" display aren't provided" — and
+# scales the 6.9" set down for every smaller iPhone, so this is the one to fill.
+# There is no APP_IPHONE_69 in the API: 6.9" images go into APP_IPHONE_67.
+DISPLAY_TYPE = "APP_IPHONE_67"
 LOCALE = "en-US"
 
 

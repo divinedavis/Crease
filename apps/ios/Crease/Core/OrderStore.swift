@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Supabase
 import SwiftUI
 
@@ -96,6 +97,12 @@ final class OrderStore: ObservableObject {
             let (active, past) = try await (open, history)
             orders = (active + past).sorted { $0.createdAt > $1.createdAt }
         } catch {
+            // The message the customer sees says nothing about why, and nothing
+            // else recorded it either — an Orders screen that fails to decode
+            // one field looks exactly like an account with no orders, which is
+            // how a demo account with three of them photographed as empty.
+            Logger(subsystem: "com.divinedavis.crease", category: "orders")
+                .error("loadOrders failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Couldn't load your orders."
         }
     }

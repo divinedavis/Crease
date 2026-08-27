@@ -5,9 +5,9 @@ Marketing pages, not raw UI dumps: an oversized lowercase headline carries each
 panel, the device sits below it, and the accent colour alternates so the five
 read as a sequence rather than five screenshots in a row.
 
-Output is 1284x2778 — one of the sizes App Store Connect accepts for the 6.5"
-slot, and close enough to the simulator's own aspect that the device image is
-not visibly distorted.
+Output is 1320x2868 — the 6.9" size, which is the one Apple asks for first and
+scales down from for every smaller iPhone. It is also the iPhone 17 Pro Max's
+own resolution, so the captured screen is pasted at its native aspect.
 
     python3 apps/ios/marketing/compose.py
 """
@@ -22,7 +22,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 RAW = HERE / "raw"
 OUT = HERE / "panels"
 
-W, H = 1284, 2778
+W, H = 1320, 2868
 
 ACCENT = (24, 92, 76)
 ACCENT_DEEP = (14, 62, 50)
@@ -30,22 +30,36 @@ CREAM = (246, 245, 241)
 INK = (22, 24, 23)
 
 # Ordered so the panels tell the story the product actually tells: the errand
-# disappears, booking is trivial, and — the part nobody else does — the
-# customer picks the return time once the clothes are genuinely ready.
+# disappears, booking is trivial, the price is knowable before the bag leaves,
+# and — the part nobody else does — the customer picks the return time once the
+# clothes are genuinely ready.
+#
+# Every claim here has to survive being read next to the screen underneath it
+# and next to the App Store description. The previous set did not: it led on
+# "dry cleaning" for a product that sells wash & fold too, promised "you pay
+# the shop for the cleaning" when the app now takes one payment for both, and
+# offered "your shop, not ours" from a picker that has held exactly one shop
+# since migration 0043.
 PANELS = [
-    dict(shot="01-home", headline="dry cleaning\nwithout the\nerrand",
-         sub="A driver collects. A shop cleans. It comes back.", dark=True),
+    dict(shot="01-home", headline="laundry,\nwithout the\nerrand",
+         sub="Wash & fold and dry cleaning, collected in Brooklyn.", dark=True),
     dict(shot="02-address", headline="book it in\nthree taps",
          sub="Your address is already saved.", dark=False),
-    dict(shot="03-booking", headline="one price,\nno surprises",
-         sub="Delivery only. You pay the shop for the cleaning.", dark=True),
-    dict(shot="04-cleaners", headline="your shop,\nnot ours",
-         sub="Choose any cleaner near you.", dark=False),
-    # The headline has to describe the screen underneath it. This one shows
-    # tracking and a cancel button, so promising the return-scheduling moment
-    # here would be a caption that does not match its picture.
-    dict(shot="05-tracking", headline="in control,\nstart to\nfinish",
-         sub="Track it, or cancel before a driver sets off.", dark=True),
+    dict(shot="03-booking", headline="one price\nbefore the bag\nleaves",
+         sub="A courier both ways, plus the shop's own cleaning prices.", dark=True),
+    # Wash & fold is the only service the live partner has switched on, so the
+    # headline says pound and not garment. Promising per-garment dry cleaning
+    # over a menu that offers one line item is the same mistake as the panel
+    # this replaced.
+    dict(shot="04-menu", headline="priced by\nthe pound",
+         sub="The shop's own rate. They weigh the bag, and that weight is the bill.", dark=False),
+    # The headline has to describe the screen underneath it. This one is an
+    # order's detail: the four-step track, the shop, the tier, the address.
+    # "You pick the return time" is true of the product but there is no picker
+    # on this screen, and a caption that promises a control the picture does
+    # not contain is the same failure as the panels this set replaced.
+    dict(shot="05-tracking", headline="every step,\nin one place",
+         sub="Collected, at the shop, cleaned, on the way back.", dark=True),
 ]
 
 
@@ -110,7 +124,16 @@ def build(panel: dict, index: int) -> Image.Image:
         draw.text((84, y), line, font=font(120), fill=text_colour)
         y += 132
 
-    draw.text((88, y + 26), panel["sub"], font=font(44, bold=False), fill=sub_colour)
+    # Shrink the sub until it fits. At a fixed 44pt the longest of these ran
+    # off the right edge of the canvas and the last word was simply gone —
+    # invisible in the composer, obvious on the App Store.
+    sub_size = 44
+    while sub_size > 28:
+        f = font(sub_size, bold=False)
+        if draw.textlength(panel["sub"], font=f) <= W - 176:
+            break
+        sub_size -= 2
+    draw.text((88, y + 26), panel["sub"], font=font(sub_size, bold=False), fill=sub_colour)
 
     shot_path = find_shot(panel["shot"])
     if shot_path:

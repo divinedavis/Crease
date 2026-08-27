@@ -40,8 +40,42 @@ final class MarketingScreenshots: XCTestCase {
     func testCaptureMarketingScreens() {
         let app = launch()
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 25))
-        sleep(2)
-        shoot(app, "01-home")
+
+        // Wait for the orders to actually arrive, pulling to refresh between
+        // checks. The first load fires from OrdersView's .task and can beat the
+        // injected session onto the wire: the request goes out as anon, RLS
+        // returns nothing, and the screen settles on "No orders yet" over an
+        // account that has three. One swipe was not enough — three runs in a
+        // row photographed the empty state — so keep asking.
+        let titles = ["Ready for delivery", "Being cleaned", "Pickup scheduled"]
+        var listed = false
+        for attempt in 0..<8 {
+            if titles.contains(where: { app.staticTexts[$0].exists }) {
+                listed = true
+                break
+            }
+            if attempt > 0 { app.scrollViews.firstMatch.swipeDown() }
+            sleep(4)
+        }
+        shoot(app, listed ? "01-home" : "09-home-empty")
+        XCTAssertTrue(listed, "Orders never loaded — the session was not honoured")
+
+        // The order the shop has finished, taken now rather than after the
+        // booking walk: several minutes in, the injected session stops being
+        // honoured and Orders empties out again.
+        //
+        // Tap the status line itself: a NavigationLink wearing .buttonStyle
+        // (.plain) does not appear under `app.scrollViews.buttons`, but its
+        // text does, and tapping the text follows the link.
+        if let card = titles.lazy
+            .map({ app.staticTexts[$0].firstMatch })
+            .first(where: { $0.exists }) {
+            card.tap()
+            sleep(4)
+            shoot(app, "05-tracking")
+            app.navigationBars.buttons.firstMatch.tap()
+            sleep(2)
+        }
 
         // Address entry, showing the pinned home row.
         guard app.buttons["Book a pickup"].waitForExistence(timeout: 8) else { return }
@@ -65,30 +99,26 @@ final class MarketingScreenshots: XCTestCase {
         sleep(6)
         shoot(app, "03-booking")
 
-        // The cleaner picker — proof the customer chooses their own shop.
-        let change = app.buttons.containing(.staticText, identifier: "Change").firstMatch
-        if change.waitForExistence(timeout: 6) {
-            change.tap()
-            if app.navigationBars["Choose a cleaner"].waitForExistence(timeout: 8) {
-                sleep(2)
-                shoot(app, "04-cleaners")
-                app.buttons["Cancel"].tap()
+        // The service menu: the screen that says what the product actually
+        // sells — wash & fold by the pound at the shop's own prices. The old
+        // fourth panel photographed the cleaner picker under the headline
+        // "your shop, not ours", which stopped being true when migration 0043
+        // left one real partner.
+        let chooseItems = app.buttons["Choose what you're sending"]
+        if chooseItems.waitForExistence(timeout: 8) {
+            chooseItems.tap()
+            if app.navigationBars["Your order"].waitForExistence(timeout: 10) {
+                // A menu with nothing chosen totals $0.00, which reads as a
+                // broken screen rather than a price list. Put a few pounds in
+                // the bag so the estimate line has a number in it.
+                let stepper = app.steppers.firstMatch
+                if stepper.waitForExistence(timeout: 5) {
+                    let increment = stepper.buttons.element(boundBy: 1)
+                    for _ in 0..<8 where increment.exists { increment.tap() }
+                }
                 sleep(1)
+                shoot(app, "04-menu")
             }
-        }
-
-        // Out of the booking flow, then into an existing order for the
-        // progress track.
-        if app.buttons["Back"].firstMatch.exists {
-            app.buttons["Back"].firstMatch.tap()
-        }
-        sleep(2)
-
-        let firstOrder = app.scrollViews.buttons.element(boundBy: 1)
-        if firstOrder.waitForExistence(timeout: 8) {
-            firstOrder.tap()
-            sleep(3)
-            shoot(app, "05-tracking")
         }
     }
 }

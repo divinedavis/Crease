@@ -63,7 +63,16 @@ final class Session: ObservableObject {
         // run. Every signed-in test scheduled after the sign-out test then
         // launched to the sign-in screen with "Auth session missing", which
         // reads as a broken feature rather than a poisoned fixture.
-        if ProcessInfo.processInfo.arguments.contains("-uiTestSignedOut") {
+        //
+        // An injected session gets the same storage, for a different reason:
+        // a test build on a simulator does not reliably get its keychain
+        // writes back, so setSession would land a session the auth client then
+        // could not read. Requests went out with only the anon key, RLS
+        // answered as if nobody were signed in, and an account with three
+        // orders rendered "No orders yet" — intermittently, which is what made
+        // it look like a race rather than storage.
+        let uiTestArguments = ["-uiTestSignedOut", "-uiTestAccessToken"]
+        if ProcessInfo.processInfo.arguments.contains(where: uiTestArguments.contains) {
             client = SupabaseClient(
                 supabaseURL: url,
                 supabaseKey: key,
