@@ -1,10 +1,16 @@
 {
-  "checked": "2026-08-26",
+  "checked": "2026-08-27",
   "window": [
-    "2026-07-27",
-    "2026-08-24"
+    "2026-07-28",
+    "2026-08-25"
   ],
   "pages": [
+    {
+      "url": "https://creasenyc.com/",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 14.9
+    },
     {
       "url": "https://creasenyc.com/laundry-pickup/gowanus",
       "impressions": 1,
@@ -22,8 +28,14 @@
       "impressions": 1,
       "clicks": 0,
       "position": 11
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/red-hook",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 11
     }
   ],
   "queries_matched": 0,
-  "queries_total_in_gsc": 1
+  "queries_total_in_gsc": 2
 }
