@@ -807,19 +807,44 @@ final class CreaseUITests: XCTestCase {
             )
         }
 
+        // The bug this was written for: the screen named the shop and stopped
+        // there, telling the customer to call someone it gave them no way to
+        // call. So the rule under test is not "a number is on screen" — it is
+        // that a number on screen is always a tappable one.
+        //
+        // Asserted that way round deliberately. It used to demand the call row
+        // unconditionally, which made it a test of the seed data as much as of
+        // the app: the moment the live partner's `cleaners.phone` was cleared
+        // (it held a personal mobile number), this failed on a screen that was
+        // behaving exactly as designed. A shop that has given us no number is a
+        // real state the app has to render, and rendering it as nothing is the
+        // right answer.
+        //
         // Rendered as a Link, which lands in either collection depending on how
         // SwiftUI exposes it, so ask for anything carrying the label.
         let call = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH 'Call '"))
             .firstMatch
-        XCTAssertTrue(
-            call.waitForExistence(timeout: 8),
-            "the shop's number must be present and tappable, not just its name. Buttons: "
-                + app.buttons.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
-                + " · links: "
-                + app.links.allElementsBoundByIndex.prefix(6).map(\.label).joined(separator: " | ")
-                + " · texts: \(onScreen)"
-        )
+        let phoneShaped = try! NSRegularExpression(pattern: "\\(\\d{3}\\) \\d{3}-\\d{4}")
+        let deadNumber = labels.first { label in
+            phoneShaped.firstMatch(in: label, range: NSRange(label.startIndex..., in: label)) != nil
+        }
+        if let deadNumber {
+            XCTAssertTrue(
+                call.waitForExistence(timeout: 8),
+                "\(deadNumber) is on screen but nothing dials it — a number the customer "
+                    + "cannot tap is the bug this test exists for. Buttons: "
+                    + app.buttons.allElementsBoundByIndex.prefix(10).map(\.label).joined(separator: " | ")
+                    + " · links: "
+                    + app.links.allElementsBoundByIndex.prefix(6).map(\.label).joined(separator: " | ")
+                    + " · texts: \(onScreen)"
+            )
+        } else {
+            XCTAssertFalse(
+                call.exists,
+                "there is a call affordance but no number behind it: \(onScreen)"
+            )
+        }
         attach(app, "at-cleaner-detail")
     }
 
