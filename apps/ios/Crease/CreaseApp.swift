@@ -98,15 +98,49 @@ struct RootView: View {
         case .signedOut:
             SignInView()
         case let .signedIn(userId):
-            OrdersView()
-                .environmentObject(OrderStore(client: session.client))
-                // Keyed on the customer, not on appearance: signing in as
-                // someone else has to move this device's token to their row,
-                // or the next "your clothes are ready" reaches the phone of
-                // whoever used it before them.
-                .task(id: userId) {
-                    await PushRegistrar.shared.customerSignedIn(userId: userId, session: session)
-                }
+            // Identity keyed on the customer so signing in as someone else
+            // builds a new store rather than showing them the last account's
+            // orders while the fetch is in flight.
+            SignedInRoot(session: session, userId: userId)
+                .id(userId)
         }
+    }
+}
+
+/// Owns the `OrderStore` for as long as one customer stays signed in.
+///
+/// This used to be `OrdersView().environmentObject(OrderStore(client:))`
+/// written inline in `RootView.body`, which made a brand-new empty store on
+/// every re-render — and `appActive` alone flips on the first
+/// `didBecomeActive` after launch, so the very first render was reliably
+/// followed by a second one. The fresh store was injected over the one
+/// `OrdersView`'s `.task` had already filled, and that `.task` did not re-run
+/// because the view's identity had not changed. The list then read "No orders
+/// yet" for an account with three of them until a pull-to-refresh, and again
+/// after every return from the background.
+///
+/// `@StateObject` evaluates its autoclosure once for the lifetime of the
+/// view's identity, so the store now outlives a re-render.
+private struct SignedInRoot: View {
+    let session: Session
+    let userId: UUID
+    @StateObject private var store: OrderStore
+
+    init(session: Session, userId: UUID) {
+        self.session = session
+        self.userId = userId
+        _store = StateObject(wrappedValue: OrderStore(client: session.client))
+    }
+
+    var body: some View {
+        OrdersView()
+            .environmentObject(store)
+            // Keyed on the customer, not on appearance: signing in as
+            // someone else has to move this device's token to their row,
+            // or the next "your clothes are ready" reaches the phone of
+            // whoever used it before them.
+            .task(id: userId) {
+                await PushRegistrar.shared.customerSignedIn(userId: userId, session: session)
+            }
     }
 }

@@ -221,6 +221,41 @@ final class CreaseUITests: XCTestCase {
         attach(app, "orders-list")
     }
 
+    /// The orders have to survive a re-render of the root view.
+    ///
+    /// `RootView.body` used to build `OrderStore(client:)` inline, so every
+    /// re-render made a second, empty store and injected it over the one
+    /// `OrdersView`'s `.task` had already filled — and `.task` did not re-run,
+    /// because the view's identity had not changed. `appActive` flips on the
+    /// first `didBecomeActive` after launch and again on every resume, so a
+    /// customer with three orders read "No orders yet" until they pulled to
+    /// refresh. It is also how the App Store capture photographed the demo
+    /// account as empty.
+    ///
+    /// Backgrounding and resuming is the cheapest way to force that re-render
+    /// from a test. Asserting on an order's own status line rather than on the
+    /// screen's chrome: the navigation bar and the Book button are there in the
+    /// empty state too, so only the list content can tell the two apart.
+    func testTheOrderListSurvivesAResume() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        let anyOrder = app.staticTexts.matching(
+            NSPredicate(format: "label IN {'Ready for delivery', 'Being cleaned', 'Pickup scheduled'}")
+        ).firstMatch
+        XCTAssertTrue(anyOrder.waitForExistence(timeout: 20),
+                      "no orders to begin with — run scripts/seed-marketing.mjs first")
+
+        XCUIDevice.shared.press(.home)
+        app.activate()
+
+        XCTAssertTrue(anyOrder.waitForExistence(timeout: 15),
+                      "the order list emptied on resume — the store was rebuilt under the view")
+        XCTAssertFalse(app.staticTexts["No orders yet"].exists,
+                       "the empty state is showing for an account that has orders")
+        attach(app, "orders-after-resume")
+    }
+
     func testOrderDetailShowsTheJourney() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
