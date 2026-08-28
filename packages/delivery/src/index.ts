@@ -37,12 +37,22 @@ export class ProviderChain {
   /**
    * Cheapest usable quote among REAL carriers, with the provider that gave it.
    * The simulator is only ever returned when nothing real answered.
+   *
+   * `simulatedOnly` inverts that for orders that must never reach a road: App
+   * Review's account, and demo walkthroughs. It is a filter on the pool rather
+   * than a separate code path so those orders still travel every line below —
+   * the same quoting, the same claim, the same status mapping — because a
+   * review session that exercises a bypass has not exercised the product.
    */
   async bestQuote(
     req: QuoteRequest,
+    opts: { simulatedOnly?: boolean } = {},
   ): Promise<{ provider: DeliveryProvider; quote: Quote } | undefined> {
+    const pool = opts.simulatedOnly
+      ? this.active().filter((p) => p.simulated)
+      : this.active();
     const results = await Promise.allSettled(
-      this.active().map(async (provider) => ({ provider, quote: await provider.quote(req) })),
+      pool.map(async (provider) => ({ provider, quote: await provider.quote(req) })),
     );
 
     const usable = results
@@ -65,8 +75,8 @@ export class ProviderChain {
     // charge-then-refund. So real carriers compete on price among themselves
     // and the mock is selected only when it is the last thing standing.
     const real = usable.filter((u) => !u.provider.simulated);
-    const pool = real.length > 0 ? real : usable;
-    return pool.reduce((a, b) => (b.quote.feeCents < a.quote.feeCents ? b : a));
+    const contenders = real.length > 0 ? real : usable;
+    return contenders.reduce((a, b) => (b.quote.feeCents < a.quote.feeCents ? b : a));
   }
 }
 

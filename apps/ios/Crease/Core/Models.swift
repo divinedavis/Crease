@@ -110,6 +110,36 @@ enum OrderStatus: String, Codable, CaseIterable {
     }
 }
 
+/// Turning whatever a phone number arrives as into something a person can read
+/// and a phone can dial.
+///
+/// Lived on `Cleaner` until the customer needed to call their driver too.
+/// Copying the two functions would have been the smaller diff and the worse
+/// one: they encode a judgement about what counts as dialable, and two copies
+/// of a judgement drift.
+enum PhoneNumber {
+    /// Shops give us whatever shape they use — `+15555550201`, `555-555-0201`
+    /// — and carriers hand back an E.164 proxy line. A bare E.164 string in the
+    /// middle of a sentence is something people read twice to be sure of.
+    static func formatted(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let digits = raw.filter(\.isNumber)
+        let local = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+        guard local.count == 10 else { return raw }
+        return "(\(local.prefix(3))) \(local.dropFirst(3).prefix(3))-\(local.suffix(4))"
+    }
+
+    /// Only when there is something real to dial. A `tel:` built from a blank
+    /// or truncated number opens an empty dialer, which reads as the tap having
+    /// failed rather than as nobody having given us a number.
+    static func callURL(_ raw: String?) -> URL? {
+        guard let raw else { return nil }
+        let digits = raw.filter(\.isNumber)
+        guard digits.count >= 10 else { return nil }
+        return URL(string: "tel:\(raw.hasPrefix("+") ? "+" : "")\(digits)")
+    }
+}
+
 struct Cleaner: Codable, Identifiable, Hashable {
     let id: UUID
     let name: String
@@ -131,26 +161,10 @@ struct Cleaner: Codable, Identifiable, Hashable {
         case turnaroundHours = "turnaround_hours"
     }
 
-    /// The number as a person reads it. Shops give us whatever shape they use
-    /// — `+15555550201`, `555-555-0201` — and a bare E.164 string in the
-    /// middle of a sentence is something people read twice to be sure of.
-    var formattedPhone: String? {
-        guard let phone else { return nil }
-        let digits = phone.filter(\.isNumber)
-        let local = digits.count == 11 && digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
-        guard local.count == 10 else { return phone }
-        return "(\(local.prefix(3))) \(local.dropFirst(3).prefix(3))-\(local.suffix(4))"
-    }
+    /// The number as a person reads it.
+    var formattedPhone: String? { PhoneNumber.formatted(phone) }
 
-    /// Only when there is something real to dial. A `tel:` built from a blank
-    /// or truncated number opens an empty dialer, which reads as the tap
-    /// having failed rather than as the shop never having given us a number.
-    var callURL: URL? {
-        guard let phone else { return nil }
-        let digits = phone.filter(\.isNumber)
-        guard digits.count >= 10 else { return nil }
-        return URL(string: "tel:\(phone.hasPrefix("+") ? "+" : "")\(digits)")
-    }
+    var callURL: URL? { PhoneNumber.callURL(phone) }
 
     var coordinate: CLLocationCoordinate2D? {
         guard let lat, let lng else { return nil }
@@ -300,6 +314,11 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     let status: String
     let provider: String
     let courierName: String?
+    /// The carrier's masked line to the driver, live only while the leg is.
+    /// Uber Direct proxies it and stops routing once the delivery closes, and
+    /// scrub_finished_leg_pii nulls it a few days later, so this is never a
+    /// courier's own number and never outlives the job.
+    let courierPhone: String?
     let courierVehicle: String?
     let trackingUrl: String?
     let dropoffPincode: String?
@@ -311,6 +330,7 @@ struct DeliveryLeg: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, leg, status, provider
         case courierName = "courier_name"
+        case courierPhone = "courier_phone"
         case courierVehicle = "courier_vehicle"
         case trackingUrl = "tracking_url"
         case dropoffPincode = "dropoff_pincode"

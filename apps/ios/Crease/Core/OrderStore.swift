@@ -45,8 +45,8 @@ final class OrderStore: ObservableObject {
     cleaner:cleaners(id, name, phone, line1, city, state, turnaround_hours, lat, lng),
     address:addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng),
     order_items(id, label, quantity, unit_price_cents),
-    delivery_legs(id, leg, status, provider, courier_name, courier_vehicle, tracking_url,
-                  dropoff_pincode, picked_up_at, completed_at)
+    delivery_legs(id, leg, status, provider, courier_name, courier_phone, courier_vehicle,
+                  tracking_url, dropoff_pincode, picked_up_at, completed_at)
     """
 
     func loadAll() async {

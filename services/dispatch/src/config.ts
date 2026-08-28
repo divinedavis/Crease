@@ -77,6 +77,30 @@ export const config = {
   declaredValueDefaultCents: Number(process.env.DECLARED_VALUE_DEFAULT_CENTS ?? 20_000),
   declaredValueMaxCents: Number(process.env.DECLARED_VALUE_MAX_CENTS ?? 50_000),
 
+  /**
+   * A ceiling on what real couriers can be bought in a rolling day.
+   *
+   * Uber Direct is live on this box, first in the chain, and costs roughly
+   * $13 a leg. Nothing bounded that. A retry loop, a reconciler that stops
+   * agreeing with itself, or one curious person with the booking flow open is
+   * enough to spend a month's budget before anyone reads a log line — and the
+   * spend is real money leaving a real card, not an API quota that simply
+   * stops.
+   *
+   * Two bounds because either one alone has a hole: a cents-only cap is
+   * defeated by many cheap legs, and a count-only cap is defeated by surge.
+   * Both are per rolling 24 hours, counted from what actually reached a
+   * carrier, so a leg that failed before dispatch does not spend the budget.
+   *
+   * Deliberately loose enough to be invisible in ordinary trading. This is a
+   * blast radius, not a business rule; the day it starts refusing real orders
+   * is the day it should be raised on purpose, having been looked at.
+   */
+  courierCaps: {
+    maxLegsPerDay: Number(process.env.COURIER_MAX_LEGS_PER_DAY ?? 40),
+    maxCentsPerDay: Number(process.env.COURIER_MAX_CENTS_PER_DAY ?? 60_000),
+  },
+
   payments: {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     ENABLE_MOCK_PAYMENTS: process.env.ENABLE_MOCK_PAYMENTS,

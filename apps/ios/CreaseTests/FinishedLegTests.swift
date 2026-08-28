@@ -21,6 +21,7 @@ final class FinishedLegTests: XCTestCase {
             status: status,
             provider: "mock",
             courierName: "Marcus T.",
+            courierPhone: "+17185550142",
             courierVehicle: "Toyota Camry",
             trackingUrl: nil,
             dropoffPincode: nil,

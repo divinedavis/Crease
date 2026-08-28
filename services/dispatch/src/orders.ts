@@ -11,11 +11,15 @@ import {
   type Waypoint,
 } from './deps.js';
 import { config } from './config.js';
+import { courierCapDecision, reachedCarrier } from './courierCaps.js';
 import { cardFeeCents, deliveryFeeCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 import { parseWindow } from './windows.js';
 
 export type LegType = 'pickup' | 'return';
+
+/** How far back the courier spend cap counts. */
+const CAP_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * A failure whose message was written for the customer to read.
@@ -456,7 +460,20 @@ export class OrderService {
       pickupDeadlineAt: dispatchWindow.end,
     };
 
-    let { best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq);
+    // App Review and demo accounts never reach a real road. Uber Direct's
+    // credentials here are live, so a reviewer following the review notes and
+    // booking a pickup would otherwise send an actual driver to an actual
+    // Brooklyn address to collect a bag that does not exist — and, two days
+    // later, a second one to bring it back.
+    const simulatedOnly = order.customer?.is_review_account === true;
+    if (simulatedOnly) {
+      this.log.info(
+        { orderId, leg, shortCode: order.short_code },
+        'review account — restricting this leg to the simulated carrier',
+      );
+    }
+
+    let { best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq, simulatedOnly);
 
     // A quote is a price with a clock on it, and until now nothing read that
     // clock: `quote_expires_at` was written on the row and never looked at
@@ -479,7 +496,7 @@ export class OrderService {
         { orderId, leg, expiresAt: legRow.quote_expires_at },
         'quote is about to expire — re-quoting before dispatch',
       );
-      ({ best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq));
+      ({ best, legRow } = await this.quoteLeg(orderId, leg, claim.id, quoteReq, simulatedOnly));
     }
 
     // What this order has now cost in couriers, against what was taken for it.
@@ -512,6 +529,21 @@ export class OrderService {
         },
         'order is underwater — couriers cost more than the fee charged',
       );
+    }
+
+    // The last line before real money leaves. Nothing above bounds how many
+    // couriers this service can buy in a day; the underwater check is per
+    // order, and an order that is individually profitable can still be the
+    // four-hundredth one a stuck retry loop has dispatched this afternoon.
+    //
+    // The refusal is recorded on the claim before it is thrown. That row is
+    // the mutex the whole function is built around, and leaving it 'pending'
+    // would refuse every future dispatch of this leg — the cap would outlive
+    // the day it was capping and quietly brick the order.
+    const capRefusal = await this.courierCapRefusal(orderId, leg, best);
+    if (capRefusal) {
+      await this.recordLegFailure(orderId, leg, capRefusal, legRow.id);
+      throw new Error(capRefusal);
     }
 
     const createReq: CreateDeliveryRequest = {
@@ -575,18 +607,27 @@ export class OrderService {
     leg: LegType,
     claimId: string,
     quoteReq: QuoteRequest,
+    simulatedOnly: boolean,
   ): Promise<{ best: { provider: DeliveryProvider; quote: Quote }; legRow: any }> {
     let best: { provider: DeliveryProvider; quote: Quote } | undefined;
     try {
-      best = await this.chain.bestQuote(quoteReq);
+      best = await this.chain.bestQuote(quoteReq, { simulatedOnly });
     } catch (err) {
       await this.releaseClaim(claimId, (err as Error).message);
       throw err;
     }
 
     if (!best) {
-      await this.recordLegFailure(orderId, leg, 'no courier coverage for this route', claimId);
-      throw new Error('no courier coverage for this route');
+      // Distinguished, because the two mean opposite things to whoever reads
+      // it: no coverage is a road problem, and a review order with nothing to
+      // answer it means the simulator is switched off on a box that is
+      // dispatching review orders — a deployment mistake, and one that would
+      // otherwise be reported as Brooklyn having no couriers in it.
+      const reason = simulatedOnly
+        ? 'no simulated carrier configured — ENABLE_MOCK_COURIER is off on a box handling review orders'
+        : 'no courier coverage for this route';
+      await this.recordLegFailure(orderId, leg, reason, claimId);
+      throw new Error(reason);
     }
 
     const { data: quoted, error: quoteWriteErr } = await this.db
@@ -919,6 +960,56 @@ export class OrderService {
     await this.db.from('orders').update({ status: 'failed', cancelled_reason: message }).eq('id', orderId);
   }
 
+  /**
+   * Why this leg must not buy a real courier, or null to go ahead.
+   *
+   * Only the reading of the window lives here; the judgement is in
+   * courierCaps.ts, where it can be tested without a database.
+   */
+  private async courierCapRefusal(
+    orderId: string,
+    leg: LegType,
+    best: { provider: DeliveryProvider; quote: Quote },
+  ): Promise<string | null> {
+    const since = new Date(Date.now() - CAP_WINDOW_MS).toISOString();
+    const { data: recent, error } = await this.db
+      .from('delivery_legs')
+      .select('provider, provider_delivery_id, fee_cents')
+      .gte('dispatched_at', since);
+
+    if (error) {
+      // Fail open, loudly. A cap that turns a database hiccup into a refused
+      // booking has done more damage than the runaway it exists to catch.
+      this.log.error({ orderId, leg, err: error.message }, 'could not read the courier spend cap');
+      return null;
+    }
+
+    const decision = courierCapDecision({
+      leg,
+      simulated: Boolean(best.provider.simulated),
+      feeCents: best.quote.feeCents ?? 0,
+      recentLegs: (recent ?? []) as any[],
+      limits: config.courierCaps,
+    });
+    if (!decision.exceeded) return null;
+
+    const detail = {
+      orderId,
+      leg,
+      provider: best.provider.name,
+      legsToday: decision.legsToday,
+      centsToday: decision.centsToday,
+      ...config.courierCaps,
+    };
+    this.log.error(
+      detail,
+      decision.refusal
+        ? 'DAILY COURIER CAP EXCEEDED — refusing to dispatch'
+        : 'DAILY COURIER CAP EXCEEDED — dispatching anyway: the shop is holding this order',
+    );
+    return decision.refusal;
+  }
+
   private async loadOrder(orderId: string) {
     const { data, error } = await this.db
       .from('orders')
@@ -926,7 +1017,7 @@ export class OrderService {
         `*,
          cleaner:cleaners(*),
          address:addresses(*),
-         customer:profiles!orders_customer_profile_fkey(full_name, phone),
+         customer:profiles!orders_customer_profile_fkey(full_name, phone, is_review_account),
          order_items(quantity)`,
       )
       .eq('id', orderId)
@@ -968,20 +1059,6 @@ function formatAddress(a: any): string {
   return [a.line1, a.line2, a.city, `${a.state} ${a.postal_code}`].filter(Boolean).join(', ');
 }
 
-/**
- * Did this leg ever become somebody's job?
- *
- * 'pending' is the placeholder a claim carries until a quote comes back, and
- * 'none' is what a refusal made before any claim records — a row with either of
- * those was never dispatched to anyone and must not spend the retry budget.
- * provider_delivery_id is the belt to that braces: a create whose response we
- * lost may still have put a courier on the road, and a half-written row like
- * that has to count even though the carrier never got named on it.
- */
-function reachedCarrier(l: { provider?: string | null; provider_delivery_id?: string | null }): boolean {
-  if (l.provider_delivery_id) return true;
-  return Boolean(l.provider) && l.provider !== 'pending' && l.provider !== 'none';
-}
 
 /**
  * How much life a quote needs left before we dare create against it.

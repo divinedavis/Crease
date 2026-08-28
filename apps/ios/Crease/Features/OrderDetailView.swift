@@ -445,6 +445,23 @@ struct OrderDetailView: View {
                 }
                 .padding(.top, 2)
             }
+
+            // Watching a pin move is not the same as being able to say "the
+            // gate code is 4B". Offered only while the leg is live: the number
+            // is the carrier's proxy line, and it stops routing to the driver
+            // the moment the delivery closes — an affordance that dials a dead
+            // line is worse than an absent one, which is the same rule the
+            // shop's call row already follows.
+            if leg.isLive,
+               let number = PhoneNumber.formatted(leg.courierPhone),
+               let url = PhoneNumber.callURL(leg.courierPhone) {
+                Link(destination: url) {
+                    Label("Call the driver", systemImage: "phone.fill")
+                        .font(.subheadline.weight(.medium))
+                }
+                .accessibilityLabel("Call the driver at \(number)")
+                .padding(.top, 2)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .creaseCard()
