@@ -1,8 +1,8 @@
 {
-  "checked": "2026-08-28",
+  "checked": "2026-08-29",
   "window": [
-    "2026-07-29",
-    "2026-08-26"
+    "2026-07-30",
+    "2026-08-27"
   ],
   "pages": [
     {
@@ -18,10 +18,22 @@
       "position": 43
     },
     {
+      "url": "https://creasenyc.com/laundry-pickup/brooklyn-heights",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 61
+    },
+    {
       "url": "https://creasenyc.com/laundry-pickup/dumbo",
       "impressions": 4,
       "clicks": 0,
       "position": 34.8
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/east-williamsburg",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 54
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/gowanus",
@@ -36,18 +48,30 @@
       "position": 56
     },
     {
-      "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
+      "url": "https://creasenyc.com/laundry-pickup/kensington",
       "impressions": 1,
       "clicks": 0,
-      "position": 11
+      "position": 10
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
+      "impressions": 2,
+      "clicks": 0,
+      "position": 16
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/red-hook",
       "impressions": 1,
       "clicks": 0,
       "position": 11
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/south-williamsburg",
+      "impressions": 3,
+      "clicks": 0,
+      "position": 65.3
     }
   ],
   "queries_matched": 0,
-  "queries_total_in_gsc": 3
+  "queries_total_in_gsc": 4
 }

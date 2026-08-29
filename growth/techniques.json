@@ -381,5 +381,41 @@
     "retired": null,
     "notes": "FIRST STEP: Build /pickup-area as a static page generated from the existing radius config: the Clinton Hill centre point and 3-mile radius, the covered neighborhoods rendered as a plain HTML list, and a small client-side box where a visitor types an address, geocodes it, and gets in/out of range \u2014 with the answer sentence in the HTML above the widget so it works with JS off. One page only; do not spawn a page per neighborhood.",
     "verdict": null
+  },
+  {
+    "id": "T022",
+    "slug": "raw_fetch_parity_budget",
+    "name": "Nightly cron that diffs raw HTML against rendered text and enforces a byte/latency budget on every indexable page",
+    "hypothesis": "Crease's whole pitch is a set of hard facts \u2014 $2.00/lb, $20 minimum, $29.95 round-trip or $16.95 one leg, weight from the shop's scale, ~3 miles around Clinton Hill, wash and fold only. If any of those strings arrive only after JavaScript runs, or the page is slow enough that a retrieval fetcher gives up, the assistant answering 'how much does laundry pickup cost in Brooklyn' has nothing of ours to quote and the page is silently worthless even when it ranks. A cron that proves each page's facts exist in the first HTTP response, and that the response is small and fast, protects the 47 pages we already have before we write a 48th.",
+    "kind": "indexing",
+    "status": "candidate",
+    "prefixes": [],
+    "metric": "organic_visitors",
+    "source": "scout:2026-08-29",
+    "evidence": "https://www.elev8operations.com/guides/ai-search-statistics-for-local-businesses-2026 \u2014 reports an Ahrefs 2026 test in which none of the five major AI systems read JSON-LD on a live fetch; all of them extracted only visible HTML, and adding JSON-LD produced no measurable citation change across 1,885 pages. https://seoprofy.com/blog/llm-citations/ \u2014 says retrieval pipelines operate in tight processing windows and skip pages that load slowly or depend on heavy client-side rendering, recommending s",
+    "added": "2026-08-29",
+    "activated": null,
+    "revisit_on": null,
+    "retired": null,
+    "notes": "FIRST STEP: Write a cron script that reads the sitemap, does a plain requests.get (no JS, no cookies) on each URL, and writes one report row per page: TTFB, total bytes, count of visible-text characters in the raw HTML, and a pass/fail for whether each canonical fact string from the pricing config ('2.00', '20', '29.95', '16.95', '3 miles') appears in that raw HTML. Sort the report by failures first, then by TTFB descending.",
+    "verdict": null
+  },
+  {
+    "id": "T023",
+    "slug": "log_landing_to_booking_dropoff",
+    "name": "Nightly access-log report of which landing pages send human visitors onward to the booking page and which send none",
+    "hypothesis": "We are getting roughly 30-47 human visitors a day and we do not currently know which of the 47 targeted pages produce a single click toward booking. At this traffic level another guide adds maybe a couple of visits, but fixing the two or three pages that already pull traffic and route nobody to booking is free and compounds across every future visitor. The log is already on the server, so this needs no analytics account, no tag, and no spend.",
+    "kind": "conversion",
+    "status": "candidate",
+    "prefixes": [],
+    "metric": "organic_visitors",
+    "source": "scout:2026-08-29",
+    "evidence": "https://digivisi.co.uk/conversion-optimisation-services/ \u2014 cites an average website conversion rate of 2.35% against 11.45% for top performers, and notes Matomo benchmark research that businesses spend about $92 on acquisition for every $1 spent on conversion work, i.e. the page is usually the bottleneck, not the traffic.",
+    "added": "2026-08-29",
+    "activated": null,
+    "revisit_on": null,
+    "retired": null,
+    "notes": "FIRST STEP: Write a cron that parses the last 7 days of the web server access log, drops requests from known bot user agents and asset paths, groups the remaining requests into sessions by IP+UA within a 30-minute window, and outputs a table of: entry URL, human sessions, sessions that later hit the booking URL or the iOS app link, and the ratio. Flag any entry URL with 5+ sessions and a zero onward rate.",
+    "verdict": null
   }
 ]
