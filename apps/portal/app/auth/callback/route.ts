@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/session-cookie';
+import { publicOrigin } from '@/lib/public-origin';
 
 /**
  * Where Google sends somebody back to.
@@ -19,11 +20,13 @@ import { SESSION_COOKIE_OPTIONS } from '@/lib/session-cookie';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  // Behind the proxy the app knows itself as localhost:3010; the browser must
-  // be sent back to the host it started on.
-  const host = request.headers.get('host') ?? 'portal.creasenyc.com';
-  const proto = request.headers.get('x-forwarded-proto') ?? 'https';
-  const origin = `${proto}://${host}`;
+  // Behind the proxy the app knows itself as localhost:3010, so the browser has
+  // to be sent back to a real origin. Take it from PORTAL_PUBLIC_URL rather
+  // than the Host header: this route is where a freshly authenticated visitor
+  // lands, and a redirect built from a caller-supplied header would hand that
+  // visitor to whatever host the caller named. middleware.ts and
+  // settings/actions.ts already resolve it this way; this route did not.
+  const origin = publicOrigin(request.headers);
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
