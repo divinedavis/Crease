@@ -417,5 +417,41 @@
     "retired": null,
     "notes": "FIRST STEP: Write a cron that parses the last 7 days of the web server access log, drops requests from known bot user agents and asset paths, groups the remaining requests into sessions by IP+UA within a 30-minute window, and outputs a table of: entry URL, human sessions, sessions that later hit the booking URL or the iOS app link, and the ratio. Flag any entry URL with 5+ sessions and a zero onward rate.",
     "verdict": null
+  },
+  {
+    "id": "T024",
+    "slug": "booking_form_field_audit",
+    "name": "Cut the booking form to the fields a pickup actually requires, tested on a real phone",
+    "hypothesis": "Crease gets roughly 30-45 human visitors a day, so the cheapest win is not more traffic but a higher share of those visitors finishing a booking. A laundry pickup booking inherently asks for an address, and address entry on mobile is the highest-friction part of the flow. Every field on the Crease booking page that is not needed to send a driver to a door (or to weigh the bag at the laundromat) is costing bookings from people who already decided.",
+    "kind": "conversion",
+    "status": "candidate",
+    "prefixes": [],
+    "metric": "organic_visitors",
+    "source": "scout:2026-08-30",
+    "evidence": "https://www.bspkn.co/insights/conversion-rate-optimization-service-businesses-2026/ \u2014 argues service-business sites typically convert 2-4% of sessions and that seven-field forms asking name, email, phone, address, service type, timeline and budget 'introduce friction that reduces form completion rates significantly'; it claims fixing headline clarity plus form friction is the fastest, most consistent lift and is the right move before buying more traffic. https://www.digitalapplied.com/blog/form-",
+    "added": "2026-08-30",
+    "activated": null,
+    "revisit_on": null,
+    "retired": null,
+    "notes": "FIRST STEP: On an actual iPhone on cellular data, open creasenyc.com and go through the booking flow to the last screen before payment. Write down every input field in order. For each one answer in writing: 'is this needed to collect the bag, weigh it at the laundromat, get it back to the door, or approve a total above the estimate?' Anything that is a No gets deleted or moved to after the booking is confirmed. If more than five fields survive, split them into two steps with the address step first.\nNeeds a person.",
+    "verdict": null
+  },
+  {
+    "id": "T025",
+    "slug": "ios_listing_metadata",
+    "name": "Rewrite the App Store title, subtitle and hidden keyword field around the phrases Brooklyn laundry customers actually ty",
+    "hypothesis": "Crease already ships an iOS app, which means it already owns a second, completely separate search surface that nothing in the ledger touches. App Store search is its own index with its own ranking fields, and a laundry-pickup app whose listing does not contain the words people search \u2014 wash and fold, laundry pickup, delivery, Brooklyn \u2014 is invisible there no matter how the website ranks. The listing is also a public page that Google and AI assistants can read as an independent confirmation that Crease exists and does wash and fold in Brooklyn.",
+    "kind": "distribution",
+    "status": "candidate",
+    "prefixes": [],
+    "metric": "organic_visitors",
+    "source": "scout:2026-08-30",
+    "evidence": "https://asomobile.net/en/blog/aso-in-2026-the-complete-guide-to-app-optimization/ \u2014 states the App Store ranks on Title, Subtitle and the hidden Keywords field only, that the description is not indexed and works purely for conversion, that duplicating a word across fields wastes space, that iOS stop words like 'app' and 'the' are indexed automatically so should not be spent, and that the 2026 shift is toward long-tail specific queries because they face less competition and bring more targeted tr",
+    "added": "2026-08-30",
+    "activated": null,
+    "revisit_on": null,
+    "retired": null,
+    "notes": "FIRST STEP: Open App Store Connect, go to the Crease app's App Information, and draft three strings without submitting: (1) Title as brand plus one job phrase, e.g. 'Crease: Laundry Pickup'; (2) Subtitle, 30 characters, reusing no word from the title, e.g. 'Wash & fold, Brooklyn doors'; (3) the 100-character keyword field as comma-separated single words with no spaces and no word repeated from title or subtitle \u2014 laundry,wash,fold,pickup,delivery,brooklyn,clinton,hill,pound,laundromat,courier,bag. Paste the three drafts into the repo as aso_draft.md and queue them for the next app release.\nNeeds a person.",
+    "verdict": null
   }
 ]
