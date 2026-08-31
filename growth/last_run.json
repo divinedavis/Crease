@@ -1,12 +1,12 @@
 {
   "build": {
-    "at": "2026-08-30T05:24:22+00:00",
+    "at": "2026-08-31T05:23:31+00:00",
     "changed_urls": 0,
-    "date": "2026-08-30",
+    "date": "2026-08-31",
     "new_urls": 0,
     "techniques": {
       "guides": {
-        "detail": "draft refused: draft states the courier fee as '$59.95', which is not what we charge",
+        "detail": "writer failed: invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
         "ok": false
       },
       "indexnow": {
@@ -20,8 +20,8 @@
     }
   },
   "measure": {
-    "at": "2026-08-30T05:23:46+00:00",
-    "date": "2026-08-29",
-    "visitors": 39
+    "at": "2026-08-31T05:23:31+00:00",
+    "date": "2026-08-30",
+    "visitors": 34
   }
 }
