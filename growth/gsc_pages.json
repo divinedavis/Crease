@@ -1,8 +1,8 @@
 {
-  "checked": "2026-08-31",
+  "checked": "2026-09-01",
   "window": [
-    "2026-08-01",
-    "2026-08-29"
+    "2026-08-02",
+    "2026-08-30"
   ],
   "pages": [
     {
@@ -22,6 +22,12 @@
       "impressions": 1,
       "clicks": 0,
       "position": 61
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/clinton-hill",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 14
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/cobble-hill",
@@ -84,6 +90,12 @@
       "position": 11
     },
     {
+      "url": "https://creasenyc.com/laundry-pickup/south-slope",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 9
+    },
+    {
       "url": "https://creasenyc.com/laundry-pickup/south-williamsburg",
       "impressions": 3,
       "clicks": 0,
@@ -91,5 +103,5 @@
     }
   ],
   "queries_matched": 0,
-  "queries_total_in_gsc": 6
+  "queries_total_in_gsc": 7
 }
