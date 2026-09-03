@@ -1,15 +1,15 @@
 {
-  "checked": "2026-09-02",
+  "checked": "2026-09-03",
   "window": [
-    "2026-08-03",
-    "2026-08-31"
+    "2026-08-04",
+    "2026-09-01"
   ],
   "pages": [
     {
       "url": "https://creasenyc.com/",
-      "impressions": 8,
+      "impressions": 9,
       "clicks": 0,
-      "position": 20.1
+      "position": 18
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/bedford-stuyvesant",
@@ -43,9 +43,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/downtown-brooklyn",
-      "impressions": 1,
+      "impressions": 2,
       "clicks": 0,
-      "position": 92
+      "position": 71.5
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/dumbo",
@@ -58,6 +58,12 @@
       "impressions": 2,
       "clicks": 0,
       "position": 65
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/flatbush",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 54
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/gowanus",
