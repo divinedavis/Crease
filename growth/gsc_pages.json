@@ -1,8 +1,8 @@
 {
-  "checked": "2026-09-03",
+  "checked": "2026-09-04",
   "window": [
-    "2026-08-04",
-    "2026-09-01"
+    "2026-08-05",
+    "2026-09-02"
   ],
   "pages": [
     {
@@ -13,9 +13,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/bedford-stuyvesant",
-      "impressions": 1,
+      "impressions": 3,
       "clicks": 0,
-      "position": 43
+      "position": 45.3
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/brooklyn-heights",
@@ -25,21 +25,21 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/carroll-gardens",
-      "impressions": 1,
+      "impressions": 2,
       "clicks": 0,
-      "position": 1
+      "position": 20
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/clinton-hill",
-      "impressions": 1,
+      "impressions": 2,
       "clicks": 0,
-      "position": 14
+      "position": 32
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/cobble-hill",
-      "impressions": 1,
+      "impressions": 3,
       "clicks": 0,
-      "position": 89
+      "position": 61.3
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/downtown-brooklyn",
@@ -91,15 +91,15 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
-      "impressions": 3,
+      "impressions": 7,
       "clicks": 0,
-      "position": 16.7
+      "position": 24.1
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/red-hook",
-      "impressions": 2,
+      "impressions": 3,
       "clicks": 0,
-      "position": 9.5
+      "position": 17.3
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/south-slope",
@@ -114,6 +114,12 @@
       "position": 63.2
     },
     {
+      "url": "https://creasenyc.com/laundry-pickup/williamsburg",
+      "impressions": 3,
+      "clicks": 0,
+      "position": 45.7
+    },
+    {
       "url": "https://creasenyc.com/laundry-pickup/windsor-terrace",
       "impressions": 1,
       "clicks": 0,
@@ -121,5 +127,5 @@
     }
   ],
   "queries_matched": 0,
-  "queries_total_in_gsc": 7
+  "queries_total_in_gsc": 8
 }
