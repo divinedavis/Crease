@@ -1,12 +1,12 @@
 {
   "build": {
-    "at": "2026-09-04T05:24:38+00:00",
+    "at": "2026-09-05T05:24:31+00:00",
     "changed_urls": 0,
-    "date": "2026-09-04",
+    "date": "2026-09-05",
     "new_urls": 0,
     "techniques": {
       "guides": {
-        "detail": "draft refused: draft states the price per pound as '$5.00', which is not what we charge",
+        "detail": "draft refused: draft states the price per pound as '$2.75', which is not what we charge",
         "ok": false
       },
       "indexnow": {
@@ -20,8 +20,8 @@
     }
   },
   "measure": {
-    "at": "2026-09-04T05:23:58+00:00",
-    "date": "2026-09-03",
-    "visitors": 59
+    "at": "2026-09-05T05:23:51+00:00",
+    "date": "2026-09-04",
+    "visitors": 26
   }
 }

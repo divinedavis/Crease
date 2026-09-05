@@ -1,8 +1,8 @@
 {
-  "checked": "2026-09-04",
+  "checked": "2026-09-05",
   "window": [
-    "2026-08-05",
-    "2026-09-02"
+    "2026-08-06",
+    "2026-09-03"
   ],
   "pages": [
     {
@@ -13,9 +13,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/bedford-stuyvesant",
-      "impressions": 3,
+      "impressions": 4,
       "clicks": 0,
-      "position": 45.3
+      "position": 38.8
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/brooklyn-heights",
