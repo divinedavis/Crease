@@ -695,11 +695,12 @@
     "source": "seed",
     "added": "2026-08-19",
     "covered": true,
-    "position": null,
-    "impressions": null,
-    "clicks": null,
+    "position": 32,
+    "impressions": 1,
+    "clicks": 0,
     "coverage_detail": "all terms present in body only (weak)",
-    "coverage_checked": "2026-09-06"
+    "coverage_checked": "2026-09-06",
+    "position_checked": "2026-09-07"
   },
   {
     "query": "laundry pickup bushwick",
@@ -1506,5 +1507,29 @@
     "clicks": null,
     "coverage_detail": "no page targets this query yet",
     "coverage_checked": "2026-09-06"
+  },
+  {
+    "query": "laundry pickup bed stuy brooklyn",
+    "intent": "buy",
+    "target": "",
+    "source": "scout:2026-09-07",
+    "added": "2026-09-07",
+    "note": "Dense walk-up housing inside the radius where in-unit laundry is rare and door collection is the whole value.",
+    "covered": null,
+    "position": null,
+    "impressions": null,
+    "clicks": null
+  },
+  {
+    "query": "brooklyn laundry pickup app",
+    "intent": "buy",
+    "target": "",
+    "source": "scout:2026-09-07",
+    "added": "2026-09-07",
+    "note": "App-first intent that maps to the iOS listing and the booking flow, and to nothing else on the site right now.",
+    "covered": null,
+    "position": null,
+    "impressions": null,
+    "clicks": null
   }
 ]

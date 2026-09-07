@@ -1,8 +1,8 @@
 {
-  "checked": "2026-09-06",
+  "checked": "2026-09-07",
   "window": [
-    "2026-08-07",
-    "2026-09-04"
+    "2026-08-08",
+    "2026-09-05"
   ],
   "pages": [
     {
@@ -25,9 +25,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/carroll-gardens",
-      "impressions": 2,
+      "impressions": 3,
       "clicks": 0,
-      "position": 20
+      "position": 15.3
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/clinton-hill",
@@ -91,9 +91,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
-      "impressions": 7,
+      "impressions": 8,
       "clicks": 0,
-      "position": 24.1
+      "position": 25.4
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/red-hook",
@@ -115,9 +115,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/williamsburg",
-      "impressions": 3,
+      "impressions": 4,
       "clicks": 0,
-      "position": 45.7
+      "position": 42.2
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/windsor-terrace",
@@ -126,6 +126,6 @@
       "position": 11
     }
   ],
-  "queries_matched": 0,
-  "queries_total_in_gsc": 8
+  "queries_matched": 1,
+  "queries_total_in_gsc": 9
 }
