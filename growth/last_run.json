@@ -1,12 +1,12 @@
 {
   "build": {
-    "at": "2026-09-07T05:20:46+00:00",
+    "at": "2026-09-08T05:20:07+00:00",
     "changed_urls": 0,
-    "date": "2026-09-07",
+    "date": "2026-09-08",
     "new_urls": 0,
     "techniques": {
       "guides": {
-        "detail": "draft refused: draft states the price per pound as '$5.00', which is not what we charge",
+        "detail": "writer failed: invalid_request_error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
         "ok": false
       },
       "indexnow": {
@@ -20,8 +20,8 @@
     }
   },
   "measure": {
-    "at": "2026-09-07T05:20:05+00:00",
-    "date": "2026-09-06",
-    "visitors": 13
+    "at": "2026-09-08T05:20:06+00:00",
+    "date": "2026-09-07",
+    "visitors": 0
   }
 }
