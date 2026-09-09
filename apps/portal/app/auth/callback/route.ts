@@ -55,7 +55,8 @@ export async function GET(request: Request) {
     // code and no way to prove it asked for it. Say which host is complaining,
     // because that is the whole diagnosis.
     console.error('[portal] oauth exchange failed', {
-      host,
+      host: request.headers.get('host'),
+      origin,
       reason: error.message,
       hasVerifierCookie: jar.getAll().some((c) => c.name.includes('code-verifier')),
     });
