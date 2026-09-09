@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@crease/delivery": "file:../../packages/delivery",
+    "@crease/payments": "file:../../packages/payments",
     "@supabase/supabase-js": "^2.47.10",
     "dotenv": "^16.4.7",
-    "fastify": "^5.2.0",
-    "ws": "^8.21.1",
-    "@crease/payments": "file:../../packages/payments"
+    "fastify": "^5.12.3",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
