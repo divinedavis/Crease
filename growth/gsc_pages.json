@@ -1,21 +1,21 @@
 {
-  "checked": "2026-09-09",
+  "checked": "2026-09-10",
   "window": [
-    "2026-08-10",
-    "2026-09-07"
+    "2026-08-11",
+    "2026-09-08"
   ],
   "pages": [
     {
       "url": "https://creasenyc.com/",
-      "impressions": 9,
+      "impressions": 11,
       "clicks": 0,
-      "position": 18
+      "position": 16.6
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/bedford-stuyvesant",
-      "impressions": 4,
+      "impressions": 6,
       "clicks": 0,
-      "position": 38.8
+      "position": 28.7
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/brooklyn-heights",
@@ -31,9 +31,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/clinton-hill",
-      "impressions": 2,
+      "impressions": 3,
       "clicks": 0,
-      "position": 32
+      "position": 33.3
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/cobble-hill",
@@ -97,9 +97,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/park-slope",
-      "impressions": 3,
+      "impressions": 4,
       "clicks": 0,
-      "position": 49.7
+      "position": 48.2
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/prospect-heights",
@@ -145,5 +145,5 @@
     }
   ],
   "queries_matched": 1,
-  "queries_total_in_gsc": 11
+  "queries_total_in_gsc": 12
 }
