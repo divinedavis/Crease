@@ -1,0 +1,14 @@
+{
+  "name": "Crease",
+  "icon": "/Users/divinedavis/projects/Crease/apps/ios/Crease/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+  "raw_dir": "/Users/divinedavis/projects/Crease/marketing/raw-ios",
+  "out_dir": "/Users/divinedavis/projects/Crease/marketing/asc-screenshots-pinterest",
+  "masonry": ["01-orders-history.png", "03-choose-service.png", "04-order-total.png", "05-track-order.png"],
+  "panels": [
+    ["02-schedule-pickup.png", "Pickup at your door"],
+    ["03-choose-service.png", "Choose your cleaner"],
+    ["04-order-total.png", "See your price upfront"],
+    ["05-track-order.png", "Track every hand-off"]
+  ],
+  "stickers": ["👔", "🚲", "🧺", "✨"]
+}
