@@ -1,8 +1,8 @@
 {
-  "checked": "2026-09-11",
+  "checked": "2026-09-12",
   "window": [
-    "2026-08-12",
-    "2026-09-09"
+    "2026-08-13",
+    "2026-09-10"
   ],
   "pages": [
     {
@@ -22,6 +22,12 @@
       "impressions": 1,
       "clicks": 0,
       "position": 61
+    },
+    {
+      "url": "https://creasenyc.com/laundry-pickup/bushwick",
+      "impressions": 1,
+      "clicks": 0,
+      "position": 60
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/carroll-gardens",
@@ -85,9 +91,9 @@
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/greenpoint",
-      "impressions": 3,
+      "impressions": 4,
       "clicks": 0,
-      "position": 38.3
+      "position": 30.8
     },
     {
       "url": "https://creasenyc.com/laundry-pickup/kensington",
