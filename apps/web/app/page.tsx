@@ -49,7 +49,7 @@ export default async function Home({
         <div className="brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/assets/icon.svg" alt="" width={34} height={34} />
-          Crease
+          <span>Crease<span className="brand-sub">: Laundry &amp; Dry Cleaning</span></span>
         </div>
         <div className="links">
           <a href="/order">Order</a>
@@ -240,7 +240,7 @@ export default async function Home({
         <div className="wrap">
           <div className="footgrid">
           <div>
-            <h4>Crease</h4>
+            <h4>Crease: Laundry &amp; Dry Cleaning</h4>
             <ul>
               <li>
                 <a href="/order">Book a pickup</a>

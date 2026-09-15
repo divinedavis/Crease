@@ -100,6 +100,8 @@ final class CreaseUITests: XCTestCase {
         let app = launch(signedIn: false)
 
         XCTAssertTrue(app.staticTexts["Crease"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Laundry & Dry Cleaning"].exists,
+                      "The sign-in wordmark carries the full product name")
         XCTAssertTrue(app.buttons["Continue with Apple"].exists
                       || app.buttons["Sign in with Apple"].exists,
                       "Apple is the primary sign-in and must be present")

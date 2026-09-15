@@ -45,6 +45,8 @@ struct SignInView: View {
 
                 Text("Crease")
                     .font(.largeTitle.weight(.bold))
+                Text("Laundry & Dry Cleaning")
+                    .font(.title3.weight(.semibold))
                 Text("Laundry, picked up and delivered.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

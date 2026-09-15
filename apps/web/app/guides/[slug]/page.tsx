@@ -26,7 +26,7 @@ export async function generateMetadata({
   if (!g) return {};
   const url = `${SITE}/guides/${g.slug}`;
   return {
-    title: `${g.title} | Crease`,
+    title: `${g.title} | Crease: Laundry & Dry Cleaning`,
     description: g.description,
     alternates: { canonical: url },
     openGraph: { title: g.title, description: g.description, url, type: 'article' },

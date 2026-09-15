@@ -14,7 +14,7 @@ import { allGuides } from '@/lib/guides';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Laundry guides for Brooklyn | Crease',
+  title: 'Laundry guides for Brooklyn | Crease: Laundry & Dry Cleaning',
   description:
     'Straight answers about wash & fold, laundry pickup and delivery, and doing laundry without a machine in Brooklyn.',
   alternates: { canonical: 'https://creasenyc.com/guides' },

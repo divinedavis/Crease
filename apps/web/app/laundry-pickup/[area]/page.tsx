@@ -31,7 +31,7 @@ export async function generateMetadata({
   const { area: slug } = await params;
   const area = findArea(slug);
   if (!area) return {};
-  const title = `Laundry pickup & delivery in ${area.name} — $2.00/lb | Crease`;
+  const title = `Laundry pickup & delivery in ${area.name} — $2.00/lb | Crease: Laundry & Dry Cleaning`;
   const description = `Wash and fold pickup and delivery in ${area.name}, Brooklyn. $2.00 a pound, $20 minimum. A driver collects from your door and we do the rest.`;
   return {
     title,

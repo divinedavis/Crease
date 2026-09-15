@@ -2,15 +2,17 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
+  applicationName: 'Crease: Laundry & Dry Cleaning',
   metadataBase: new URL('https://creasenyc.com'),
-  title: 'Crease — Laundry, picked up and delivered in Brooklyn',
+  title: 'Crease: Laundry & Dry Cleaning Delivery in Brooklyn',
   description:
     'Wash & fold pickup and delivery in Brooklyn. $2.00 a pound, $20 minimum. A courier collects from your door and your neighborhood laundromat does the rest.',
   openGraph: {
-    title: 'Crease — Laundry, picked up and delivered in Brooklyn',
+    title: 'Crease: Laundry & Dry Cleaning Delivery in Brooklyn',
     description:
       'Wash & fold pickup and delivery in Brooklyn. $2.00 a pound, $20 minimum.',
     url: 'https://creasenyc.com/',
+    siteName: 'Crease: Laundry & Dry Cleaning',
     type: 'website',
   },
   alternates: { canonical: 'https://creasenyc.com/' },

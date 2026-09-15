@@ -1,6 +1,6 @@
 import { OrderForm } from './order-form';
 
-export const metadata = { title: 'Book a pickup — Crease' };
+export const metadata = { title: 'Book a pickup — Crease: Laundry & Dry Cleaning' };
 
 // Signing a shop is exactly the event that changes this page, so it must not
 // be baked at build time. Five minutes is short enough that a new partner

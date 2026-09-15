@@ -34,6 +34,7 @@ from asc import ASC, load_config  # noqa: E402
 
 API = "https://api.appstoreconnect.apple.com/v1"
 
+NAME = "Crease: Laundry & Dry Cleaning"       # <= 30 characters
 SUBTITLE = "Laundry pickup and delivery"          # <= 30 characters
 KEYWORDS = ("laundry,dry cleaning,wash and fold,pickup,delivery,"
             "brooklyn,cleaners,garment,fold,courier")   # <= 100 characters
@@ -86,6 +87,14 @@ Typing an out-of-area address will show a "not yet in your area" message; that i
 
 PAYMENTS
 Stripe is running in test mode for review. Use card 4242 4242 4242 4242, any future expiry date, any CVC, any ZIP. No real money moves. The card is authorized (not charged) at booking, because the final price depends on the shop's count when the bag is opened; the customer approves anything above the authorized amount before it is charged.
+
+APPLE PAY (WHY PASSKIT IS IN THE BINARY)
+Apple Pay is integrated at checkout, through Stripe's payment sheet (merchant ID merchant.com.divinedavis.crease). To reach it:
+    1. Sign in, then tap "Enter your address" on the home screen and enter 100 Clinton Avenue, Brooklyn, NY 11205.
+    2. Pick a service, tap "Choose what you're sending", add any item, then tap "Continue".
+    3. On the Checkout screen, the Payment row reads "Apple Pay" (tap it for an explanation of the payment options).
+    4. Tap "Place Order". The payment sheet opens with the Apple Pay button at the top, above card entry.
+Apple Pay is only offered when the device has a payment card in Wallet. The app asks PassKit (PKPaymentAuthorizationController.canMakePayments) and, on a device with no card, the row reads "Card" and the sheet shows card entry only. That is likely what happened on the review iPad. With a Wallet card (a sandbox tester card works) Apple Pay appears. Stripe is in test mode, so an Apple Pay authorization moves no real money.
 
 WHY THE ORDER SITS "AT THE CLEANER"
 An order is two separate deliveries with a two-day gap between them, so a freshly booked order will not complete during a short review session. The order list and detail screens show the full journey at every stage.
@@ -180,8 +189,8 @@ def apply(asc: ASC, cfg: dict) -> None:
 
     asc.patch(f"/appInfoLocalizations/{ids['info_loc']}", {"data": {
         "type": "appInfoLocalizations", "id": ids["info_loc"],
-        "attributes": {"subtitle": SUBTITLE, "privacyPolicyUrl": PRIVACY}}})
-    print("    subtitle + privacy policy URL")
+        "attributes": {"name": NAME, "subtitle": SUBTITLE, "privacyPolicyUrl": PRIVACY}}})
+    print("    name + subtitle + privacy policy URL")
 
     asc.patch(f"/appStoreVersionLocalizations/{ids['version_loc']}", {"data": {
         "type": "appStoreVersionLocalizations", "id": ids["version_loc"],
@@ -251,6 +260,7 @@ def show(asc: ASC, cfg: dict) -> None:
     detail = asc.get(f"/appStoreVersions/{ids['version']}/appStoreReviewDetail").get("data")
     build = asc.get(f"/appStoreVersions/{ids['version']}/build").get("data")
     print(f"version {version['versionString']}  {version['appStoreState']}")
+    print(f"  name         {info_loc['name']}")
     print(f"  subtitle     {info_loc['subtitle']}")
     print(f"  description  {len(loc['description'] or '')} chars")
     print(f"  keywords     {loc['keywords']}")

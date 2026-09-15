@@ -13,7 +13,7 @@ export function SiteNav({ guides = true }: { guides?: boolean }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/assets/icon.svg" alt="" width={34} height={34} />
         <a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-          Crease
+          Crease<span className="brand-sub">: Laundry &amp; Dry Cleaning</span>
         </a>
       </div>
       <div className="links">
@@ -34,7 +34,7 @@ export function SiteFooter() {
       <div className="wrap">
         <div className="footgrid">
           <div>
-            <h4>Crease</h4>
+            <h4>Crease: Laundry &amp; Dry Cleaning</h4>
             <ul>
               <li>
                 <a href="/order">Book a pickup</a>
