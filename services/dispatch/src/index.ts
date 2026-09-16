@@ -710,7 +710,13 @@ app.post('/webhooks/stripe', async (req, reply) => {
     return { ok: true, reconciled: event.type };
   }
 
-  if (event.type !== 'payment_intent.succeeded') {
+  // Checkout holds rather than captures (capture_method 'manual'), and for a
+  // hold Stripe sends amount_capturable_updated — payment_intent.succeeded
+  // only arrives at intake, when the shop captures. Listening for succeeded
+  // alone meant this backstop never fired for a phone that died mid-checkout;
+  // the order sat in draft until the sweep found it. Both events mean the same
+  // thing here: the bank has the money, go and confirm.
+  if (!['payment_intent.succeeded', 'payment_intent.amount_capturable_updated'].includes(event.type)) {
     await settleLedger();
     return { ok: true, ignored: event.type };
   }

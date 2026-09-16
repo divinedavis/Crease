@@ -64,9 +64,12 @@ async function postEvent(body, { secret = SECRET, timestamp = Math.floor(Date.no
   return { status: res.status, json: await res.json().catch(() => ({})) };
 }
 
+// Checkout is a manual-capture hold, so the event Stripe actually sends when
+// the card clears is amount_capturable_updated; payment_intent.succeeded only
+// arrives at intake, once the shop captures.
 const succeeded = (intentId) => ({
   id: `evt_${Math.random().toString(36).slice(2)}`,
-  type: 'payment_intent.succeeded',
+  type: 'payment_intent.amount_capturable_updated',
   data: { object: { id: intentId, object: 'payment_intent' } },
 });
 
@@ -95,7 +98,7 @@ const { data: order } = await db.from('orders').insert({
   address_id: address.id,
   status: 'draft',
   estimate_subtotal_cents: 0,
-  delivery_fee_cents: 1995,
+  delivery_fee_cents: 1695,
   service_tier: 'pickup_only',
   pickup_window_start: now.toISOString(),
   pickup_window_end: new Date(now.getTime() + 2 * 3600_000).toISOString(),
@@ -108,6 +111,7 @@ const intentRes = await fetch(`${BASE}/v1/me/orders/${order.id}/payment-intent`,
   body: '{}',
 });
 const intent = await intentRes.json();
+const HELD_CENTS = intent.amountCents;
 const intentId = intent.clientSecret.split('_secret_')[0];
 
 console.log('\nCHARGE  card taken, then the app dies before confirm-payment');
@@ -150,10 +154,11 @@ check('promoted and dispatched', await waitForOrder(order.id, ['pickup_dispatche
 check('arrived at the cleaner', await waitForOrder(order.id, ['at_cleaner']), 'at_cleaner');
 
 const { data: paid } = await db
-  .from('payments').select('status, captured_cents')
+  .from('payments').select('status, captured_cents, authorized_cents')
   .eq('order_id', order.id).eq('kind', 'primary').single();
-check('payment written back', paid.status, 'captured');
-check('captured the fee', paid.captured_cents, 1995);
+check('payment written back as held', paid.status, 'authorized');
+check('held the fee', paid.authorized_cents, HELD_CENTS);
+check('nothing captured before intake', paid.captured_cents, 0);
 
 // --- Stripe retries; the customer must not pay for that -------------------
 console.log('\nREDELIVERY  Stripe resends events, and does so routinely');

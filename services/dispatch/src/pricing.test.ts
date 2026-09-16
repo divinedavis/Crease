@@ -7,6 +7,7 @@ import {
   DELIVERY_FEE_CENTS,
   deliveryFeeCents,
   feeForCourierCost,
+  fundsSecuredCents,
   FLAT_RATE_LEG_COST_CENTS,
   legsForTier,
   MIN_CANCELLATION_FEE_CENTS,
@@ -150,4 +151,21 @@ test('card fee matches Stripe US pricing', () => {
   assert.equal(cardFeeCents(2995), 117); // 2.9% + 30c
   assert.equal(cardFeeCents(1995), 88);
   assert.equal(cardFeeCents(0), 0);
+});
+
+test('a held payment secures its authorized amount, not the 0 in captured_cents', () => {
+  // captured_cents is NOT NULL DEFAULT 0 (migration 0007), so the old
+  // `captured ?? authorized` read 0 for every hold and refused every courier.
+  assert.equal(fundsSecuredCents({ status: 'authorized', captured_cents: 0, authorized_cents: 2044 }), 2044);
+  assert.equal(fundsSecuredCents({ status: 'authorized', captured_cents: null, authorized_cents: 1695 }), 1695);
+});
+
+test('a captured payment secures what was actually taken', () => {
+  assert.equal(fundsSecuredCents({ status: 'captured', captured_cents: 1800, authorized_cents: 2044 }), 1800);
+});
+
+test('anything else secures nothing', () => {
+  for (const status of ['requires_payment_method', 'processing', 'refunded', 'failed', 'none']) {
+    assert.equal(fundsSecuredCents({ status, captured_cents: 500, authorized_cents: 500 }), 0);
+  }
 });

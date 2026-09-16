@@ -12,7 +12,7 @@ import {
 } from './deps.js';
 import { config } from './config.js';
 import { courierCapDecision, reachedCarrier } from './courierCaps.js';
-import { cardFeeCents, deliveryFeeCents } from './pricing.js';
+import { cardFeeCents, deliveryFeeCents, fundsSecuredCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 import { parseWindow } from './windows.js';
 
@@ -241,8 +241,9 @@ export class OrderService {
     // draft. So paying as pickup_only and then flipping the row to round_trip
     // buys a second courier leg for nothing, and the status gate above waves it
     // through because the payment really is captured. Re-check the price of the
-    // tier being dispatched against the money actually taken.
-    const paidCents = payment.captured_cents ?? payment.authorized_cents ?? 0;
+    // tier being dispatched against the money actually secured — the hold while
+    // the row is 'authorized', the capture once intake has taken it.
+    const paidCents = fundsSecuredCents(payment);
     const tierPriceCents = deliveryFeeCents(tier);
     if (tierPriceCents > paidCents) {
       throw new Error(

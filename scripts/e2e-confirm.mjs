@@ -16,7 +16,9 @@
 import { adminClient, readEnv } from './lib/client.mjs';
 
 const TIER = process.argv[2] ?? 'pickup_only';
-const FEE_CENTS = TIER === 'round_trip' ? 2995 : 1995;
+// Published floor per tier. The intent may price above it from the real
+// route, so the checks below read the minted amount back rather than pin it.
+const FEE_CENTS = TIER === 'round_trip' ? 2995 : 1695;
 
 const TEST_PASSWORD = process.env.CREASE_TEST_PASSWORD;
 if (!TEST_PASSWORD) {
@@ -129,7 +131,8 @@ check('no leg created', earlyLegs, 0);
 console.log('\nCHECKOUT  intent + Stripe test card');
 const intent = await asCustomer(`/v1/me/orders/${order.id}/payment-intent`, token);
 check('intent minted', intent.status, 200);
-check('amount is the delivery fee', intent.json.amountCents, FEE_CENTS);
+check('amount is at least the published fee', intent.json.amountCents >= FEE_CENTS, true);
+const HELD_CENTS = intent.json.amountCents;
 check('client secret returned', Boolean(intent.json.clientSecret), true);
 check('publishable key returned', intent.json.publishableKey?.startsWith('pk_'), true);
 
@@ -152,21 +155,24 @@ const confirmed = await fetch(`https://api.stripe.com/v1/payment_intents/${inten
   body: new URLSearchParams({ payment_method: 'pm_card_visa', return_url: 'https://usecreaseapp.com/paid' }),
 });
 const pi = await confirmed.json();
-check('stripe intent succeeded', pi.status, 'succeeded');
-check('stripe took the fee', pi.amount_received, FEE_CENTS);
+// Checkout holds; the shop's intake captures. Stripe reports a manual-capture
+// intent as requires_capture with the hold in amount_capturable.
+check('stripe holds the intent', pi.status, 'requires_capture');
+check('stripe holds the fee', pi.amount_capturable, HELD_CENTS);
 
 // --- confirm-payment: the new single door ---------------------------------
 console.log('\nCONFIRM  the call the app makes when the sheet closes');
 const done = await asCustomer(`/v1/me/orders/${order.id}/confirm-payment`, token);
 check('confirm accepted', done.status, 200);
-check('payment recorded', done.json.paymentStatus, 'captured');
+check('payment recorded as held', done.json.paymentStatus, 'authorized');
 check('dispatched a courier', done.json.dispatched, TIER !== 'return_only');
 
 const { data: paid } = await db
-  .from('payments').select('status, captured_cents')
+  .from('payments').select('status, captured_cents, authorized_cents')
   .eq('order_id', order.id).eq('kind', 'primary').single();
-check('payments row written back', paid.status, 'captured');
-check('captured the fee', paid.captured_cents, FEE_CENTS);
+check('payments row written back', paid.status, 'authorized');
+check('held the fee', paid.authorized_cents, HELD_CENTS);
+check('nothing captured before intake', paid.captured_cents, 0);
 
 if (TIER === 'return_only') {
   // Nobody is collecting this bag — the customer carries it in, and the shop's

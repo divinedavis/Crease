@@ -196,3 +196,24 @@ export function cancellationRetainCents(input: {
 
   return Math.max(MIN_CANCELLATION_FEE_CENTS, courier + cardFeeCents(input.capturedCents));
 }
+
+/**
+ * Money actually secured behind an order, in cents.
+ *
+ * Checkout holds; intake captures. Until the shop counts the bag the row is
+ * 'authorized' with the hold in authorized_cents and captured_cents at its
+ * schema default of 0 — not null, so `captured_cents ?? authorized_cents`
+ * never fell through and every held order read as "0c was taken". That one
+ * expression refused to dispatch a courier for every booking made through the
+ * app from 2026-08-18 (when checkout became a hold) until this landed. Read
+ * the column that matches the status instead of hoping the other is null.
+ */
+export function fundsSecuredCents(payment: {
+  status: string;
+  captured_cents?: number | null;
+  authorized_cents?: number | null;
+}): number {
+  if (payment.status === 'captured') return payment.captured_cents ?? 0;
+  if (payment.status === 'authorized') return payment.authorized_cents ?? 0;
+  return 0;
+}

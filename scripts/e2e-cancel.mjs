@@ -40,11 +40,14 @@ async function makeOrder() {
     address_id: address.id,
     status: 'scheduled',
     estimate_subtotal_cents: 0,
-    delivery_fee_cents: 1995,
+    delivery_fee_cents: 1695,
     // Case 2 cancels a courier mid-flight, so the fixture has to be a tier that
     // gets one. return_only never has a pickup leg — the dispatcher refuses it
     // outright now, which used to look like a cancellation bug in this script.
     service_tier: 'pickup_only',
+    // The dispatcher refuses a leg with no window to dispatch into.
+    pickup_window_start: new Date().toISOString(),
+    pickup_window_end: new Date(Date.now() + 2 * 3600_000).toISOString(),
   }).select('id, short_code').single();
   return data;
 }
@@ -72,8 +75,8 @@ console.log('\nCASE 2  cancel after a courier is dispatched');
     kind: 'primary',
     provider: 'stripe',
     status: 'captured',
-    authorized_cents: 1995,
-    captured_cents: 1995,
+    authorized_cents: 1695,
+    captured_cents: 1695,
     provider_intent_ref: `pi_test_${order.short_code}`,
   });
 

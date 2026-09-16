@@ -69,10 +69,14 @@ console.log(`\norder ${order.short_code} (${order.id})\n`);
 // in for a completed PaymentSheet on the device.
 console.log('CHECKOUT  pay the delivery fee');
 const intent = await post(`/v1/orders/${order.id}/payment-intent`);
-check('intent created for the delivery fee', intent.amountCents, order.delivery_fee_cents);
+// The intent re-pins the fee from the real route, so read back what it wrote
+// rather than the flat number the fixture was seeded with.
+const { data: pinned } = await db.from('orders').select('delivery_fee_cents').eq('id', order.id).single();
+check('intent matches the pinned delivery fee', intent.amountCents, pinned.delivery_fee_cents);
+check('fee is at least the published floor', intent.amountCents >= order.delivery_fee_cents, true);
 check('client secret returned', Boolean(intent.clientSecret), true);
 
-await db.from('payments').update({ status: 'captured', captured_cents: order.delivery_fee_cents })
+await db.from('payments').update({ status: 'captured', captured_cents: intent.amountCents })
   .eq('order_id', order.id).eq('kind', 'primary');
 
 // --- leg 1: customer -> cleaner ------------------------------------------
