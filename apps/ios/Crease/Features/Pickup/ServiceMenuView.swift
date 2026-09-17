@@ -92,6 +92,12 @@ struct ServiceMenuView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                // On a tab change only. The first fill happens when the shop's
+                // price list lands, in BookPickupView — writing it from this
+                // sheet's `onAppear` mutates state the presenting screen owns
+                // in the middle of its own update pass, which SwiftUI resolves
+                // by rebuilding both views repeatedly before it settles.
+                .onChange(of: kind) { prefillMinimum() }
 
                 total
             }
@@ -156,16 +162,33 @@ struct ServiceMenuView: View {
                 Text(entered > 0 ? enteredLabel(item, entered) : "—")
                     .font(.subheadline.weight(.semibold).monospacedDigit())
                     .foregroundStyle(entered > 0 ? Theme.accent : .secondary)
+                // A pound at a time above the floor, and straight to the floor
+                // from nothing: the values in between all bill the same, so
+                // stepping through them one tap at a time is nine taps that
+                // change no price. Written with increment/decrement closures
+                // rather than a range because that first step is a different
+                // size from the rest, which `Stepper(value:in:step:)` cannot
+                // express.
                 Stepper(
                     "",
-                    value: Binding(
-                        get: { quantities[item.id] ?? 0 },
-                        set: { quantities[item.id] = max(0, $0) }
-                    ),
-                    // A pound at a time. Nobody knows their laundry to the
-                    // ounce, and the scale at the shop is what settles it.
-                    in: 0...(item.isByWeight ? 200 : 99),
-                    step: 1
+                    // nil where the range runs out, which is how a Stepper is
+                    // told to grey that half out — the bounds used to come from
+                    // `in:` and have to keep being visible.
+                    onIncrement: entered < ceiling(item)
+                        ? {
+                            let next = entered <= 0 ? ServicePricing.startingUnits(item) : entered + 1
+                            quantities[item.id] = min(next, ceiling(item))
+                        }
+                        : nil,
+                    onDecrement: entered > 0
+                        ? {
+                            // Below the floor is not a cheaper order, it is the
+                            // same order priced as the floor. So the step under
+                            // it is out, and the one below that is empty.
+                            let next = entered - 1
+                            quantities[item.id] = next < ServicePricing.startingUnits(item) ? 0 : next
+                        }
+                        : nil
                 )
                 .labelsHidden()
             }
@@ -177,6 +200,14 @@ struct ServiceMenuView: View {
                 Text("\(shopName) has a \(unitsLabel(item.minimumUnits)) lb minimum, so this bills as \(unitsLabel(ServicePricing.billableUnits(item, entered: entered))) lb.")
                     .font(.caption2)
                     .foregroundStyle(.orange)
+            } else if entered == ServicePricing.startingUnits(item), item.minimumUnits > 0 {
+                // Why the line already has a number in it. A count nobody
+                // typed needs saying, or it reads as the app having decided how
+                // much laundry they have — and the floor is the one weight it
+                // can state without guessing.
+                Text("That's \(shopName)'s minimum, so it's where this starts. Add pounds if your bag is bigger.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 2)
@@ -208,6 +239,28 @@ struct ServiceMenuView: View {
         .background(.regularMaterial)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Estimated cleaning \(subtotal.asMoney), courier fee charged separately")
+    }
+
+    /// The most this line will take. Two hundred pounds is a laundromat run,
+    /// ninety-nine garments is a wardrobe; past either, the number is a typo.
+    private func ceiling(_ item: ServiceItem) -> Double { item.isByWeight ? 200 : 99 }
+
+    /// Open a weighed service at the shop's minimum instead of at nothing.
+    ///
+    /// A 10 lb floor means the bag is billed at 10 lb however light it is, so
+    /// zero is not a real starting point — it is $0.00 shown for an order that
+    /// cannot cost less than $20, above a stepper the customer has to tap ten
+    /// times before the screen says anything true. Starting at the floor states
+    /// the real opening price and leaves the tapping to people whose bag is
+    /// bigger than that. What counts as openable is decided in one place, next
+    /// to the pricing it is about.
+    private func prefillMinimum() {
+        guard let line = ServicePricing.lineToOpenAtMinimum(
+            menu: menu,
+            serviceType: kind.rawValue,
+            entered: quantities
+        ) else { return }
+        quantities[line.id] = line.minimumUnits
     }
 
     private func priceLine(_ item: ServiceItem) -> String {

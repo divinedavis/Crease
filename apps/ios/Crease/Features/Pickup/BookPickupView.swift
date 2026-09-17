@@ -235,6 +235,20 @@ struct BookPickupView: View {
                let first = ServiceKind.allCases.first(where: { k in menu.contains { $0.serviceType == k.rawValue } }) {
                 serviceKind = first
             }
+            // Laundry opens at the shop's own weight floor rather than at
+            // nothing: under the minimum every weight bills the minimum, so a
+            // line sitting at zero quotes $0.00 for a bag that cannot cost less
+            // than the floor, and asks the customer to discover the floor in
+            // the small print and dial it in by hand on every order. Set here,
+            // where the price list arrives, because this is the one spot
+            // outside a view update that knows both the menu and the bag.
+            if let line = ServicePricing.lineToOpenAtMinimum(
+                menu: menu,
+                serviceType: serviceKind.rawValue,
+                entered: quantities
+            ) {
+                quantities[line.id] = line.minimumUnits
+            }
         }
     }
 

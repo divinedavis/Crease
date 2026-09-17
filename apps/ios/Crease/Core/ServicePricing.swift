@@ -56,6 +56,40 @@ enum ServicePricing {
         max(0, cleaningCents) + max(0, fixedCents)
     }
 
+    /// The count a line starts at once it is in the bag at all.
+    ///
+    /// The shop's own floor, where it has one. Under a 10 lb minimum every
+    /// weight bills the same $20, so a stepper starting at zero spends its
+    /// first nine taps moving a number that changes no price — and a line left
+    /// at a dash asks every customer to find the floor in the small print and
+    /// dial it in by hand, on every order. The floor is the only opening value
+    /// that is both honest about the bill and useful as a place to start.
+    static func startingUnits(_ item: ServiceItem) -> Double {
+        item.minimumUnits > 0 ? item.minimumUnits : 1
+    }
+
+    /// The line to open at the shop's floor, when there is exactly one to open.
+    ///
+    /// Two guards, both about not putting things in somebody's bag:
+    ///
+    /// - only when nothing is counted anywhere, so tapping another service tab
+    ///   to see what it costs never fills the bag (that clash is the conflict
+    ///   banner's whole subject, and it must not be one this screen invented);
+    /// - only when the service has one weighed line, because with two the floor
+    ///   is not one number and prefilling both books two bags nobody asked for.
+    static func lineToOpenAtMinimum(
+        menu: [ServiceItem],
+        serviceType: String,
+        entered: [UUID: Double]
+    ) -> ServiceItem? {
+        guard menu.allSatisfy({ (entered[$0.id] ?? 0) <= 0 }) else { return nil }
+        let weighed = menu.filter {
+            $0.serviceType == serviceType && $0.isByWeight && $0.minimumUnits > 0
+        }
+        guard weighed.count == 1 else { return nil }
+        return weighed.first
+    }
+
     /// Whether the weight floor — not the bag — is setting this line's price.
     /// The screen says so where it happens, because "why is 8 lb $33.75" is a
     /// question best answered before it is asked.

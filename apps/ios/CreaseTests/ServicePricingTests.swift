@@ -60,6 +60,20 @@ final class ServicePricingTests: XCTestCase {
         XCTAssertEqual(ServicePricing.subtotalCents(lines), 3915 + 1571)
     }
 
+    func testAWeighedLineStartsAtTheShopsFloorAndTheOneBelowItIsEmpty() {
+        // The stepper's first tap lands on the minimum rather than on 1 lb:
+        // every weight under the floor bills the floor, so the nine values in
+        // between are the same $33.75 typed nine different ways.
+        XCTAssertEqual(ServicePricing.startingUnits(wash), 15)
+        XCTAssertEqual(
+            ServicePricing.lineTotalCents(wash, entered: ServicePricing.startingUnits(wash)),
+            ServicePricing.lineTotalCents(wash, entered: 1),
+            "if these ever differ, the floor is no longer the cheapest real order"
+        )
+        // And a service sold by the piece still counts from one.
+        XCTAssertEqual(ServicePricing.startingUnits(shirt), 1)
+    }
+
     func testGarbageInputCannotBecomeACharge() {
         XCTAssertEqual(ServicePricing.billableUnits(wash, entered: .nan), 0)
         XCTAssertEqual(ServicePricing.billableUnits(wash, entered: -5), 0)
