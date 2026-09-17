@@ -130,17 +130,28 @@ final class OrderStore: ObservableObject {
     ///
     /// Scoped by RLS rather than by a filter — `profiles_self` is `id =
     /// auth.uid()`, so this select can only ever return one row, and asking for
-    /// it by id would be belt on top of the braces. Failure is silent because
-    /// nothing on screen depends on it: the phone row simply reads "Add a phone
-    /// number", which is the honest thing to show when we do not have one.
+    /// it by id would be belt on top of the braces.
+    ///
+    /// A failed fetch leaves whatever we already had. `try?` into `?? []` used
+    /// to flatten a dropped connection into an empty result and write nil over
+    /// a profile that had loaded fine a minute earlier — so checkout, which
+    /// refetches every time it opens, answered one bad round trip by forgetting
+    /// the customer's phone number and asking for it again. An empty result
+    /// that the server actually returned is still authoritative: it is what
+    /// signing out looks like.
     func loadProfile() async {
-        let rows: [Profile] = (try? await client
-            .from("profiles")
-            .select("id, full_name, phone")
-            .limit(1)
-            .execute()
-            .value) ?? []
-        profile = rows.first
+        do {
+            let rows: [Profile] = try await client
+                .from("profiles")
+                .select("id, full_name, phone")
+                .limit(1)
+                .execute()
+                .value
+            profile = rows.first
+        } catch {
+            Logger(subsystem: "com.divinedavis.crease", category: "orders")
+                .error("loadProfile failed: \(String(describing: error), privacy: .public)")
+        }
     }
 
     /// Save the number a courier dials from the doorstep.
@@ -162,9 +173,19 @@ final class OrderStore: ObservableObject {
 
         struct Patch: Encodable { let phone: String }
         do {
+            // Filtered by the customer's own id, and not because RLS needs the
+            // help — `profiles_self` already scopes this to one row. PostgREST
+            // refuses an UPDATE that carries no WHERE clause at all (error
+            // 21000), so the unfiltered version of this call never wrote
+            // anything: every number anyone typed came back "Couldn't save that
+            // number", and the courier rows stayed on "Add a phone number"
+            // forever. The policy is still what decides whose row this is — an
+            // id belonging to somebody else matches nothing.
+            let userId = try await client.auth.session.user.id
             let saved: Profile = try await client
                 .from("profiles")
                 .update(Patch(phone: e164))
+                .eq("id", value: userId)
                 .select("id, full_name, phone")
                 .single()
                 .execute()

@@ -471,6 +471,139 @@ final class CreaseUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
+    /// A weighed service opens at the shop's floor, not at nothing.
+    ///
+    /// Laundry is sold with a minimum, and under that minimum every weight
+    /// bills the same — so a line sitting at "—" showed $0.00 for an order that
+    /// could not cost less than the floor, and asked the customer to tap the
+    /// stepper ten times before the screen said anything true. The prefilled
+    /// floor is the first number that is both honest and useful, and this is
+    /// the assertion that keeps it there.
+    func testAWeighedServiceOpensAtTheShopsMinimum() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        let serviceRow = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Wash & fold' OR label CONTAINS 'Choose what'"))
+            .firstMatch
+        guard serviceRow.waitForExistence(timeout: 15) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+        serviceRow.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+
+        guard app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'minimum'")).firstMatch
+            .waitForExistence(timeout: 5) else {
+            app.buttons["Done"].tap()
+            throw XCTSkip("this shop sells nothing with a weight floor; nothing to prefill")
+        }
+
+        // Read off the running total rather than the stepper: what matters is
+        // that the sheet opens quoting the real opening price of this bag.
+        //
+        // The total is one combined accessibility element, and which type it
+        // reports as is not ours to decide — so both are asked, by type.
+        // `descendants(matching: .any)` would find it either way and re-snapshot
+        // the entire application on every retry doing it, which turned a
+        // 25-second test into an eight-minute one.
+        let quoted = NSPredicate(format: "label BEGINSWITH 'Estimated cleaning'")
+        let estimate = [app.staticTexts.matching(quoted), app.otherElements.matching(quoted)]
+            .map(\.firstMatch)
+            .first { $0.waitForExistence(timeout: 5) }
+        guard let estimate else { return XCTFail("the sheet must total the bag") }
+        XCTAssertFalse(
+            estimate.label.contains("$0.00"),
+            "a weighed service has to open at its minimum, not at nothing"
+        )
+        attach(app, "service-menu-opens-at-minimum")
+
+        app.buttons["Done"].tap()
+    }
+
+    /// A phone number, once given, is still there next time.
+    ///
+    /// It is saved to the profile rather than to the order precisely so it is
+    /// asked for once — and the write went out with no WHERE clause, which
+    /// PostgREST refuses outright (21000), so every number anyone typed came
+    /// back "Couldn't save that number" and the row read "Add a phone number"
+    /// forever. Asserted after leaving the screen and coming back, because
+    /// in-memory state would have passed this while nothing was stored.
+    func testAContactNumberIsRememberedAfterLeavingCheckout() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        guard pickFirstGarment(in: app) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 15))
+        proceed.tap()
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
+
+        // A 555-01xx number: reserved for fiction, so a test account that ends
+        // up in a carrier's hands dials nobody real.
+        let typed = "5555550142"
+        let shown = "(555) 555-0142"
+
+        let phoneRow = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'phone number' OR label CONTAINS '(555)'"))
+            .firstMatch
+        XCTAssertTrue(phoneRow.waitForExistence(timeout: 10), "checkout must ask for a contact number")
+        phoneRow.tap()
+        XCTAssertTrue(app.navigationBars["Phone number"].waitForExistence(timeout: 5))
+
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        // Whatever is already stored has to go, or the new digits land on the
+        // end of it and the save is refused for length. Deleted character by
+        // character rather than through Select All, which a number pad does not
+        // offer.
+        if let existing = field.value as? String, !existing.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
+        field.typeText(typed)
+        app.buttons["Save"].tap()
+
+        let saved = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS %@", shown)).firstMatch
+        XCTAssertTrue(
+            saved.waitForExistence(timeout: 10),
+            "the number has to come back from the server, not just out of the sheet"
+        )
+
+        // Leave checkout entirely and come back: the row is rebuilt from a
+        // fresh fetch, which is the half that was broken.
+        app.buttons["Back"].firstMatch.tap()
+        XCTAssertTrue(proceed.waitForExistence(timeout: 10))
+        proceed.tap()
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            saved.waitForExistence(timeout: 10),
+            "a saved contact number must survive leaving the screen"
+        )
+        attach(app, "checkout-remembers-phone")
+    }
+
     /// Looking at the laundry prices must not empty the bag.
     ///
     /// An order carries one service type, and that was enforced by clearing
