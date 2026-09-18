@@ -452,6 +452,14 @@ export class UberDirectProvider implements DeliveryProvider {
         const parsed = JSON.parse(text);
         code = parsed.code ?? parsed.kind;
         message = parsed.message ?? text;
+        // Uber's top-level message is a category, not a reason:
+        // invalid_params says "The parameters of your request were invalid"
+        // whether a field is misspelled or the whole account is switched off.
+        // The reason is in metadata.param_details — "This account has been
+        // disabled. Please reach out to directbilling-group@uber.com" read as
+        // field-name drift for as long as nobody opened the envelope.
+        const detail = parsed.metadata?.param_details;
+        if (detail && detail !== message) message = `${message} (${detail})`;
       } catch {
         /* non-JSON error body; keep the raw text */
       }
