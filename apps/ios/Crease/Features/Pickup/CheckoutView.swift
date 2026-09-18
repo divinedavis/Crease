@@ -439,7 +439,17 @@ struct CheckoutView: View {
                         detail: scheduledPickup.map { atText($0) }
                             ?? "Earliest \(timeText(earliestSchedulable))",
                         isOn: scheduledPickup != nil
-                    ) { scheduling = true }
+                    ) {
+                        // Re-anchor the clock on the way in. `quotedAt` is
+                        // fixed at appear so the quoted window cannot creep
+                        // between redraws, but a checkout left open for half an
+                        // hour then offers a slot barely twenty minutes out —
+                        // and the carrier wants an hour's notice on a scheduled
+                        // pickup. A tap is not a redraw, so this is the one
+                        // place the clock is allowed to move.
+                        quotedAt = Date()
+                        scheduling = true
+                    }
                 }
             } else {
                 // Return-only. The clothes are at the shop; when they come home
