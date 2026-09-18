@@ -12,12 +12,15 @@ just re-states the listing.
     python3 scripts/asc-metadata.py            # apply
     python3 scripts/asc-metadata.py --show     # print what is there now
 
-Two things Apple does NOT expose over the API and which therefore have to be
+One thing Apple does NOT expose over the API, and which therefore has to be
 done in the browser:
 
   * App Privacy (the data-collection questionnaire). There is no
     appDataUsages resource on v1 — every path 404s with PATH_ERROR.
-  * Submitting the version for review.
+
+Submitting for review IS scriptable, despite what this said until 2026-09-18:
+`python3 scripts/asc.py submit`. Review attachments too, one per version:
+`python3 scripts/asc-review-attachments.py apply`.
 
 The demo-account password is read from the login keychain, never stored here:
 

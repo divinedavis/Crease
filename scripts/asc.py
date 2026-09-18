@@ -13,6 +13,7 @@ after a partial failure resumes rather than duplicating.
     python3 scripts/asc.py setup       # register bundle id + create app record
     python3 scripts/asc.py builds      # TestFlight build processing state
     python3 scripts/asc.py attach 39   # point the App Store version at a build
+    python3 scripts/asc.py submit      # send the version to App Review
 """
 from __future__ import annotations
 
@@ -316,12 +317,71 @@ def cmd_attach(asc: ASC, cfg: dict):
     print("the placeholder icon in App Store Connect should now be the real one")
 
 
+def cmd_submit(asc: ASC, cfg: dict):
+    """Send the editable App Store version to App Review.
+
+        python3 scripts/asc.py submit
+
+    A rejected submission cannot simply be pushed again. Its state is
+    UNRESOLVED_ISSUES, and from there the API refuses every move that would
+    reuse it: PATCH submitted=true answers "Version is not ready to be
+    submitted yet" for as long as you care to retry, adding the re-prepared
+    version as an item is "state does not allow adding more items", and
+    deleting the rejected item is "Item was already submitted". The dashboard's
+    "Resubmit to App Review" button is not doing any of those. What works is to
+    cancel the old submission and make a new one — which is what this does.
+
+    Attaching a fresh build is what takes the version itself out of REJECTED,
+    so run `attach` first or there is nothing submittable here.
+    """
+    app_id = cfg["ASC_APP_ID"]
+
+    versions = asc.get(f"/apps/{app_id}/appStoreVersions", limit=10)["data"]
+    editable = [v for v in versions
+                if v["attributes"]["appStoreState"] in
+                ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED")]
+    if not editable:
+        raise SystemExit("no version in a submittable state — has one already been sent?")
+    version = editable[0]
+
+    for sub in asc.get("/reviewSubmissions", **{"filter[app]": app_id, "limit": 10})["data"]:
+        if sub["attributes"]["state"] in ("COMPLETE", "CANCELING"):
+            continue
+        print(f"cancelling submission {sub['id'][:8]} ({sub['attributes']['state']})")
+        asc.patch(f"/reviewSubmissions/{sub['id']}",
+                  {"data": {"type": "reviewSubmissions", "id": sub["id"],
+                            "attributes": {"canceled": True}}})
+        # CANCELING is not cancelled: a new submission raised against a version
+        # the old one still holds is refused.
+        for _ in range(20):
+            time.sleep(15)
+            state = asc.get(f"/reviewSubmissions/{sub['id']}")["data"]["attributes"]["state"]
+            if state != "CANCELING":
+                break
+        print(f"  now {state}")
+
+    created = asc.post("/reviewSubmissions", {
+        "data": {"type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+                 "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
+    asc.post("/reviewSubmissionItems", {
+        "data": {"type": "reviewSubmissionItems",
+                 "relationships": {
+                     "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": created["id"]}},
+                     "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version["id"]}}}}})
+
+    done = asc.patch(f"/reviewSubmissions/{created['id']}", {
+        "data": {"type": "reviewSubmissions", "id": created["id"],
+                 "attributes": {"submitted": True}}})["data"]
+    print(f"submitted version {version['attributes']['versionString']} — "
+          f"{done['attributes']['state']}")
+
+
 def main():
     cfg = load_config()
     asc = ASC(cfg)
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     {"status": cmd_status, "setup": cmd_setup, "builds": cmd_builds,
-     "attach": cmd_attach}[cmd](asc, cfg)
+     "attach": cmd_attach, "submit": cmd_submit}[cmd](asc, cfg)
 
 
 if __name__ == "__main__":
