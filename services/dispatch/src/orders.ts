@@ -825,7 +825,10 @@ export class OrderService {
   private async stampReadyEstimate(orderId: string, arrivedAt?: string) {
     const { data: order, error } = await this.db
       .from('orders')
-      .select('cleaner:cleaners(turnaround_hours)')
+      .select(
+        `cleaner:cleaners(turnaround_hours),
+         order_items(service_item:service_items(turnaround_hours))`,
+      )
       .eq('id', orderId)
       .maybeSingle();
     if (error || !order) {
@@ -833,13 +836,24 @@ export class OrderService {
       return;
     }
 
-    // The shop's own speed, and nothing finer: what is actually in the bag is
-    // not known until somebody counts it, which is what refines this later.
-    const hours = (order as any).cleaner?.turnaround_hours;
-    const estimate = readyAtFrom(
-      arrivedAt ?? new Date().toISOString(),
-      hours ?? DEFAULT_TURNAROUND_HOURS,
-    );
+    // What the customer said is in the bag, which they said at booking — the
+    // lines are written with the order, hours before it reaches a counter.
+    // This used to take the shop's blanket speed and nothing finer, on the
+    // grounds that nobody knows what is in a bag until it is counted. But the
+    // customer does, and they already told us: a declared wash & fold is two
+    // hours, against a shop default of two days that exists for dry cleaning.
+    // Every laundry order therefore spent the whole trip promising Thursday
+    // for something ready that afternoon, and only corrected itself when the
+    // counter got to it.
+    //
+    // The count still overrides this — refineReadyEstimate runs at intake off
+    // the same column, and the shop's number is the one that settles it.
+    const declared = ((order as any).order_items ?? []) as any[];
+    const shopHours = (order as any).cleaner?.turnaround_hours;
+    const hours = declared.length
+      ? longestTurnaroundHours(declared.map((i) => i.service_item), shopHours)
+      : shopHours ?? DEFAULT_TURNAROUND_HOURS;
+    const estimate = readyAtFrom(arrivedAt ?? new Date().toISOString(), hours);
     await this.db.from('orders').update({ estimated_ready_at: estimate }).eq('id', orderId);
     this.log.info({ orderId, estimatedReadyAt: estimate, hours }, 'ready estimate set on arrival');
   }
