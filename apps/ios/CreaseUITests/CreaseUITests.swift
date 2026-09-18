@@ -28,8 +28,12 @@ final class CreaseUITests: XCTestCase {
         }
     }
 
-    private func launch(signedIn: Bool) -> XCUIApplication {
+    private func launch(signedIn: Bool, walletEmpty: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
+        // Stand in for a device with no card in Wallet. The simulators ship
+        // with one, and a card can only be added or removed through Wallet's
+        // own UI, so the state App Review reviews from is otherwise untestable.
+        if walletEmpty { app.launchArguments += ["-uiTestWalletEmpty"] }
         if !signedIn {
             // Explicit, because the keychain session survives reinstall and
             // would otherwise carry over from a signed-in test.
@@ -858,6 +862,64 @@ final class CreaseUITests: XCTestCase {
             "the hold must be explained before the card is taken, not after"
         )
         attach(app, "checkout-money")
+    }
+
+    /// Apple Pay is visible on a device with no card in Wallet.
+    ///
+    /// Version 1.0 was rejected twice under guideline 2.1 — "the app binary
+    /// includes the PassKit framework ... we were unable to verify any
+    /// integration of Apple Pay" — because the checkout asked PassKit whether a
+    /// card was provisioned and, on the review iPad, hid every trace of Apple
+    /// Pay when the answer was no. Review notes cannot fix that: they described
+    /// a row the reviewer's device was never going to show.
+    ///
+    /// Run against a checkout told it has no card in Wallet, which is the
+    /// review device: if Apple Pay can be found here, so can App Review.
+    func testApplePayIsOfferedOnADeviceWithNoWalletCard() throws {
+        let app = launch(signedIn: true, walletEmpty: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        guard pickFirstGarment(in: app) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 15))
+        proceed.tap()
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
+
+        app.swipeUp()
+        let paymentRow = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Apple Pay'")).firstMatch
+        XCTAssertTrue(
+            paymentRow.waitForExistence(timeout: 10),
+            "checkout must name Apple Pay even with no card in Wallet — App Review's device has none"
+        )
+        attach(app, "checkout-apple-pay-row")
+
+        paymentRow.tap()
+        XCTAssertTrue(app.navigationBars["Payment"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Apple Pay'")).firstMatch.exists,
+            "the payment sheet has to say Apple Pay is taken"
+        )
+        // PassKit's own control, which is the part a reviewer can recognise
+        // without taking anyone's word for it.
+        XCTAssertTrue(
+            app.buttons["Set up Apple Pay"].waitForExistence(timeout: 5),
+            "a device with no Wallet card must be offered Apple Pay setup"
+        )
+        attach(app, "payment-methods-apple-pay-setup")
+        app.buttons["Done"].tap()
     }
 
     private func placeOrderButton(_ app: XCUIApplication) -> XCUIElement {

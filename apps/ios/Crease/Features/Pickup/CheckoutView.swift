@@ -170,7 +170,7 @@ struct CheckoutView: View {
             .presentationDetents([.medium])
         }
         .sheet(isPresented: $explainingPayment) {
-            PaymentMethodsView(walletAvailable: walletAvailable)
+            PaymentMethodsView(walletSupported: walletSupported, walletReady: walletReady)
                 .presentationDetents([.medium])
         }
     }
@@ -626,20 +626,50 @@ struct CheckoutView: View {
 
     // MARK: - Payment
 
-    /// Whether this device can actually pay with a wallet. Asked of PassKit
-    /// rather than assumed: a row promising Apple Pay to a phone with no card
-    /// set up is a row that lies about what the next tap does.
-    private var walletAvailable: Bool {
-        PKPaymentAuthorizationController.canMakePayments(
+    /// Whether this device does Apple Pay at all — the hardware and the OS,
+    /// before any question of cards.
+    ///
+    /// Separate from `walletReady` on purpose, and the distinction is what got
+    /// version 1.0 rejected twice under guideline 2.1: PassKit is in the
+    /// binary, the review iPad had no card in Wallet, so every trace of Apple
+    /// Pay was hidden and the reviewer could not verify an integration that is
+    /// genuinely there. A device that supports Apple Pay is told so — with the
+    /// setup button Apple documents for exactly this state — instead of being
+    /// shown a card icon and nothing else.
+    private var walletSupported: Bool {
+        PKPaymentAuthorizationController.canMakePayments()
+    }
+
+    /// Whether this device can actually pay with a wallet right now. Asked of
+    /// PassKit rather than assumed: a row promising Apple Pay to a phone with
+    /// no card set up is a row that lies about what the next tap does.
+    private var walletReady: Bool {
+        #if DEBUG
+        // The state App Review's device was in, which no simulator can be put
+        // into from the outside: Wallet cards are added through Wallet's own
+        // UI, and the simulators ship with one. Same shape as the session
+        // injection in Session.swift — a DEBUG-only launch argument, so the
+        // build that goes to Apple has no such path in it at all.
+        if ProcessInfo.processInfo.arguments.contains("-uiTestWalletEmpty") { return false }
+        #endif
+        return PKPaymentAuthorizationController.canMakePayments(
             usingNetworks: [.visa, .masterCard, .amex, .discover]
         )
+    }
+
+    /// What the row calls the payment method, in the three states PassKit
+    /// actually has: a wallet ready to pay, a wallet that could be, and a
+    /// device that has none.
+    private var paymentRowTitle: String {
+        if walletReady { return "Apple Pay" }
+        return walletSupported ? "Apple Pay or card" : "Card"
     }
 
     private var paymentRow: some View {
         Button { explainingPayment = true } label: {
             HStack(spacing: 12) {
                 Group {
-                    if walletAvailable {
+                    if walletSupported {
                         HStack(spacing: 1) {
                             Image(systemName: "applelogo").font(.system(size: 11, weight: .medium))
                             Text("Pay").font(.system(size: 12, weight: .semibold))
@@ -655,8 +685,17 @@ struct CheckoutView: View {
                         .fill(Color(.tertiarySystemFill))
                 )
 
-                Text(walletAvailable ? "Apple Pay" : "Card")
-                    .font(.body.weight(.medium))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(paymentRowTitle)
+                        .font(.body.weight(.medium))
+                    // Only in the middle state, where the title alone would
+                    // promise a sheet this device cannot open yet.
+                    if walletSupported && !walletReady {
+                        Text("No card in Wallet yet — set it up, or pay by card")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Spacer(minLength: 8)
 
@@ -1020,15 +1059,27 @@ struct SchedulePickupView: View {
 /// cannot keep.
 struct PaymentMethodsView: View {
     @Environment(\.dismiss) private var dismiss
-    let walletAvailable: Bool
+    /// This device does Apple Pay; whether it has a card in Wallet yet.
+    let walletSupported: Bool
+    let walletReady: Bool
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
-                Text(walletAvailable
-                     ? "Tap Place Order and Apple Pay opens first — one authentication, no card to type. A card or bank account can be chosen from the same sheet."
-                     : "Tap Place Order and a secure sheet opens where you can enter a card. Apple Pay isn't set up on this device.")
+                Text(explainer)
                     .font(.subheadline)
+
+                // The middle state gets Apple's own setup button rather than a
+                // sentence about Wallet. It is the control Apple documents for
+                // a device that supports Apple Pay and has no card on it, and
+                // it is the one thing on this screen that proves the
+                // integration without asking anyone to go and provision a card
+                // first — which is precisely what App Review could not do.
+                if walletSupported && !walletReady {
+                    SetUpApplePayButton()
+                        .frame(height: 48)
+                        .accessibilityLabel("Set up Apple Pay")
+                }
 
                 Label("Crease never sees or stores your card. It goes straight to Stripe.", systemImage: "lock.shield")
                     .font(.footnote)
@@ -1046,5 +1097,39 @@ struct PaymentMethodsView: View {
                 }
             }
         }
+    }
+
+    private var explainer: String {
+        if walletReady {
+            return "Tap Place Order and Apple Pay opens first — one authentication, no card to type. A card or bank account can be chosen from the same sheet."
+        }
+        if walletSupported {
+            return "Crease takes Apple Pay, and this device supports it but has no card in Wallet yet. Add one below and Apple Pay opens first at checkout. Either way, tapping Place Order opens a secure sheet where a card can be entered instead."
+        }
+        return "Tap Place Order and a secure sheet opens where you can enter a card. This device doesn't support Apple Pay."
+    }
+}
+
+/// Apple's own "Set up Apple Pay" button, which opens Wallet.
+///
+/// PassKit's, not a drawing of one: `PKPaymentButton` with the `.setUp` type is
+/// what Apple specifies for a device that can do Apple Pay but has no card, and
+/// a hand-rolled lookalike is both against the guidelines and the sort of thing
+/// a reviewer discounts. SwiftUI's `PayWithApplePayButton` only covers the pay
+/// case, so this is the UIKit control.
+private struct SetUpApplePayButton: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> PKPaymentButton {
+        let button = PKPaymentButton(paymentButtonType: .setUp, paymentButtonStyle: .automatic)
+        button.cornerRadius = 12
+        button.addTarget(context.coordinator, action: #selector(Coordinator.open), for: .touchUpInside)
+        return button
+    }
+
+    func updateUIView(_ uiView: PKPaymentButton, context: Context) {}
+
+    final class Coordinator: NSObject {
+        @objc func open() { PKPassLibrary().openPaymentSetup() }
     }
 }
