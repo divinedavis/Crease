@@ -31,8 +31,9 @@ struct CheckoutView: View {
     @Binding var pickup: ResolvedAddress
     @Binding var dropoffNotes: String
     @Binding var cleaner: Cleaner?
-    /// Which tier this is. The Delivery/Pickup control writes it, so the fee
-    /// and the total below recompute as it is tapped.
+    /// Which tier this is. Chosen on the booking screen; checkout only reads
+    /// it. A Delivery/Pickup toggle used to live here, but it duplicated that
+    /// choice and read as a control that did nothing.
     @Binding var selected: ServiceOption
     @Binding var serviceKind: ServiceKind
     @Binding var quantities: [UUID: Double]
@@ -91,7 +92,6 @@ struct CheckoutView: View {
             ScrollView {
                 VStack(spacing: 18) {
                     if let errorMessage { errorBanner(errorMessage) }
-                    if offersModeChoice { modeToggle }
                     mapCard
                     detailsCard
                     timeSection
@@ -207,73 +207,6 @@ struct CheckoutView: View {
             .padding(12)
             .background(Theme.danger.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    // MARK: - Delivery / Pickup
-
-    /// The two tiers this control switches between: we bring the finished order
-    /// home, or you collect it from the shop's counter.
-    private var deliveryOption: ServiceOption? { ServiceOption.all.first { $0.id == "round_trip" } }
-    private var pickupOption: ServiceOption? { ServiceOption.all.first { $0.id == "pickup_only" } }
-
-    /// Hidden on return-only. That tier exists because the clothes are already
-    /// at the shop and already paid for, so there is no second way to run it —
-    /// offering a choice there would be offering to un-drop-off a bag.
-    private var offersModeChoice: Bool {
-        selected.id != "return_only" && deliveryOption != nil && pickupOption != nil
-    }
-
-    private var modeToggle: some View {
-        HStack(spacing: 0) {
-            if let deliveryOption {
-                modeHalf(deliveryOption, title: "Delivery")
-            }
-            if let pickupOption {
-                modeHalf(pickupOption, title: "Pickup")
-            }
-        }
-        .padding(4)
-        .background(Color(.secondarySystemBackground), in: Capsule())
-        // The badge names the reason someone would pick the other half, and it
-        // is a fact rather than a nudge: one courier leg genuinely costs less
-        // than two. Anchored to the cheaper tier by arithmetic, so it cannot
-        // end up sitting over the dearer one if the price sheet moves.
-        .overlay(alignment: cheaperIsPickup ? .topTrailing : .topLeading) {
-            Text("Lower Fees")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Theme.accent)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Color(.systemBackground), in: Capsule())
-                .overlay(Capsule().stroke(Theme.accent.opacity(0.45), lineWidth: 1))
-                .padding(.horizontal, 26)
-                .offset(y: -13)
-                .accessibilityHidden(true)
-        }
-        .padding(.top, 8)
-    }
-
-    private var cheaperIsPickup: Bool {
-        (pickupOption?.priceCents ?? .max) <= (deliveryOption?.priceCents ?? .max)
-    }
-
-    private func modeHalf(_ option: ServiceOption, title: String) -> some View {
-        let isOn = selected.id == option.id
-        return Button {
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) { selected = option }
-        } label: {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isOn ? .white : .primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
-                .background(isOn ? Theme.accent : .clear, in: Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(working)
-        .accessibilityAddTraits(isOn ? [.isSelected] : [])
-        .accessibilityLabel("\(title). \(option.blurb). \(option.priceCents.asMoney)")
     }
 
     // MARK: - Map

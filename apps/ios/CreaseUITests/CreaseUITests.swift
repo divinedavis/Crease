@@ -777,10 +777,10 @@ final class CreaseUITests: XCTestCase {
     ///
     /// It used to be a receipt: every choice on it — the tier, the door, the
     /// bag, the shop — could only be corrected by backing out to the booking
-    /// screen, which discards the draft that was built. This drives the two
-    /// choices that move money and time, because a control that looks live and
-    /// changes nothing is worse than no control at all.
-    func testCheckoutRepricesWhenTheTierIsSwitched() throws {
+    /// screen, which discards the draft that was built. This drives the time
+    /// choice and checks the tier is not re-offered: the tier is picked on the
+    /// booking screen, and a second toggle here read as a dead control.
+    func testCheckoutOffersTimeWithoutReofferingTheTier() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
         app.buttons["Book a pickup"].tap()
@@ -804,35 +804,16 @@ final class CreaseUITests: XCTestCase {
         proceed.tap()
         XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
 
-        // Both halves of the control, each carrying the price it would charge.
-        let delivery = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH 'Delivery.'")).firstMatch
-        let pickup = app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH 'Pickup.'")).firstMatch
-        XCTAssertTrue(delivery.waitForExistence(timeout: 5), "checkout must offer the delivery tier")
-        XCTAssertTrue(pickup.exists, "checkout must offer the collect-it-yourself tier")
+        // The tier is chosen on the booking screen. Checkout used to repeat it
+        // as a Delivery/Pickup toggle that read as dead, so it must stay gone.
+        XCTAssertFalse(
+            app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Delivery.'")).firstMatch.exists,
+            "checkout must not re-offer the tier the booking screen already chose"
+        )
+        attach(app, "checkout-top")
 
-        guard let roundTrip = totalOnPlaceOrder(app) else {
-            return XCTFail("the place-order button must carry the total")
-        }
-
-        pickup.tap()
-        // One courier leg costs less than two, so the total on the button has to
-        // fall. A toggle that reprices nothing is a toggle that charged the
-        // customer for a service they did not pick.
-        let dropped = NSPredicate(format: "label != %@", "Place Order · " + money(roundTrip))
-        expectation(for: dropped, evaluatedWith: placeOrderButton(app))
-        waitForExpectations(timeout: 5)
-
-        guard let oneLeg = totalOnPlaceOrder(app) else {
-            return XCTFail("the place-order button must still carry the total")
-        }
-        XCTAssertLessThan(oneLeg, roundTrip, "collecting it yourself must cost less than delivery")
-        attach(app, "checkout-pickup")
-
-        // And the time the driver is asked for is a choice, not a stamp. Every
+        // The time the driver is asked for is a choice, not a stamp. Every
         // booking used to be "now" whatever the customer wanted.
-        pickup.tap() // no-op re-tap keeps the tier; the cards below are the point
         XCTAssertTrue(
             app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Standard'")).firstMatch.exists,
             "checkout must offer the next available driver"
@@ -920,27 +901,6 @@ final class CreaseUITests: XCTestCase {
         )
         attach(app, "payment-methods-apple-pay-setup")
         app.buttons["Done"].tap()
-    }
-
-    private func placeOrderButton(_ app: XCUIApplication) -> XCUIElement {
-        app.buttons
-            .matching(NSPredicate(format: "label BEGINSWITH 'Place Order' AND label CONTAINS '$'"))
-            .firstMatch
-    }
-
-    /// The dollars on the button, which is the number the customer is agreeing
-    /// to — deliberately read off the control itself rather than recomputed
-    /// here, so a screen that displays one price and charges another fails.
-    private func totalOnPlaceOrder(_ app: XCUIApplication) -> Double? {
-        let button = placeOrderButton(app)
-        guard button.waitForExistence(timeout: 10),
-              let tail = button.label.split(separator: "$").last
-        else { return nil }
-        return Double(tail.filter { $0.isNumber || $0 == "." })
-    }
-
-    private func money(_ value: Double) -> String {
-        String(format: "$%.2f", value)
     }
 
     /// What the screen says once the bag is at the shop.
