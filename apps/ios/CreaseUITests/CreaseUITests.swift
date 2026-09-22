@@ -100,6 +100,24 @@ final class CreaseUITests: XCTestCase {
         add(shot)
     }
 
+    /// The launch splash is decoration over the real screen. It has to lift by
+    /// itself — no tap, no timeout the customer notices — and leave nothing
+    /// behind that swallows the first touch on the sign-in buttons.
+    func testTheSplashLiftsOnItsOwn() {
+        let app = launch(signedIn: false)
+        // Merged into one accessibility element, so it is not a static text.
+        // Not asserted present: on a signed-out launch it folds away in about
+        // a second and a half, and `launch()` blocks for longer than that.
+        let mark = app.descendants(matching: .any).matching(identifier: "splash.wordmark").firstMatch
+        let gone = NSPredicate(format: "exists == false")
+        let lifted = XCTNSPredicateExpectation(predicate: gone, object: mark)
+        XCTAssertEqual(XCTWaiter().wait(for: [lifted], timeout: 6), .completed,
+                       "the splash is still up six seconds after launch")
+        let apple = [app.buttons["Continue with Apple"], app.buttons["Sign in with Apple"]]
+            .first { $0.waitForExistence(timeout: 3) }
+        XCTAssertTrue(apple?.isHittable == true, "something is still covering the sign-in screen")
+    }
+
     func testSignInOffersAllThreeDoors() {
         let app = launch(signedIn: false)
 

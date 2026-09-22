@@ -30,6 +30,7 @@
 		7166AD11F708FC67757EF404 /* PinConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65CDD7EB235F4833E4AB572E /* PinConfirmView.swift */; };
 		7194E0429F1BF472F7621082 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 878103286229AF62E1C35715 /* Theme.swift */; };
 		79FDF034AD2673CC8BE119B0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 02DD1050D2C1AF4B5A7AE22E /* Supabase */; };
+		7F90CFDD4B2EE2532054D704 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7D1D43676B3ADE591846FB /* SplashView.swift */; };
 		85ED285AC05AF7E2B27D5B61 /* PriceCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */; };
 		8720FC51070189C85F80B303 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08676723DF8AA03131E96937 /* SignInView.swift */; };
 		87BD7A7D13AB7DA6359710D0 /* SecurityOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDB8576D702E552AB330954 /* SecurityOverlay.swift */; };
@@ -82,6 +83,7 @@
 		279324D013D034F3598EEE41 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		28F98B89C26D57784841B735 /* MarketingScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketingScreenshots.swift; sourceTree = "<group>"; };
 		2A9740EB7DC2492BCDC52958 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		2E7D1D43676B3ADE591846FB /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePricingTests.swift; sourceTree = "<group>"; };
 		38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceCopyTests.swift; sourceTree = "<group>"; };
 		39B2121EE8C6FDE0D63F2C17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -114,7 +116,7 @@
 		F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleReturnView.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_9B165E81-0C18-4448-AEE5-B61D9F2A765A" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_97CFFEF6-312F-4FA8-8EA8-94F775C86378" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +160,7 @@
 				9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */,
 				F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */,
 				08676723DF8AA03131E96937 /* SignInView.swift */,
+				2E7D1D43676B3ADE591846FB /* SplashView.swift */,
 				8E68974C6D392F38A7A3004E /* Pickup */,
 			);
 			path = Features;
@@ -245,10 +248,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_A2B5AEE4-A40A-4A81-B4D3-7A0877C2F65D" /* ios */ = {
+		"TEMP_4AAE678B-FC6F-4A28-A53D-47814A4EDCD6" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_9B165E81-0C18-4448-AEE5-B61D9F2A765A" /* Secrets.xcconfig */,
+				"TEMP_97CFFEF6-312F-4FA8-8EA8-94F775C86378" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -409,6 +412,7 @@
 				1FE0DB3420D993E2657D63B1 /* ServicePricing.swift in Sources */,
 				65248D63B9B13189C67F76B9 /* Session.swift in Sources */,
 				8720FC51070189C85F80B303 /* SignInView.swift in Sources */,
+				7F90CFDD4B2EE2532054D704 /* SplashView.swift in Sources */,
 				7194E0429F1BF472F7621082 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -511,7 +515,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_9B165E81-0C18-4448-AEE5-B61D9F2A765A" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_97CFFEF6-312F-4FA8-8EA8-94F775C86378" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -660,7 +664,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_9B165E81-0C18-4448-AEE5-B61D9F2A765A" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_97CFFEF6-312F-4FA8-8EA8-94F775C86378" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
