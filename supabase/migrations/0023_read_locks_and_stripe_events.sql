@@ -71,3 +71,8 @@ end;
 $$;
 revoke all on function public.purge_delivery_events(integer) from public, anon, authenticated;
 grant execute on function public.purge_delivery_events(integer) to service_role;
+
+-- Explicit Data API grants (Supabase stops auto-granting new public tables
+-- on 2026-10-30). Mirrors the grants live in production, so a rebuild from
+-- these migrations exposes exactly what prod exposes. RLS still gates rows.
+grant select, insert, update, delete on public.stripe_events to service_role;
