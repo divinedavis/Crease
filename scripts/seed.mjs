@@ -33,7 +33,15 @@ if (!user) {
   if (error) throw error;
   user = data.user;
 }
-await db.from('profiles').upsert({ id: user.id, full_name: 'Test Customer', phone: '+15555550123' });
+// is_review_account: this is the demo account the App Store review notes hand
+// out, and migration 0046 flagged it by email once. That flag lives on the
+// profile row, so every time this account was deleted and recreated here it
+// came back unflagged — and a reviewer booking a pickup would have put a real
+// Uber driver on the road. Set on every seed, not just the first.
+const { error: profileError } = await db.from('profiles').upsert({
+  id: user.id, full_name: 'Test Customer', phone: '+15555550123', is_review_account: true,
+});
+if (profileError) throw profileError;
 console.log('customer:', user.id);
 
 // --- address --------------------------------------------------------------
