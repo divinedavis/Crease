@@ -143,6 +143,15 @@ const { count: abandonedLegs } = await db
   .from('delivery_legs').select('*', { count: 'exact', head: true }).eq('order_id', order.id);
 check('still no leg', abandonedLegs, 0);
 
+// The server decides the mode, not this machine's .env. Once production runs
+// live keys, the intent above is live and a test card can never pay it — the
+// guards above are all that can be checked without a real charge.
+if (intent.json.publishableKey?.startsWith('pk_live_')) {
+  console.log('\nLIVE   server is on live Stripe keys — paid path skipped (needs a real card)');
+  console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED (guards only)' : `${failures} FAILURE(S)`}\n`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
 // PaymentSheet confirms the intent from the device with the card the customer
 // typed. Same call, same result — pm_card_visa is Stripe's 4242 test card.
 const intentId = intent.json.clientSecret.split('_secret_')[0];

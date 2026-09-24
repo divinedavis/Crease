@@ -114,8 +114,12 @@ const intent = await intentRes.json();
 const HELD_CENTS = intent.amountCents;
 const intentId = intent.clientSecret.split('_secret_')[0];
 
+// Live keys on the server mean a test card cannot pay this intent, so there is
+// no held money for the webhook to recover. The signature checks still run.
+const LIVE = intent.publishableKey?.startsWith('pk_live_');
+
 console.log('\nCHARGE  card taken, then the app dies before confirm-payment');
-await fetch(`https://api.stripe.com/v1/payment_intents/${intentId}/confirm`, {
+if (!LIVE) await fetch(`https://api.stripe.com/v1/payment_intents/${intentId}/confirm`, {
   method: 'POST',
   headers: {
     authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
@@ -144,6 +148,18 @@ check('stale timestamp rejected', stale.status, 401);
 
 const { data: untouched } = await db.from('orders').select('status').eq('id', order.id).single();
 check('nothing moved it', untouched.status, 'draft');
+
+if (LIVE) {
+  // A correctly signed 'succeeded' for an intent nobody paid disagrees with
+  // Stripe's own record — refused with a 500, and the order must not move.
+  console.log('\nLIVE   server is on live Stripe keys — paid-recovery path skipped (needs a real card)');
+  const unpaid = await postEvent(succeeded(intentId));
+  check('signed event for an unpaid intent refused', unpaid.status, 500);
+  const { data: still } = await db.from('orders').select('status').eq('id', order.id).single();
+  check('order still not dispatched', still.status, 'draft');
+  console.log(`\n${failures === 0 ? 'ALL PASS' : `${failures} FAILURE(S)`}  order ${order.short_code}\n`);
+  process.exit(failures === 0 ? 0 : 1);
+}
 
 // --- the real event rescues the order ------------------------------------
 console.log('\nWEBHOOK  Stripe tells us what the app could not');

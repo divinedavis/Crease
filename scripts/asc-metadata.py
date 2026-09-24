@@ -89,7 +89,7 @@ Pickups are only offered within three miles of our partner cleaner at 909 Fulton
 Typing an out-of-area address will show a "not yet in your area" message; that is expected behaviour, not a bug.
 
 PAYMENTS
-Stripe is running in test mode for review. Use card 4242 4242 4242 4242, any future expiry date, any CVC, any ZIP. No real money moves. The card is authorized (not charged) at booking, because the final price depends on the shop's count when the bag is opened; the customer approves anything above the authorized amount before it is charged.
+Payments are processed live through Stripe. The card is authorized (not charged) at booking, because the final price depends on the shop's count when the bag is opened; the customer approves anything above the authorized amount before it is charged.
 
 APPLE PAY (GUIDELINE 2.1 — WHERE TO FIND IT)
 Thank you for the two reviews of this. You were right that Apple Pay could not be found: builds 42 and 43 showed nothing about Apple Pay unless the device already had a card in Wallet, so on the review iPad the payment row simply read "Card". Build 45 fixes that, and Apple Pay is now visible whether or not Wallet has a card on it.
@@ -101,8 +101,6 @@ Apple Pay is integrated at checkout through Stripe's payment sheet, merchant ID 
     4. On the Checkout screen, scroll to the payment row immediately under TOTAL. It carries the Apple Pay mark and reads "Apple Pay" — or "Apple Pay or card" if this device has no Wallet card.
     5. Tap that row. The Payment sheet names Apple Pay, and on a device with no Wallet card it shows Apple's own "Set up Apple Pay" button (PKPaymentButton, .setUp), which opens Wallet.
     6. With a card in Wallet, tapping "Place Order" opens Stripe's sheet with the Apple Pay button above card entry.
-
-Stripe is in test mode, so an Apple Pay authorization moves no real money.
 
 WHY THE ORDER SITS "AT THE CLEANER"
 An order is two separate deliveries with a two-day gap between them, so a freshly booked order will not complete during a short review session. The order list and detail screens show the full journey at every stage.
