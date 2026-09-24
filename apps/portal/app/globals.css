@@ -221,7 +221,7 @@ button.primary, .btn.primary {
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-input[type="text"], input[type="email"], input[type="password"], input[type="number"], textarea {
+input:not([type]), input[type="text"], input[type="email"], input[type="tel"], input[type="password"], input[type="number"], select, textarea {
   font: inherit;
   width: 100%;
   padding: 11px 12px;
@@ -270,6 +270,19 @@ label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .notice.danger { background: var(--danger-bg); color: var(--danger-fg); }
 
 .empty { color: var(--muted); padding: 28px; text-align: center; }
+/* Price list: one form per line, fields in a wrapping grid. */
+.price-group h3 { font-size: 15px; margin: 18px 0 8px; }
+.price-row { border-top: 1px solid var(--border); padding: 14px 0; }
+.price-row.off .price-head strong { color: var(--muted); }
+.price-row.add { border-top: 2px solid var(--border); margin-top: 8px; }
+.price-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 10px; }
+.price-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0 12px; }
+.price-fields .wide { grid-column: span 2; }
+.price-fields .field { margin-bottom: 12px; }
+.price-fields .offered { grid-column: 1 / -1; font-weight: 400; display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.price-fields .offered input { width: auto; min-height: 0; }
+@media (max-width: 640px) { .price-fields .wide { grid-column: 1 / -1; } }
+
 .row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 
 @media (max-width: 640px) {

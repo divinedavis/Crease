@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase';
 import { callDispatch } from '@/lib/dispatch';
 import { parseHoursForm } from '@/lib/hours';
+import { codeFor, parseServiceItemForm } from '@/lib/price-list';
 
 /**
  * Every write here rides the staff member's own session, so RLS decides which
@@ -208,4 +209,96 @@ async function geocode(
   } catch {
     return 'unreachable';
   }
+}
+
+/**
+ * The shop's price list. What is saved here is what the app quotes on the next
+ * booking — service_items is read straight by the booking sheet — so the form
+ * is parsed strictly (lib/price-list.ts) and every write selects back what it
+ * wrote, same as everything else on this page.
+ *
+ * Nothing is ever deleted: order_items points at these rows, and a service a
+ * shop stops offering is switched off, not erased.
+ */
+async function wouldLeaveNothingOffered(
+  db: Awaited<ReturnType<typeof supabaseServer>>,
+  cleanerId: string,
+  exceptId: string,
+): Promise<boolean> {
+  const { count } = await db
+    .from('service_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('cleaner_id', cleanerId)
+    .eq('active', true)
+    .neq('id', exceptId);
+  return (count ?? 0) === 0;
+}
+
+export async function saveServiceItem(
+  cleanerId: string,
+  itemId: string,
+  _prev: unknown,
+  formData: FormData,
+) {
+  const parsed = parseServiceItemForm((name) => formData.get(name));
+  if ('error' in parsed) return { error: parsed.error };
+
+  const db = await supabaseServer();
+
+  // A shop with nothing switched on cannot be booked at all — the app offers
+  // no service and the order insert policy refuses one without a live price.
+  // Same line as opening hours: disappearing from routing is a conversation.
+  if (!parsed.item.active && (await wouldLeaveNothingOffered(db, cleanerId, itemId))) {
+    return { error: 'At least one service has to stay on, or customers can’t book you. Contact Crease if you need to pause.' };
+  }
+
+  const { data: saved, error } = await db
+    .from('service_items')
+    .update(parsed.item)
+    .eq('id', itemId)
+    .eq('cleaner_id', cleanerId)
+    .select('id');
+  if (error) {
+    console.error('[portal] saveServiceItem: update failed', { cleanerId, itemId }, error);
+    return { error: 'Could not save that price. Try again.' };
+  }
+  if (!saved?.length) return { error: NOT_YOURS };
+
+  revalidatePath('/settings');
+  return { ok: true };
+}
+
+export async function addServiceItem(cleanerId: string, _prev: unknown, formData: FormData) {
+  const parsed = parseServiceItemForm((name) => formData.get(name));
+  if ('error' in parsed) return { error: parsed.error };
+
+  const db = await supabaseServer();
+  const { data: existing, error: readError } = await db
+    .from('service_items')
+    .select('code, sort_order')
+    .eq('cleaner_id', cleanerId);
+  if (readError) {
+    console.error('[portal] addServiceItem: read failed', { cleanerId }, readError);
+    return { error: 'Could not add that service. Try again.' };
+  }
+
+  const rows = existing ?? [];
+  const { data: saved, error } = await db
+    .from('service_items')
+    .insert({
+      ...parsed.item,
+      cleaner_id: cleanerId,
+      code: codeFor(parsed.item.label, parsed.item.service_type, rows.map((r) => r.code)),
+      sort_order: Math.max(0, ...rows.map((r) => r.sort_order ?? 0)) + 10,
+    })
+    .select('id');
+  if (error) {
+    console.error('[portal] addServiceItem: insert failed', { cleanerId }, error);
+    // 42501 is RLS: the row was aimed at a shop this account does not staff.
+    return { error: error.code === '42501' ? NOT_YOURS : 'Could not add that service. Try again.' };
+  }
+  if (!saved?.length) return { error: NOT_YOURS };
+
+  revalidatePath('/settings');
+  return { ok: true };
 }

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentStaff, supabaseServer } from '@/lib/supabase';
 import { hoursByDay } from '@/lib/hours';
-import { ShopDetailsForm, HoursForm, PayoutPanel } from './settings-forms';
+import { ShopDetailsForm, HoursForm, PayoutPanel, PriceList } from './settings-forms';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +42,17 @@ export default async function SettingsPage({
       }>()
     : { data: null };
 
+  // Staff read their own inactive rows too (service_items_read), which is the
+  // point: a service switched off is still there to switch back on.
+  const { data: items } = cleanerId
+    ? await db
+        .from('service_items')
+        .select('id, label, service_type, unit, unit_price_cents, minimum_units, turnaround_hours, active')
+        .eq('cleaner_id', cleanerId)
+        .order('active', { ascending: false })
+        .order('sort_order')
+    : { data: null };
+
   const { payouts } = await searchParams;
 
   return (
@@ -74,6 +85,7 @@ export default async function SettingsPage({
           )}
 
           <ShopDetailsForm shop={shop} />
+          <PriceList cleanerId={shop.id} items={items ?? []} />
           <HoursForm
             cleanerId={shop.id}
             byDay={Object.fromEntries(hoursByDay(shop.hours))}

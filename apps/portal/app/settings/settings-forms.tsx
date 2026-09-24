@@ -1,8 +1,16 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { DAY_NAMES, type DayHours } from '@/lib/hours';
-import { saveShopDetails, saveHours, startPayoutOnboarding, refreshPayoutStatus } from './actions';
+import {
+  saveShopDetails,
+  saveHours,
+  startPayoutOnboarding,
+  refreshPayoutStatus,
+  saveServiceItem,
+  addServiceItem,
+} from './actions';
+import { SERVICE_TYPES, SERVICE_TYPE_LABEL, priceLine } from '@/lib/price-list';
 
 type ActionResult = { ok?: boolean; error?: string; relocated?: boolean } | null;
 
@@ -187,6 +195,127 @@ export function PayoutPanel({
             </form>
           )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+export type PriceListItem = {
+  id: string;
+  label: string;
+  service_type: string;
+  unit: string;
+  unit_price_cents: number;
+  minimum_units: number | string;
+  turnaround_hours: number | null;
+  active: boolean;
+};
+
+/**
+ * The fields one price-list line is made of. Shared by the edit rows and the
+ * add form so the two can never ask for different things.
+ */
+function ServiceFields({ item, idPrefix }: { item?: PriceListItem; idPrefix: string }) {
+  const id = (name: string) => `${idPrefix}_${name}`;
+  const minimum = Number(item?.minimum_units ?? 0);
+  return (
+    <div className="price-fields">
+      <div className="field wide">
+        <label htmlFor={id('label')}>Name</label>
+        <input id={id('label')} name="label" defaultValue={item?.label ?? ''} maxLength={60} required
+          placeholder="Wash & fold" />
+      </div>
+      <div className="field">
+        <label htmlFor={id('service_type')}>Kind</label>
+        <select id={id('service_type')} name="service_type" defaultValue={item?.service_type ?? 'wash_fold'}>
+          {SERVICE_TYPES.map((t) => (
+            <option key={t} value={t}>{SERVICE_TYPE_LABEL[t]}</option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={id('unit')}>Charged</label>
+        <select id={id('unit')} name="unit" defaultValue={item?.unit ?? 'pound'}>
+          <option value="pound">Per pound</option>
+          <option value="piece">Per item</option>
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={id('price')}>Price ($)</label>
+        <input id={id('price')} name="price" inputMode="decimal" required placeholder="2.00"
+          defaultValue={item ? (item.unit_price_cents / 100).toFixed(2) : ''} />
+      </div>
+      <div className="field">
+        <label htmlFor={id('minimum')}>Minimum (lb)</label>
+        <input id={id('minimum')} name="minimum" inputMode="decimal" placeholder="none"
+          defaultValue={minimum > 0 ? String(minimum) : ''} />
+      </div>
+      <div className="field">
+        <label htmlFor={id('turnaround_hours')}>Ready in (hours)</label>
+        <input id={id('turnaround_hours')} name="turnaround_hours" inputMode="numeric"
+          placeholder="shop default" defaultValue={item?.turnaround_hours ?? ''} />
+      </div>
+      <label className="offered">
+        <input type="checkbox" name="active" defaultChecked={item ? item.active : true} /> Offered to customers
+      </label>
+    </div>
+  );
+}
+
+function ServiceItemRow({ cleanerId, item }: { cleanerId: string; item: PriceListItem }) {
+  const [state, action, pending] = useActionState(saveServiceItem.bind(null, cleanerId, item.id), null);
+  return (
+    <form action={action} className={`price-row${item.active ? '' : ' off'}`}>
+      <div className="price-head">
+        <strong>{item.label}</strong>
+        <span className="sub">
+          {item.active ? priceLine(item) : `Not offered · last price ${priceLine(item)} — check it before switching on`}
+        </span>
+      </div>
+      <Feedback state={state} saved="Saved. The app quotes this from the next booking." />
+      <ServiceFields item={item} idPrefix={item.id} />
+      <button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save'}</button>
+    </form>
+  );
+}
+
+function AddServiceForm({ cleanerId }: { cleanerId: string }) {
+  const [state, action, pending] = useActionState(addServiceItem.bind(null, cleanerId), null);
+  const form = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state?.ok) form.current?.reset();
+  }, [state]);
+  return (
+    <form action={action} ref={form} className="price-row add">
+      <div className="price-head"><strong>Add a service</strong></div>
+      <Feedback state={state} saved="Added. Customers can book it from the next order." />
+      <ServiceFields idPrefix="new" />
+      <button className="primary" type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add service'}</button>
+    </form>
+  );
+}
+
+export function PriceList({ cleanerId, items }: { cleanerId: string; items: PriceListItem[] }) {
+  const byType = SERVICE_TYPES.map((t) => ({ type: t, rows: items.filter((i) => i.service_type === t) }))
+    .filter((g) => g.rows.length > 0);
+  return (
+    <section className="group">
+      <h2>Prices &amp; services</h2>
+      <div className="card">
+        <p className="sub" style={{ marginTop: 0 }}>
+          What customers see and are quoted in the app. Laundry can be per pound with a minimum
+          weight; dry cleaning and pressing are per item. Changes apply to new bookings only —
+          orders already placed keep the price they were booked at.
+        </p>
+        {byType.map((g) => (
+          <div key={g.type} className="price-group">
+            <h3>{SERVICE_TYPE_LABEL[g.type]}</h3>
+            {g.rows.map((item) => (
+              <ServiceItemRow key={item.id} cleanerId={cleanerId} item={item} />
+            ))}
+          </div>
+        ))}
+        <AddServiceForm cleanerId={cleanerId} />
       </div>
     </section>
   );
