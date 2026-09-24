@@ -247,7 +247,7 @@ struct BookPickupView: View {
                 serviceType: serviceKind.rawValue,
                 entered: quantities
             ) {
-                quantities[line.id] = line.minimumUnits
+                quantities[line.id] = ServicePricing.openingUnits(line)
             }
         }
     }
@@ -701,6 +701,7 @@ struct BookPickupView: View {
         // order and the shop counts the bag regardless, so a failure here costs
         // a head start, not the booking.
         await store.replaceDeclaredItems(orderId: created.id, lines: declaredLines)
+        LastBagSize.remember(quantities, menu: menu)
 
         // The order exists as a draft and becomes scheduled only once it is
         // paid for. An unpaid draft dispatches nobody.

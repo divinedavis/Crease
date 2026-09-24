@@ -200,6 +200,13 @@ struct ServiceMenuView: View {
                 Text("\(shopName) has a \(unitsLabel(item.minimumUnits)) lb minimum, so this bills as \(unitsLabel(ServicePricing.billableUnits(item, entered: entered))) lb.")
                     .font(.caption2)
                     .foregroundStyle(.orange)
+            } else if item.isByWeight, entered > ServicePricing.startingUnits(item),
+                      entered == LastBagSize.pounds(for: item) {
+                // Why the line opened above the floor: it is the bag they
+                // booked last time here, not a number the app made up.
+                Text("Same as your last order at \(shopName). Change it if this bag is different.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             } else if entered == ServicePricing.startingUnits(item), item.minimumUnits > 0 {
                 // Why the line already has a number in it. A count nobody
                 // typed needs saying, or it reads as the app having decided how
@@ -260,7 +267,7 @@ struct ServiceMenuView: View {
             serviceType: kind.rawValue,
             entered: quantities
         ) else { return }
-        quantities[line.id] = line.minimumUnits
+        quantities[line.id] = ServicePricing.openingUnits(line)
     }
 
     private func priceLine(_ item: ServiceItem) -> String {

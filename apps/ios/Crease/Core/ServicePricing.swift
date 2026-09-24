@@ -97,3 +97,43 @@ enum ServicePricing {
         entered > 0 && billableUnits(item, entered: entered) > entered
     }
 }
+
+/// The weight a customer last booked at a shop, so the next order opens there.
+///
+/// Most people send about the same bag every week. Opening at the shop's floor
+/// every time made a regular 18 lb customer dial eight pounds back in on every
+/// order. Keyed by the price-list line, which belongs to one shop, so a bag
+/// size at one laundromat never lands on another's floor. Saved when the order
+/// is created — what was booked, not whatever the stepper was left at.
+enum LastBagSize {
+    private static let prefix = "crease.lastBagPounds."
+
+    static func pounds(for item: ServiceItem, in defaults: UserDefaults = .standard) -> Double? {
+        let value = defaults.double(forKey: prefix + item.id.uuidString)
+        return value > 0 ? value : nil
+    }
+
+    static func remember(
+        _ quantities: [UUID: Double],
+        menu: [ServiceItem],
+        in defaults: UserDefaults = .standard
+    ) {
+        for item in menu where item.isByWeight {
+            if let pounds = quantities[item.id], pounds > 0 {
+                defaults.set(pounds, forKey: prefix + item.id.uuidString)
+            }
+        }
+    }
+}
+
+extension ServicePricing {
+    /// Where a weighed line opens: the last bag booked at this shop, or the
+    /// shop's floor when there is none. Never under the floor — a remembered
+    /// 8 lb from before a shop raised its minimum would only be billed as the
+    /// minimum anyway — and never over the 200 lb the stepper allows.
+    static func openingUnits(_ item: ServiceItem, in defaults: UserDefaults = .standard) -> Double {
+        let floor = startingUnits(item)
+        guard let last = LastBagSize.pounds(for: item, in: defaults) else { return floor }
+        return min(max(last, floor), 200)
+    }
+}

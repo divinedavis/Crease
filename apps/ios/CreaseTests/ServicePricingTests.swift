@@ -107,4 +107,45 @@ extension ServicePricingTests {
         XCTAssertEqual(ServicePricing.holdCents(cleaningCents: -500, fixedCents: 1695), 1695)
         XCTAssertEqual(ServicePricing.holdCents(cleaningCents: 0, fixedCents: 0), 0)
     }
+
+    // MARK: - Last bag size
+
+    private func scratchDefaults() -> UserDefaults {
+        let name = "crease.tests.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: name)!
+        d.removePersistentDomain(forName: name)
+        return d
+    }
+
+    func testAFirstOrderOpensAtTheShopsFloor() {
+        XCTAssertEqual(ServicePricing.openingUnits(wash, in: scratchDefaults()), 15)
+    }
+
+    func testTheNextOrderOpensAtTheLastBagBooked() {
+        let d = scratchDefaults()
+        LastBagSize.remember([wash.id: 22], menu: [wash, shirt], in: d)
+        XCTAssertEqual(ServicePricing.openingUnits(wash, in: d), 22)
+    }
+
+    func testARememberedBagNeverOpensUnderTheFloor() {
+        let d = scratchDefaults()
+        LastBagSize.remember([wash.id: 9], menu: [wash], in: d)
+        XCTAssertEqual(ServicePricing.openingUnits(wash, in: d), 15)
+    }
+
+    func testOneShopsBagSizeDoesNotCarryToAnother() {
+        let d = scratchDefaults()
+        let otherShop = ServiceItem(
+            id: UUID(), code: "wash_fold", label: "Wash & fold",
+            unitPriceCents: 199, serviceType: "wash_fold", unit: "pound", minimumUnits: 10
+        )
+        LastBagSize.remember([wash.id: 22], menu: [wash], in: d)
+        XCTAssertEqual(ServicePricing.openingUnits(otherShop, in: d), 10)
+    }
+
+    func testGarmentCountsAreNotRemembered() {
+        let d = scratchDefaults()
+        LastBagSize.remember([shirt.id: 4], menu: [shirt], in: d)
+        XCTAssertNil(LastBagSize.pounds(for: shirt, in: d))
+    }
 }

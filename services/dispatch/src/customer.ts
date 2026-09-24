@@ -10,6 +10,7 @@ import { DeliveryProviderError, TERMINAL_STATUSES } from './deps.js';
 import { CustomerFacingError } from './orders.js';
 import { RETAIN_ALL } from './payments.js';
 import { cancellationRetainCents } from './pricing.js';
+import { SERVICE_RADIUS_MILES, withinServiceArea } from './serviceArea.js';
 import { parseWindow } from './windows.js';
 
 /**
@@ -219,6 +220,22 @@ export function registerCustomerRoutes(
     // it and overwrites the reference to the charge that was given back.
     if (order.status !== 'draft') {
       return reply.code(409).send({ ok: false, error: 'This order is no longer awaiting payment.' });
+    }
+
+    // Nothing more than three miles from its shop is booked. Checked here, the
+    // one door to a card hold, so the app, a stale build or a hand-rolled
+    // request all meet the same rule before any money is touched.
+    const { data: route } = await db
+      .from('orders')
+      .select('addresses(lat, lng), cleaners(lat, lng)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (!withinServiceArea((route as any)?.addresses, (route as any)?.cleaners)) {
+      return reply.code(422).send({
+        ok: false,
+        code: 'out_of_area',
+        error: `This address is more than ${SERVICE_RADIUS_MILES} miles from the shop, so we can't pick up there yet. Nothing has been charged.`,
+      });
     }
 
     try {
