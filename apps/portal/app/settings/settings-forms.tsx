@@ -118,7 +118,7 @@ export function HoursForm({
         {DAY_NAMES.map((day, dow) => {
           const row = byDay[dow];
           return (
-            <div className="field" key={day} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div className="field" key={day} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
               <label style={{ width: 90, marginBottom: 0 }}>{day}</label>
               <input type="time" name={`open_${dow}`} defaultValue={row?.open ?? ''} />
               <span className="sub">to</span>

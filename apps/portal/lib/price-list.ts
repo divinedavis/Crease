@@ -16,7 +16,7 @@ export const SERVICE_TYPES = ['wash_fold', 'dry_clean', 'press'] as const;
 export type ServiceType = (typeof SERVICE_TYPES)[number];
 
 export const SERVICE_TYPE_LABEL: Record<ServiceType, string> = {
-  wash_fold: 'Laundry (wash & fold)',
+  wash_fold: 'Laundry',
   dry_clean: 'Dry cleaning',
   press: 'Pressing',
 };
