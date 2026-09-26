@@ -227,7 +227,9 @@ export function registerCustomerRoutes(
     // request all meet the same rule before any money is touched.
     const { data: route } = await db
       .from('orders')
-      .select('addresses(lat, lng), cleaners(lat, lng)')
+      .select(
+        'addresses(id, label, line1, line2, city, state, postal_code, access_notes, lat, lng), cleaners(lat, lng)',
+      )
       .eq('id', req.params.id)
       .maybeSingle();
     if (!withinServiceArea((route as any)?.addresses, (route as any)?.cleaners)) {
@@ -236,6 +238,22 @@ export function registerCustomerRoutes(
         code: 'out_of_area',
         error: `This address is more than ${SERVICE_RADIUS_MILES} miles from the shop, so we can't pick up there yet. Nothing has been charged.`,
       });
+    }
+
+    // Freeze the address that just passed the check onto the order. The saved
+    // addresses row stays customer-editable, and every courier leg reads this
+    // copy instead — otherwise the 3-mile rule could be passed here and the
+    // row rewritten to anywhere before the courier is booked. Written on every
+    // call (not only the first) so a re-armed draft carries the address it was
+    // re-checked against. Refuse to take money if it cannot be written.
+    const { error: snapErr } = await db
+      .from('orders')
+      .update({ address_snapshot: (route as any).addresses })
+      .eq('id', req.params.id)
+      .eq('status', 'draft');
+    if (snapErr) {
+      req.log.error({ err: snapErr, orderId: req.params.id }, 'could not snapshot the order address');
+      return reply.code(502).send({ ok: false, error: 'Could not start payment. Please try again.' });
     }
 
     try {

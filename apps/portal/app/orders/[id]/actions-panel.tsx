@@ -39,7 +39,10 @@ export function ActionsPanel({
 
   const pickupOnly = serviceTier === 'pickup_only';
 
-  const canMarkReady = ['cleaning', 'awaiting_approval'].includes(status);
+  // Not from 'awaiting_approval': the customer has not accepted the count yet,
+  // and 'ready' is past the only status their approval can be taken from — the
+  // extra would never be charged and the return courier would unlock anyway.
+  const canMarkReady = status === 'cleaning';
   // Only once the customer has chosen a window. Before that the shop pressing
   // this would summon a courier at a time nobody agreed to.
   const canSendBack = !pickupOnly && status === 'ready' && hasReturnWindow;

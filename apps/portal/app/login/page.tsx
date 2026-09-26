@@ -36,7 +36,7 @@ export default function LoginPage() {
       <div className="card" style={{ marginBottom: 14 }}>
         {oauthError === 'not_staff' && (
           <div className="notice danger">
-            That Google account isn&rsquo;t attached to a shop yet. Ask Crease to add it.
+            That account isn&rsquo;t attached to a shop yet. Ask Crease to add it.
           </div>
         )}
         {oauthError === 'exchange_failed' && (

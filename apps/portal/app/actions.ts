@@ -21,6 +21,44 @@ import { callDispatch } from '@/lib/dispatch';
  * first place ('Add at least one item.') are returned as-is.
  */
 
+/**
+ * The order, if and only if the signed-in account staffs the shop it belongs to.
+ *
+ * Reading an order through the caller's session is not an authorization check
+ * on its own: orders RLS also lets a CUSTOMER read their own orders, and the
+ * portal's server actions are callable by id from any signed-in session. So a
+ * customer could post markReady / requestReturnCourier / retryPickupCourier on
+ * their own order and the internal-key call behind each would run unchallenged.
+ * Every staff action goes through here instead, which filters on the shops in
+ * cleaner_staff for this user — no row there, no order.
+ */
+async function staffCleanerIds(db: Awaited<ReturnType<typeof supabaseServer>>): Promise<string[]> {
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) return [];
+  const { data } = await db.from('cleaner_staff').select('cleaner_id').eq('user_id', user.id);
+  return (data ?? []).map((r: { cleaner_id: string }) => r.cleaner_id).filter(Boolean);
+}
+
+async function orderForStaff(
+  db: Awaited<ReturnType<typeof supabaseServer>>,
+  orderId: string,
+  columns: string,
+): Promise<any | null> {
+  const cleanerIds = await staffCleanerIds(db);
+  if (cleanerIds.length === 0) return null;
+  const { data } = await db
+    .from('orders')
+    .select(`${columns}, cleaner_id`)
+    .eq('id', orderId)
+    .in('cleaner_id', cleanerIds)
+    .maybeSingle();
+  const row = data as any;
+  if (!row || !cleanerIds.includes(row.cleaner_id)) return null;
+  return row;
+}
+
 export async function signIn(_prev: unknown, formData: FormData) {
   const db = await supabaseServer();
   const { error } = await db.auth.signInWithPassword({
@@ -37,6 +75,12 @@ export async function signIn(_prev: unknown, formData: FormData) {
       return { error: 'Too many sign-in attempts. Wait a minute and try again.' };
     }
     return { error: 'Email or password is incorrect.' };
+  }
+  // A valid Crease login is not a portal login: customers have accounts in the
+  // same project. Signed in but staffing no shop means signed straight back out.
+  if ((await staffCleanerIds(db)).length === 0) {
+    await db.auth.signOut();
+    return { error: 'That account isn\u2019t attached to a shop. Ask Crease to add it.' };
   }
   redirect('/');
 }
@@ -59,13 +103,11 @@ export async function signOut() {
 export async function saveIntake(orderId: string, _prev: unknown, formData: FormData) {
   const db = await supabaseServer();
 
-  const { data: order } = await db
-    .from('orders')
-    .select(
-      'id, cleaner_id, service_type, service_tier, estimate_subtotal_cents, approval_threshold_cents, status',
-    )
-    .eq('id', orderId)
-    .single();
+  const order = await orderForStaff(
+    db,
+    orderId,
+    'id, service_type, service_tier, estimate_subtotal_cents, approval_threshold_cents, status',
+  );
   if (!order) return { error: 'order not found' };
 
   // The same condition orders/[id]/page.tsx uses to decide whether to render
@@ -283,7 +325,7 @@ export async function markReady(orderId: string) {
   // Read through the staff session first, because the call below goes out on
   // the internal key and that key does not care whose shop this is. RLS is what
   // stops a counter at one location finishing another location's order.
-  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  const order = await orderForStaff(db, orderId, 'id');
   if (!order) return { error: 'order not found' };
 
   // The write happens in the dispatcher rather than here, because of what hangs
@@ -324,11 +366,7 @@ export async function confirmReturnOrder(orderId: string) {
   // Read through the staff session first: callDispatch goes out on the
   // internal key, which does no per-shop authorization, so RLS here is what
   // stops one shop confirming another shop's order.
-  const { data: order } = await db
-    .from('orders')
-    .select('id, status, service_tier')
-    .eq('id', orderId)
-    .maybeSingle();
+  const order = await orderForStaff(db, orderId, 'id, status, service_tier');
   if (!order) return { error: 'order not found' };
   if (order.service_tier !== 'return_only') {
     return { error: 'This order has garments to count — use the intake form.' };
@@ -367,7 +405,7 @@ export async function requestReturnCourier(orderId: string) {
   // shop booking a courier on another shop's order. (Server actions are
   // directly invocable by id — client-side button gating is not a control.)
   const db = await supabaseServer();
-  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  const order = await orderForStaff(db, orderId, 'id');
   if (!order) return { error: 'order not found' };
 
   try {
@@ -391,11 +429,7 @@ export async function requestReturnCourier(orderId: string) {
  */
 export async function markCollected(orderId: string) {
   const db = await supabaseServer();
-  const { data: order } = await db
-    .from('orders')
-    .select('status, service_tier')
-    .eq('id', orderId)
-    .single();
+  const order = await orderForStaff(db, orderId, 'status, service_tier');
 
   if (!order) return { error: 'order not found' };
   if (order.service_tier !== 'pickup_only') {
@@ -430,7 +464,7 @@ export async function retryPickupCourier(orderId: string) {
   // Ownership check through the staff RLS session before the internal-key call
   // — same reason as requestReturnCourier: stop cross-shop courier booking.
   const db = await supabaseServer();
-  const { data: order } = await db.from('orders').select('id').eq('id', orderId).maybeSingle();
+  const order = await orderForStaff(db, orderId, 'id');
   if (!order) return { error: 'order not found' };
 
   try {

@@ -268,10 +268,15 @@ app.post<{ Params: { id: string } }>(
     // the order is there and finished. There is no intake to pass through on
     // the way, and making one up would put a count and a price on garments
     // nobody is billing for.
+    //
+    // Never from 'awaiting_approval'. That order is waiting on the customer to
+    // accept a count above the hold; the approve route only moves it from that
+    // status, so marking it ready first strands the approval (the extra is
+    // never charged) and unlocks the return courier on an unapproved bill.
     const readyFrom =
       order.service_tier === 'return_only'
-        ? ['scheduled', 'cleaning', 'awaiting_approval', 'ready']
-        : ['cleaning', 'awaiting_approval', 'ready'];
+        ? ['scheduled', 'cleaning', 'ready']
+        : ['cleaning', 'ready'];
     if (!readyFrom.includes(order.status)) {
       return reply
         .code(409)

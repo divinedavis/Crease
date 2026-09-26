@@ -15,6 +15,7 @@ import { courierCapDecision, reachedCarrier } from './courierCaps.js';
 import { cardFeeCents, deliveryFeeCents, fundsSecuredCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 import { parseWindow } from './windows.js';
+import { withinServiceArea } from './serviceArea.js';
 
 export type LegType = 'pickup' | 'return';
 
@@ -235,6 +236,18 @@ export class OrderService {
       );
     }
 
+    // The return leg goes out after intake, and intake is what captures (the
+    // portal settles before it can mark ready; a return-only order is settled
+    // by its confirm step). A hold that was never captured at this point means
+    // the bill was never settled — an approval still pending, a settle that
+    // failed — and a courier bringing the clothes home would hand over goods
+    // nobody has paid for. Only money actually taken releases leg 2.
+    if (leg === 'return' && payment.status !== 'captured') {
+      throw new Error(
+        `order ${order.short_code} has not been captured (payment status '${payment.status}') — refusing to dispatch the return`,
+      );
+    }
+
     // Held funds are not the same as enough of them. The fee is priced once,
     // when the intent is created, from whatever tier the order carried at that
     // moment — and service_tier stays customer-writable while the order is a
@@ -248,6 +261,16 @@ export class OrderService {
     if (tierPriceCents > paidCents) {
       throw new Error(
         `order ${order.short_code} is ${tier} (${tierPriceCents}c) but only ${paidCents}c was taken — refusing to dispatch until it is repriced`,
+      );
+    }
+
+    // The 3-mile rule again, below every caller. payment-intent checks it and
+    // freezes the address it checked onto the order; loadOrder hands that copy
+    // back as order.address. An order paid before snapshots existed still
+    // reads the live row, so this is what stops that row being moved.
+    if (!withinServiceArea(order.address, order.cleaner)) {
+      throw new Error(
+        `order ${order.short_code} address is outside the service area — refusing to dispatch a courier`,
       );
     }
 
@@ -1038,7 +1061,13 @@ export class OrderService {
       .eq('id', orderId)
       .single();
     if (error || !data) throw new Error(`order ${orderId} not found: ${error?.message}`);
-    return data as any;
+    // Couriers go to the address frozen at checkout, never to the live saved
+    // row, which the customer can edit at any time. See migration 0047.
+    const row = data as any;
+    if (row.address_snapshot && typeof row.address_snapshot === 'object') {
+      row.address = row.address_snapshot;
+    }
+    return row;
   }
 
   /** Legs run in opposite directions; this is the only place that flips them. */

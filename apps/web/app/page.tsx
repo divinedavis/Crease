@@ -29,8 +29,8 @@ export default async function Home({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // /?owner=1 marks this device as yours so the traffic tile stops counting
-  // it; /?owner=0 undoes it.
+  // /?owner=<CREASE_OWNER_TOKEN> marks this device as yours so the traffic
+  // tile stops counting it; /?owner=0 undoes it. The route checks the token.
   //
   // A redirect rather than a fetch from here. Calling the route server-side
   // sends the request back through nginx from the box itself, and nginx sets
@@ -39,7 +39,8 @@ export default async function Home({
   const params = await searchParams;
   if (params.owner !== undefined) {
     const { redirect } = await import('next/navigation');
-    redirect(`/api/owner?owner=${params.owner === '0' ? '0' : '1'}`);
+    const value = typeof params.owner === 'string' ? params.owner.slice(0, 200) : '';
+    redirect(`/api/owner?owner=${encodeURIComponent(value)}`);
   }
   const ownerSet = params.owner_set;
 

@@ -52,9 +52,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (!user && !isPublic) {
+  // Signed in is not staff. Customers sign in to the same Supabase project, and
+  // a customer session reaching the portal's pages and server actions is how a
+  // customer could drive staff steps on their own order. No cleaner_staff row
+  // means the session is ended here and the visitor lands on the sign-in page
+  // with the same "not attached to a shop" message the Google callback uses.
+  let notStaff = false;
+  if (user && !isPublic) {
+    const { data: staffRows, error: staffErr } = await supabase
+      .from('cleaner_staff')
+      .select('cleaner_id')
+      .eq('user_id', user.id)
+      .limit(1);
+    // Only a clean empty answer signs someone out. A failed lookup (a network
+    // blip to Supabase) must not log a shop out mid-shift; every server action
+    // re-checks staff membership itself, so letting the page render is safe.
+    if (!staffErr && (!staffRows || staffRows.length === 0)) {
+      notStaff = true;
+      await supabase.auth.signOut();
+    }
+  }
+
+  if ((!user || notStaff) && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.search = notStaff ? '?error=not_staff' : '';
 
     // Behind nginx the standalone server resolves nextUrl against its own
     // listen address, so this redirect went out as localhost:3010 — a dead end
@@ -85,7 +107,11 @@ export async function middleware(request: NextRequest) {
         url.port = '';
       }
     }
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    // signOut() above wrote its cookie-clearing into `response`; carry it onto
+    // the redirect or the browser keeps the customer session it just lost.
+    if (notStaff) response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
   }
 
   return response;

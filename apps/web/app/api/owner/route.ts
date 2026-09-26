@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 
@@ -13,6 +14,14 @@ import { NextResponse } from 'next/server';
  * same idea against an nginx log that records no cookies.
  *
  * /?owner=0 forgets the address again.
+ *
+ * Marking needs the owner token (CREASE_OWNER_TOKEN, in apps/web/.env.local on
+ * the droplet and keychain `crease-owner-token`): /?owner=<token>. It used to
+ * be /?owner=1 for anyone, which let any visitor add their own address to the
+ * list and hide themselves — or a whole shared NAT / Private Relay exit — from
+ * the traffic count. With no token configured, marking is refused outright.
+ * Forgetting (/?owner=0) only ever removes the caller's own address and clears
+ * their own cookie, so it stays open.
  */
 const STORE = process.env.CREASE_OWNER_FILE ?? '/var/lib/crease/owner-ips.json';
 const COOKIE = 'crease_owner';
@@ -74,8 +83,21 @@ async function write(entries: Entry[]) {
   await fs.writeFile(STORE, JSON.stringify({ ips: entries.slice(-MAX_IPS) }, null, 2));
 }
 
+/** Constant-time compare via fixed-length digests, so length leaks nothing. */
+function tokenMatches(given: string): boolean {
+  const expected = process.env.CREASE_OWNER_TOKEN?.trim();
+  if (!expected || expected.length < 24 || !given) return false;
+  const a = createHash('sha256').update(given).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 export async function GET(request: Request) {
-  const on = new URL(request.url).searchParams.get('owner') !== '0';
+  const value = new URL(request.url).searchParams.get('owner') ?? '';
+  const on = value !== '0';
+  if (on && !tokenMatches(value)) {
+    return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 });
+  }
   const ip = callerIp(request);
   if (!ip) return NextResponse.json({ ok: false, reason: 'no_ip' }, { status: 400 });
 
