@@ -87,6 +87,11 @@ export default {
   },
   // Nothing gains from telling a scanner which framework version to look up.
   poweredByHeader: false,
+  // The policy is a static file (public/privacy.html), but people and App
+  // Review type /privacy. That used to 404.
+  async redirects() {
+    return [{ source: '/privacy', destination: '/privacy.html', permanent: true }];
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
