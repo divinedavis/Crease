@@ -36,3 +36,6 @@
   behavior gets a test, changed behavior updates its test, removed behavior
   deletes its test (no dead tests). Say which in the commit body
   (`Tests: ...`), alongside the `XCUITest review:` and `OWASP LLM:` lines.
+
+## App Store freeze
+`ASC_FREEZE` at the repo root = TestFlight only (owner, 2026-09-22). `scripts/asc.py` refuses `setup`, `attach` and `submit` while it exists. Delete it only on the owner's explicit word.

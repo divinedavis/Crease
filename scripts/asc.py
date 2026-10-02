@@ -399,10 +399,19 @@ def cmd_submit(asc: ASC, cfg: dict):
           f"{done['attributes']['state']}")
 
 
+FREEZE = pathlib.Path(__file__).resolve().parent.parent / "ASC_FREEZE"
+WRITES = {"setup", "attach", "submit"}
+
+
 def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    # Owner's App Store freeze (TestFlight only since 2026-09-22): every
+    # command that writes to App Store Connect refuses while ASC_FREEZE
+    # exists. Delete that file only on the owner's explicit word.
+    if cmd in WRITES and FREEZE.exists():
+        sys.exit(f"refusing '{cmd}': App Store frozen ({FREEZE.name} exists) — TestFlight only until the owner lifts it")
     cfg = load_config()
     asc = ASC(cfg)
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     {"status": cmd_status, "setup": cmd_setup, "builds": cmd_builds,
      "attach": cmd_attach, "submit": cmd_submit}[cmd](asc, cfg)
 
