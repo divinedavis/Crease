@@ -317,6 +317,26 @@ def cmd_attach(asc: ASC, cfg: dict):
     print("the placeholder icon in App Store Connect should now be the real one")
 
 
+def ensure_phased_release(asc: ASC, version: dict) -> None:
+    """Release updates over Apple's 7-day phased rollout instead of to everyone
+    at once, so a bad build reaches a slice of users and can be paused (App
+    Store Connect > the version > Phased Release). Created INACTIVE; Apple
+    flips it ACTIVE when the version is released. Apple does not offer it for
+    a first release, so a 1.0 is skipped. Idempotent: an existing one is kept."""
+    if version["attributes"]["versionString"] == "1.0":
+        print("  phased release: n/a for 1.0")
+        return
+    have = asc.get(f"/appStoreVersions/{version['id']}/appStoreVersionPhasedRelease").get("data")
+    if have:
+        print("  phased release:", have["attributes"]["phasedReleaseState"])
+        return
+    asc.post("/appStoreVersionPhasedReleases", {"data": {
+        "type": "appStoreVersionPhasedReleases",
+        "attributes": {"phasedReleaseState": "INACTIVE"},
+        "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version["id"]}}}}})
+    print("  phased release: on (7-day rollout once approved)")
+
+
 def cmd_submit(asc: ASC, cfg: dict):
     """Send the editable App Store version to App Review.
 
@@ -343,6 +363,9 @@ def cmd_submit(asc: ASC, cfg: dict):
     if not editable:
         raise SystemExit("no version in a submittable state — has one already been sent?")
     version = editable[0]
+
+    # Set before submitting, so the version goes to review with it attached.
+    ensure_phased_release(asc, version)
 
     for sub in asc.get("/reviewSubmissions", **{"filter[app]": app_id, "limit": 10})["data"]:
         if sub["attributes"]["state"] in ("COMPLETE", "CANCELING"):
