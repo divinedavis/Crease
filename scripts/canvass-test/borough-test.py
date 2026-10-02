@@ -34,6 +34,7 @@ window.__server.rows.push(
     own_app: null, cash_only: null, created_at: null, updated_at: null });
 """
 (HERE / "supabase.js").write_text(stub)
+shutil.copy(ROOT / "growth/prospects/session-cookie.js", HERE / "session-cookie.js")
 
 handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(HERE))
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 8734), handler)
@@ -53,7 +54,7 @@ with sync_playwright() as p:
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(URL)
-    pg.fill("#email", "c@example.com"); pg.fill("#pw", "good"); pg.click("button.primary")
+    pg.click("#google")   # Google-only sign-in; the stub does the OAuth round trip
     pg.wait_for_selector("#list")
 
     check("a second market brings out the borough segment", pg.is_visible("#boroseg"))

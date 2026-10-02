@@ -29,6 +29,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SNAPSHOT_PATH = os.path.join(HERE, "snapshot.json")
 
 ALLOWED = {"divinejdavis@gmail.com"}
+# A Google Cloud service account is a machine, not a person, and the one the
+# Search Console technique names is already in techniques.json in this repo.
+# Without this the real-snapshot test failed on every run since T004 landed.
+ALLOWED_SUFFIXES = (".iam.gserviceaccount.com",)
 
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 PHONE = re.compile(r"(?<!\d)(?:\+?1[ .-]?)?\(?\d{3}\)?[ .-]?\d{3}[ .-]?\d{4}(?!\d)")
@@ -41,7 +45,7 @@ STREET = re.compile(
 def _assert_no_pii(doc):
     blob = json.dumps(doc)
     for match in EMAIL.findall(blob):
-        if match.lower() not in ALLOWED:
+        if match.lower() not in ALLOWED and not match.lower().endswith(ALLOWED_SUFFIXES):
             raise RuntimeError(f"snapshot contains an email address ({match}) — refusing to write")
     for pattern, what in ((PHONE, "phone number"), (STREET, "street address")):
         m = pattern.search(blob)

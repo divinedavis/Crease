@@ -19,6 +19,8 @@ HERE = pathlib.Path(tempfile.mkdtemp(prefix="roadmap-test-"))
 html = SRC.read_text().replace("__SUPABASE_URL__", "https://stub.local").replace("__SUPABASE_ANON_KEY__", "stub-anon")
 (HERE / "roadmap.html").write_text(html)
 shutil.copy(pathlib.Path(__file__).parent / "stub-roadmap.js", HERE / "supabase.js")
+# Both pages load the shared cookie adapter; without it the page logs a 404.
+shutil.copy(ROOT / "growth/prospects/session-cookie.js", HERE / "session-cookie.js")
 
 handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(HERE))
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 8732), handler)

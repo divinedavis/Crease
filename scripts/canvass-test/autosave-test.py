@@ -20,6 +20,7 @@ HERE = pathlib.Path(tempfile.mkdtemp(prefix="canvass-test-"))
 html = SRC.read_text().replace("__SUPABASE_URL__", "https://stub.local").replace("__SUPABASE_ANON_KEY__", "stub-anon")
 (HERE / "index.html").write_text(html)
 shutil.copy(pathlib.Path(__file__).parent / "stub-supabase.js", HERE / "supabase.js")
+shutil.copy(ROOT / "growth/prospects/session-cookie.js", HERE / "session-cookie.js")
 
 handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(HERE))
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 8731), handler)
@@ -36,10 +37,8 @@ with sync_playwright() as p:
     page.on("console", lambda m: print("  [console]", m.type, m.text) if m.type == "error" else None)
     page.goto("http://127.0.0.1:8731/index.html")
 
-    # sign in
-    page.fill("#email", "canvasser@example.com")
-    page.fill("#pw", "good")
-    page.click("#login button")
+    # sign in (Google only since 8ff32b0; the stub does the OAuth round trip)
+    page.click("#google")
     page.wait_for_selector(".shop", state="attached")
     page.evaluate("() => document.querySelectorAll('details.hood').forEach(d => d.open = true)")
     check("list renders after sign-in", page.locator(".shop").count() == 2)
@@ -78,10 +77,8 @@ with sync_playwright() as p:
 
     # --- reload with a dead session: nothing lost -------------------------
     page.reload()
-    page.wait_for_selector("#login")   # signed out -> login screen
-    page.fill("#email", "canvasser@example.com")
-    page.fill("#pw", "good")
-    page.click("#login button")
+    page.wait_for_selector("#google")   # signed out -> login screen
+    page.click("#google")
     page.wait_for_selector(".shop", state="attached")
     page.evaluate("() => document.querySelectorAll('details.hood').forEach(d => d.open = true)")
     page.wait_for_timeout(1200)
@@ -109,11 +106,15 @@ with sync_playwright() as p:
     page.fill('.shop[data-id="aaa"] [data-notes]', "Cash only, owner is Maria")
     page.wait_for_timeout(1200)
     check("list still on screen after session death", page.locator(".shop").count() == 2)
-    page.fill("#repw", "good")
-    page.click("#resync button")
-    page.wait_for_timeout(1000)
+    check("sync bar offers Google re-auth", page.locator("#resync button").is_visible())
+    page.click("#resync button")   # OAuth round trip: the page reloads, held edits flush
+    page.wait_for_selector(".shop", state="attached")
+    page.wait_for_timeout(1200)
+    page.evaluate("() => document.querySelectorAll('details.hood').forEach(d => d.open = true)")
+    page.locator('.shop[data-id="aaa"] [data-expand]').click()
+    page.wait_for_selector('.shop[data-id="aaa"] [data-notes]', state="attached")
     srow = page.evaluate("() => window.__server.rows.find(r => r.id === 'aaa')")
-    check("in-place re-auth drains the queue", srow["notes"] == "Cash only, owner is Maria", srow)
+    check("re-auth round trip drains the queue", srow["notes"] == "Cash only, owner is Maria", srow)
 
     # writes never lost a keystroke: final server state matches the textarea
     check("textarea matches server", page.locator('.shop[data-id="aaa"] [data-notes]').input_value() == srow["notes"])

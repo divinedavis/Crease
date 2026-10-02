@@ -27,6 +27,15 @@ class PiiAssertionTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             snapshot._assert_no_pii({"leads": ["someone@example.com"]})
 
+    def test_a_service_account_is_not_a_person(self):
+        self.assertTrue(snapshot._assert_no_pii(
+            {"notes": "reader@some-project.iam.gserviceaccount.com is an owner"}))
+
+    def test_a_lookalike_service_account_domain_is_refused(self):
+        """The suffix is anchored: a person's address on a lookalike domain still fails."""
+        with self.assertRaises(RuntimeError):
+            snapshot._assert_no_pii({"leads": ["someone@iam.gserviceaccount.com.example.org"]})
+
     def test_a_phone_number_is_refused(self):
         for number in ("718-555-0142", "(718) 555-0142", "+1 718 555 0142", "7185550142"):
             with self.assertRaises(RuntimeError, msg=number):

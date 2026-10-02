@@ -68,6 +68,14 @@
             listeners.forEach((cb) => cb('SIGNED_IN'));
             return { error: null };
           },
+          // The page signs in with Google only. A real OAuth sign-in leaves the
+          // page and comes back to redirectTo with a session; the stub does the
+          // same round trip in one step, so held edits must survive a reload.
+          async signInWithOAuth({ options } = {}) {
+            localStorage.setItem('stub-session', JSON.stringify({ user: { email: 'canvasser@example.com' } }));
+            location.assign(options?.redirectTo ?? location.href);
+            return { error: null };
+          },
           async signOut() { localStorage.removeItem('stub-session'); listeners.forEach((cb) => cb('SIGNED_OUT')); },
           onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
         },
