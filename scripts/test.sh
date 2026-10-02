@@ -53,7 +53,16 @@ run() {  # run "<label>" cmd... — quiet on success, full output on failure
 
 step "node unit tests (every workspace)"
 run "node unit tests" npm test --workspaces --if-present
-awk '/^ℹ tests /{t+=$3} /^ℹ pass /{p+=$3} END{printf "    %d tests, %d passed\n", t, p}' "$LOG"
+# Node 23+ prints a spec summary ("ℹ tests 4"); Node 22 off a TTY prints TAP
+# ("# tests 4"). Count both, and treat zero as a failure: a glob that matches
+# nothing passes `node --test` without running a single test.
+counts="$(awk '/^(ℹ|#) tests [0-9]/{t+=$3} /^(ℹ|#) pass [0-9]/{p+=$3} END{print t+0, p+0}' "$LOG")"
+echo "    ${counts% *} tests, ${counts#* } passed"
+suites="$(grep -cE '^(ℹ|#) tests [0-9]' "$LOG" || true)"
+workspaces="$(grep -c '"test":' packages/*/package.json services/*/package.json apps/portal/package.json apps/web/package.json | awk -F: '{s+=$2} END{print s}')"
+if [ "$suites" != "$workspaces" ] || grep -qE '^(ℹ|#) tests 0$' "$LOG"; then
+  cat "$LOG"; echo "FAILED: expected $workspaces workspaces each running >0 tests, saw $suites summaries (or one ran 0)" >&2; exit 1
+fi
 
 step "python unit tests (growth/)"
 run "python unit tests" "$PY" -m unittest discover -s growth -p 'test_*.py' -t .
