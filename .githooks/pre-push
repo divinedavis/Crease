@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Runs before every `git push` from a checkout that ran scripts/install_hooks.sh.
+# Two gates that used to be habits:
+#   1. gitleaks over exactly the commits being pushed — the repo is PUBLIC and
+#      the droplet's .env files hold the service-role, Stripe and APNs keys;
+#   2. scripts/test.sh — typecheck + every unit test, a few seconds.
+# Emergency bypass: git push --no-verify (say why in the next commit).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+ZERO=0000000000000000000000000000000000000000
+GITLEAKS="$(command -v gitleaks || echo /opt/homebrew/bin/gitleaks)"
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue            # deleting a branch
+  if [ "$remote_sha" = "$ZERO" ]; then range="$local_sha --not --remotes"; else range="$remote_sha..$local_sha"; fi
+  if [ -x "$GITLEAKS" ]; then
+    "$GITLEAKS" git --no-banner --redact --log-opts="$range" >/dev/null 2>&1 || {
+      echo "pre-push: gitleaks found a secret in $range — run: gitleaks git --log-opts=\"$range\" -v" >&2; exit 1; }
+  else
+    echo "pre-push: gitleaks not installed (brew install gitleaks) — secrets scan skipped" >&2
+  fi
+done
+scripts/test.sh >/tmp/crease-pre-push.log 2>&1 || {
+  tail -30 /tmp/crease-pre-push.log >&2
+  echo "pre-push: tests failed — run: scripts/test.sh" >&2; exit 1; }
+echo "pre-push: secrets scan + $(grep -m1 -oE "[0-9]+ tests" /tmp/crease-pre-push.log | cut -d" " -f1) node + $(grep -m1 -oE 'Ran [0-9]+' /tmp/crease-pre-push.log | cut -d' ' -f2) python tests passed"
