@@ -3,6 +3,10 @@
 #
 #   ./deploy/deploy.sh
 #
+# Gates, in order: clean tree -> scripts/test.sh -> build -> snapshot of what
+# is live (deploy/snapshot.sh) -> upload -> deploy/health.sh. Anything that
+# fails after the snapshot restores it (deploy/rollback.sh) and exits 1.
+#
 # Secrets are never committed and never scp'd from the repo: the droplet's
 # .env files are written once by bootstrap.sh from the macOS keychain and are
 # left alone by every subsequent deploy.
@@ -36,6 +40,15 @@ if [ "${CREASE_DEPLOY_DIRTY:-0}" != "1" ]; then
   fi
 fi
 echo "==> deploying $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)"
+
+# Typecheck + every unit test, the same command the pre-push hook and CI run.
+# CREASE_SKIP_TESTS=1 is the escape hatch, same spirit as CREASE_DEPLOY_DIRTY.
+if [ "${CREASE_SKIP_TESTS:-0}" != "1" ]; then
+  echo "==> tests"
+  if ! scripts/test.sh | sed 's/^/    /'; then
+    echo "refusing to deploy: scripts/test.sh failed" >&2; exit 1
+  fi
+fi
 
 # The repo pins Node 22 (.nvmrc, and `engines` in services/dispatch/package.json)
 # while the droplet still runs 20, and nothing has ever said so out loud: the
@@ -99,7 +112,20 @@ done
 
 echo "==> staging"
 STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
+SNAP=""
+# Once the snapshot exists, any non-zero exit (a failed upload check, npm ci,
+# a restart, the health check) puts the snapshot back before exiting 1.
+on_exit() {
+  local rc=$?
+  rm -rf "$STAGE"
+  if [ "$rc" != 0 ] && [ -n "$SNAP" ]; then
+    echo "!! deploy failed after the upload began — rolling back to $SNAP" >&2
+    CREASE_HOST="$HOST" "$ROOT/deploy/rollback.sh" "$SNAP" \
+      || echo "!! ROLLBACK FAILED — run by hand: CREASE_HOST=$HOST deploy/rollback.sh $SNAP" >&2
+    exit 1
+  fi
+}
+trap on_exit EXIT
 
 mkdir -p "$STAGE/services/dispatch" "$STAGE/packages" "$STAGE/apps/portal" "$STAGE/apps/web"
 cp -R services/dispatch/dist "$STAGE/services/dispatch/"
@@ -172,7 +198,16 @@ rm -f "$STAGE"/scripts/e2e*.mjs \
       "$STAGE"/scripts/upload-screenshots.py \
       "$STAGE"/scripts/asc.py \
       "$STAGE"/scripts/asc-metadata.py \
-      "$STAGE"/scripts/asc-config.env*
+      "$STAGE"/scripts/asc-config.env* \
+      "$STAGE"/scripts/test.sh \
+      "$STAGE"/scripts/install_hooks.sh
+rm -rf "$STAGE"/scripts/canvass-test
+# Which commit is live, readable on the box and carried into every snapshot.
+git rev-parse HEAD > "$STAGE/.deployed-rev"
+
+echo "==> snapshot of what is live"
+SNAP="$(CREASE_HOST="$HOST" "$ROOT/deploy/snapshot.sh")"
+echo "    /var/backups/crease-app/$SNAP (rollback: deploy/rollback.sh $SNAP)"
 
 echo "==> uploading"
 ssh "$HOST" "mkdir -p $REMOTE /var/log/crease && chown $SERVICE_USER:adm /var/log/crease && chmod 750 /var/log/crease"
@@ -262,41 +297,9 @@ ssh "$HOST" 'systemctl enable --now crease-sweep.timer crease-purge.timer'
 # the same weekly schedule; remove the cron entry so they can't both fire.
 ssh "$HOST" 'rm -f /etc/cron.d/crease-purge-events'
 
-echo "==> waiting for health"
-ready=0
-for i in $(seq 1 15); do
-  if ssh "$HOST" 'curl -sf -m 3 http://127.0.0.1:8011/healthz >/dev/null'; then ready=1; break; fi
-  sleep 2
-done
-[ "$ready" = 1 ] || echo "    dispatch still not answering after 30s — verifying anyway" >&2
-
-# Assert, don't narrate. This step used to print the health body and the portal
-# status code and exit 0 regardless, so a deploy that left both services broken
-# ended with "==> done" and the operator walked away. Same checks the sibling
-# deploy scripts make: a health body that says ok, and a portal that renders.
+# Assert, don't narrate: units active, dispatch healthz ok, the portal's
+# sign-in form, the site's title and one of its JS chunks, public URLs 200.
+# A failure here trips on_exit, which restores the snapshot.
 echo "==> verifying"
-health="$(ssh "$HOST" 'curl -s -m 5 http://127.0.0.1:8011/healthz' || true)"
-portal="$(ssh "$HOST" 'curl -s -o /dev/null -w "%{http_code}" -m 8 http://127.0.0.1:3010/login' || true)"
-web="$(ssh "$HOST" 'curl -s -o /dev/null -w "%{http_code}" -m 10 http://127.0.0.1:3020/' || true)"
-units="$(ssh "$HOST" 'systemctl is-active crease-dispatch crease-portal crease-web' || true)"
-echo "    dispatch healthz -> ${health:-<no response>}"
-echo "    portal /login    -> ${portal:-<no response>} (expect 200)"
-echo "    web /            -> ${web:-<no response>} (expect 200)"
-echo "    units            -> $(echo "$units" | tr '\n' ' ')"
-
-echo "$health" | grep -q '"ok":true' || {
-  echo "ERROR: dispatch is not healthy after restart — the new code is live and broken" >&2
-  echo "  journalctl -u crease-dispatch -n 50 --no-pager" >&2
-  exit 1
-}
-[ "$portal" = "200" ] || {
-  echo "ERROR: portal /login returned '${portal:-<no response>}', expected 200" >&2
-  echo "  journalctl -u crease-portal -n 50 --no-pager" >&2
-  exit 1
-}
-[ "$web" = "200" ] || {
-  echo "ERROR: the customer site returned '${web:-<no response>}', expected 200" >&2
-  echo "  journalctl -u crease-web -n 50 --no-pager" >&2
-  exit 1
-}
+CREASE_HOST="$HOST" "$ROOT/deploy/health.sh"
 echo "==> done"
