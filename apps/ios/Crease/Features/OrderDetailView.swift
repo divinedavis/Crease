@@ -59,7 +59,7 @@ struct OrderDetailView: View {
             if !live.statusDetail.isEmpty {
                 Text(live.statusDetail)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             JourneyTrack(order: live)
@@ -92,7 +92,7 @@ struct OrderDetailView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(Theme.accentFill)
             .controlSize(.large)
             .disabled(paying)
         }
@@ -133,7 +133,7 @@ struct OrderDetailView: View {
             if let shop = live.cleaner, let street = shop.line1 {
                 Text([street, shop.city, shop.state].joined(separator: ", "))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,7 +156,7 @@ struct OrderDetailView: View {
             if let shop = live.cleaner, let street = shop.line1 {
                 Text([street, shop.city, shop.state].joined(separator: ", "))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +181,7 @@ struct OrderDetailView: View {
                 Text("Choose a delivery time").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(Theme.accentFill)
             .controlSize(.large)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -224,13 +224,13 @@ struct OrderDetailView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(Theme.accentFill)
             .controlSize(.large)
             .disabled(approving)
 
             Text("Questions? Call \(live.cleaner?.name ?? "the shop") before approving.")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -238,21 +238,30 @@ struct OrderDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 
+    /// "22 dollars", "22 dollars 50 cents": a bare "$22.00" failed the
+    /// accessibility audit's human-readable label check.
+    static func spoken(_ cents: Int) -> String {
+        let d = cents / 100, c = cents % 100
+        let dollars = "\(d) dollar\(d == 1 ? "" : "s")"
+        return c == 0 ? dollars : "\(dollars) \(c) cent\(c == 1 ? "" : "s")"
+    }
+
     private func itemsCard(_ items: [OrderItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("What they counted")
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
 
             ForEach(items) { item in
                 HStack {
                     Text(item.label).font(.subheadline)
                     Text("×\(item.quantity)")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                     Spacer()
                     Text(item.totalCents.asMoney)
                         .font(.subheadline.monospacedDigit())
+                        .accessibilityLabel(Self.spoken(item.totalCents))
                 }
             }
 
@@ -262,6 +271,7 @@ struct OrderDetailView: View {
                 Spacer()
                 Text(live.displayCents.asMoney)
                     .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .accessibilityLabel(Self.spoken(live.displayCents))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -344,7 +354,7 @@ struct OrderDetailView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(row.detail)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.muted)
                         }
                     }
                 }
@@ -430,7 +440,7 @@ struct OrderDetailView: View {
                 HStack(spacing: 8) {
                     Text("Handoff code")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                     Text(pin)
                         .font(.title3.weight(.bold).monospacedDigit())
                         .tracking(3)
@@ -489,6 +499,7 @@ struct OrderDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .tint(Theme.danger)   // the system red read "nearly passed" on its own tinted fill
                 .controlSize(.large)
                 .disabled(cancelling)
 
@@ -499,7 +510,7 @@ struct OrderDetailView: View {
                 if live.status.cancellationMayCost || live.courierEngaged || live.bagCollected {
                     Text(cancellationMoneyNote)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -524,7 +535,7 @@ struct OrderDetailView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
                 // No number here. This card tells the customer to call, and the
                 // cleaner card directly above it is already showing the number
                 // to call — repeating it reads as two different numbers at a
@@ -656,7 +667,7 @@ struct OrderDetailView: View {
 
     private func labelled(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.caption).foregroundStyle(Theme.muted)
             Text(value).font(.subheadline).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -665,12 +676,12 @@ struct OrderDetailView: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundStyle(muted ? .secondary : .primary)
+                .foregroundStyle(muted ? Theme.muted : Color.primary)
             Spacer()
             Text(value)
                 .font(bold ? .subheadline.weight(.bold).monospacedDigit()
                            : .subheadline.monospacedDigit())
-                .foregroundStyle(muted ? .secondary : .primary)
+                .foregroundStyle(muted ? Theme.muted : Color.primary)
         }
     }
 }

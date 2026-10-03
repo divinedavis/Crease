@@ -253,7 +253,7 @@ struct CheckoutView: View {
                 symbol: "house",
                 title: addressLabel,
                 detail: pickup.oneLine,
-                detailTint: .secondary
+                detailTint: Theme.muted
             ) { editingPin = true }
 
             Divider().padding(.leading, 56)
@@ -271,7 +271,7 @@ struct CheckoutView: View {
                 symbol: "phone",
                 title: store.profile?.formattedPhone ?? "Add a phone number",
                 detail: store.profile?.phone == nil ? "So the courier can reach you at the door" : nil,
-                detailTint: .secondary
+                detailTint: Theme.muted
             ) { editingPhone = true }
         }
         .background(Color(.secondarySystemBackground))
@@ -289,7 +289,7 @@ struct CheckoutView: View {
             HStack(spacing: 14) {
                 Image(systemName: symbol)
                     .font(.title3)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -308,7 +308,7 @@ struct CheckoutView: View {
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
@@ -350,13 +350,13 @@ struct CheckoutView: View {
             HStack(spacing: 8) {
                 Image(systemName: "clock")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                 Text(timeTitle)
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 8)
                 Text(chosenTimeText)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
 
             if let standardWindow {
@@ -390,7 +390,7 @@ struct CheckoutView: View {
                 // from the order once they do.
                 Text("You'll choose a delivery window once \(cleaner?.name ?? "the shop") says your order is ready.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
                     .background(Color(.secondarySystemBackground))
@@ -416,7 +416,7 @@ struct CheckoutView: View {
                 Text(title).font(.subheadline.weight(.semibold))
                 Text(detail)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -445,7 +445,7 @@ struct CheckoutView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Order Summary")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
 
             Button {
                 // The shop is changed from its own row below; this opens the
@@ -462,13 +462,13 @@ struct CheckoutView: View {
                             ForEach(lines, id: \.item.id) { line in
                                 Text(lineLabel(line))
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Theme.muted)
                                     .lineLimit(1)
                             }
                         } else {
                             Text(emptyBagLine)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.muted)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
                         }
@@ -476,7 +476,7 @@ struct CheckoutView: View {
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.right")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.muted)
                 }
                 .padding(14)
                 .background(Color(.secondarySystemBackground))
@@ -506,7 +506,7 @@ struct CheckoutView: View {
             .font(.caption.weight(.heavy))
             .foregroundStyle(.white)
             .frame(width: 38, height: 38)
-            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .background(Theme.accentFill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .accessibilityHidden(true)
     }
 
@@ -557,7 +557,7 @@ struct CheckoutView: View {
 
     private func totalRow(_ label: String, _ value: String, valueTint: Color = .primary) -> some View {
         HStack {
-            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Text(label).font(.subheadline).foregroundStyle(Theme.muted)
             Spacer()
             Text(value)
                 .font(.subheadline.monospacedDigit())
@@ -636,7 +636,7 @@ struct CheckoutView: View {
                     if walletSupported && !walletReady {
                         Text("No card in Wallet yet — set it up, or pay by card")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.muted)
                     }
                 }
 
@@ -644,7 +644,7 @@ struct CheckoutView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)
             }
             .contentShape(Rectangle())
         }
@@ -663,10 +663,10 @@ struct CheckoutView: View {
                 .font(.caption.weight(.semibold))
             Text(holdExplainer)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
             Text("Cancel before a driver is assigned and you pay nothing. After that, the trip we've already paid for is kept.")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -705,7 +705,7 @@ struct CheckoutView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
-            .background(Theme.accent, in: Capsule())
+            .background(Theme.accentFill, in: Capsule())
             .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
@@ -796,7 +796,7 @@ struct DropoffNotesView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Tell the courier where to find you. Anything here is shown to the driver on both legs.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
 
                 TextField("Meet at my door", text: $draft, axis: .vertical)
                     .lineLimit(3, reservesSpace: true)
@@ -891,7 +891,7 @@ struct ContactPhoneView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Couriers call this number if they can't find you at the door. It is shared with the driver on an active order and with nobody else.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
 
                 TextField("(555) 555-0123", text: $draft)
                     .keyboardType(.phonePad)
@@ -967,7 +967,7 @@ struct SchedulePickupView: View {
 
                 Text("We'll send a courier to arrive within twenty minutes of this time.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 0)
@@ -1026,7 +1026,7 @@ struct PaymentMethodsView: View {
 
                 Label("Crease never sees or stores your card. It goes straight to Stripe.", systemImage: "lock.shield")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
 
                 Spacer(minLength: 0)
             }

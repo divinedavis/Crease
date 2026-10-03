@@ -182,6 +182,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Must be set before launch finishes or the tap that woke the app is
         // delivered to nobody and opens the order list instead of the order.
         UNUserNotificationCenter.current().delegate = self
+        Metrics.shared.start()   // MetricKit, logged on the device only (Core/Metrics.swift)
         return true
     }
 

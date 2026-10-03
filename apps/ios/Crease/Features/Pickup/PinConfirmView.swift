@@ -99,7 +99,7 @@ struct PinConfirmView: View {
                 .font(.title3.weight(.semibold))
             Text("Move the map so the pin sits where the driver should meet you.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
@@ -129,7 +129,7 @@ struct PinConfirmView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(Theme.accentFill)
             .controlSize(.large)
         }
         .padding(.horizontal, 20)

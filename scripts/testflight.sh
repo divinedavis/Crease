@@ -23,6 +23,16 @@ EXPORT="$WORK/export"
 BUMP=1
 [ "${1:-}" = "--no-bump" ] && BUMP=0
 
+# Apple's four quality checks before anything is bumped or built for upload:
+# Swift Testing, every XCUITest incl. the accessibility audit, the performance
+# budget, MetricKit + Xcode Organizer, and Features/ coverage
+# (owner, 2026-10-03). CREASE_SKIP_GATES=1 is for an emergency only; say why.
+if [ "${CREASE_SKIP_GATES:-0}" = "1" ]; then
+  echo "==> WARNING: CREASE_SKIP_GATES=1 — shipping without the quality gates" >&2
+else
+  "$ROOT/scripts/ios-gates.sh"
+fi
+
 cd "$IOS"
 
 if [ "$BUMP" = "1" ]; then

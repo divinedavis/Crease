@@ -16,7 +16,7 @@ struct LockView: View {
                     .font(.title2.weight(.semibold))
                 Text("Unlock with \(lock.biometry.label) to see your orders.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                 Button {
                     Task { await lock.unlock() }
@@ -25,6 +25,7 @@ struct LockView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Theme.accentFill)
                 .padding(.horizontal, 48)
                 .padding(.top, 6)
             }

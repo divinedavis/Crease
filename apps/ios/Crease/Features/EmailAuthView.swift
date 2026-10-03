@@ -14,6 +14,9 @@ import SwiftUI
 /// confirmation link would put a mail app between someone and their first
 /// order, which is the whole reason the rest of the screen is OAuth.
 struct EmailAuthSheet: View {
+    /// The 40 pt headline, scaled with the reader's text size.
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 40
+
     @EnvironmentObject private var session: Session
     @Environment(\.dismiss) private var dismiss
 
@@ -66,6 +69,8 @@ struct EmailAuthSheet: View {
                             Text("Cancel")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(ink.opacity(0.65))
+                                .frame(minWidth: 44, minHeight: 44, alignment: .leading)   // Apple's 44 pt hit target
+                                .contentShape(Rectangle())
                         }
                         Spacer()
                     }
@@ -78,7 +83,8 @@ struct EmailAuthSheet: View {
                         .contentTransition(.opacity)
 
                     Text(mode == .signIn ? "Sign in to\nyour orders." : "Join\nCrease.")
-                        .font(.system(size: 40, weight: .bold))
+                        .font(.system(size: titleSize, weight: .bold))   // scales with Dynamic Type
+                        .accessibilityLabel(mode == .signIn ? "Sign in to your orders." : "Join Crease.")
                         .foregroundStyle(ink)
                         .lineSpacing(-4)
                         .fixedSize(horizontal: false, vertical: true)
@@ -182,7 +188,7 @@ struct EmailAuthSheet: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .foregroundStyle(.white)
-                        .background(Capsule().fill(Theme.accent))
+                        .background(Capsule().fill(Theme.accentFill))
                     }
                     .disabled(!canSubmit || isSubmitting)
                     .opacity(canSubmit ? 1 : 0.4)
@@ -204,10 +210,12 @@ struct EmailAuthSheet: View {
                                 .foregroundStyle(ink.opacity(0.6))
                                 .underline()
                                 .contentTransition(.opacity)
+                                .frame(minHeight: 44)   // Apple's 44 pt hit target
+                                .contentShape(Rectangle())
                         }
                         Spacer()
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 8)
                     .padding(.bottom, 40)
                 }
                 .padding(.horizontal, 28)

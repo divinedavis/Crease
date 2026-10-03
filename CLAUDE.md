@@ -32,6 +32,14 @@
 - Not automated (need prod credentials or Xcode): `scripts/e2e*.mjs` and
   `rls-check.mjs` run against production over an SSH tunnel; `scripts/ios-test.sh`
   runs the XCUITests on a simulator.
+- iOS quality gates (owner, 2026-10-03): `scripts/testflight.sh` runs
+  `scripts/ios-gates.sh` before every upload — Swift Testing + XCTest + every
+  XCUITest incl. `AccessibilityAuditTests` (light AND dark), the
+  `ios-coverage-gate.py` check that every `Features/` file is executed by a
+  test, `PerformanceTests` judged by `ios-perf-gate.py` (fail > 1.5x the median
+  of the last 5 ships, baseline `apps/ios/perf_baseline.json`), MetricKit wiring,
+  and the Xcode Organizer report. A new screen needs a UI test that opens it.
+  `CREASE_SKIP_GATES=1` only for an emergency, said in the commit.
 - **Every change adds, updates AND deletes tests in the same commit.** New
   behavior gets a test, changed behavior updates its test, removed behavior
   deletes its test (no dead tests). Say which in the commit body

@@ -49,7 +49,7 @@ struct SignInView: View {
                     .font(.title3.weight(.semibold))
                 Text("Laundry, picked up and delivered.")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
 
             Spacer(minLength: 0)
@@ -128,7 +128,8 @@ struct SignInView: View {
 
                 Text("Nothing to confirm in your inbox — you're in as soon as you sign up.")
                     .font(.footnote)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)   // .tertiary failed the contrast audit
+                    .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.center)
                     .padding(.top, 6)
             }

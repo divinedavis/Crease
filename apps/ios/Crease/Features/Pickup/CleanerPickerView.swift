@@ -73,7 +73,7 @@ struct CleanerPickerView: View {
                 Text(cleaner.name).font(.body.weight(.semibold))
                 Text([cleaner.line1, cleaner.city].compactMap { $0 }.joined(separator: ", "))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                 HStack(spacing: 10) {
                     if let miles = cleaner.milesFrom(pickup) {
@@ -82,7 +82,7 @@ struct CleanerPickerView: View {
                     Label("\(cleaner.turnaroundHours)h turnaround", systemImage: "clock")
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
             }
 
             Spacer()

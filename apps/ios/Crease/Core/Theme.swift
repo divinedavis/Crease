@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// One place for the app's visual language.
 ///
@@ -7,11 +8,30 @@ import SwiftUI
 /// state that matters — the one live order, the one thing needing a decision —
 /// so it means something when it appears.
 enum Theme {
-    static let accent = Color(red: 0.12, green: 0.44, blue: 0.36)
-    static let accentSoft = Color(red: 0.12, green: 0.44, blue: 0.36).opacity(0.12)
-    static let warn = Color(red: 0.72, green: 0.45, blue: 0.05)
+    // Each colour has a dark-mode twin (2026-10-03): the light values read
+    // under 3:1 on a dark background, which Apple's accessibility audit
+    // failed on every order screen. Light values are unchanged except warn,
+    // which was 3.8:1 on white and under 4.5:1 on its own amber card (was 0.72/0.45/0.05). The dark accent keeps
+    // white button text above 3:1 (large/bold text) while reading 4.7:1 as text.
+    static let accent = adaptive(light: (0.12, 0.44, 0.36), dark: (0.27, 0.58, 0.47))
+    static let accentSoft = accent.opacity(0.12)
+    /// For FILLS under white text (prominent buttons, capsules): the light
+    /// green in both modes, so the white label stays 5.9:1 in dark mode too.
+    static let accentFill = Color(red: 0.12, green: 0.44, blue: 0.36)
+    /// Secondary text. The system's .secondary / .tertiary read "nearly
+    /// passed" / "failed" in Apple's contrast audit on these backgrounds;
+    /// this is ~7:1 in both modes.
+    static let muted = adaptive(light: (0.33, 0.33, 0.36), dark: (0.70, 0.70, 0.74))
+    static let warn = adaptive(light: (0.50, 0.29, 0.0), dark: (0.95, 0.68, 0.25))
     static let warnSoft = Color(red: 0.95, green: 0.72, blue: 0.28).opacity(0.18)
-    static let danger = Color(red: 0.72, green: 0.20, blue: 0.15)
+    static let danger = adaptive(light: (0.62, 0.15, 0.12), dark: (1.0, 0.45, 0.40))
+
+    private static func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+        Color(UIColor { t in
+            let c = t.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+        })
+    }
 
     static let cardRadius: CGFloat = 16
 }
@@ -91,9 +111,10 @@ struct JourneyTrack: View {
                                 .font(.system(size: 8, weight: .bold))
                         }
                         Text(steps[i])
-                            .font(.caption2)
+                            .font(.caption2.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)   // wraps at large text sizes
                     }
-                    .foregroundStyle(i <= current ? Theme.accent : .secondary)
+                    .foregroundStyle(i <= current ? Theme.accent : Color(.label).opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: i == 0 ? .leading
                            : (i == steps.count - 1 ? .trailing : .center))
                 }

@@ -77,7 +77,7 @@ struct AddressEntryView: View {
 
                     if search.query.isEmpty && home == nil && otherSaved.isEmpty {
                         Text("Start typing your address.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.muted)
                             .listRowSeparator(.hidden)
                     }
 
@@ -92,7 +92,7 @@ struct AddressEntryView: View {
                                 .font(.footnote.weight(.semibold))
                             Text(ServiceArea.blurb)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.muted)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(.vertical, 8)
@@ -131,7 +131,7 @@ struct AddressEntryView: View {
     private var field: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
             TextField("Street address", text: $search.query)
                 .focused($focused)
                 .textInputAutocapitalization(.words)
@@ -140,7 +140,7 @@ struct AddressEntryView: View {
                 .accessibilityLabel("Street address")
             if !search.query.isEmpty {
                 Button { search.query = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Theme.muted)
                 }
                 .accessibilityLabel("Clear")
             }
@@ -168,13 +168,13 @@ struct AddressEntryView: View {
                 Text(address.label ?? "Saved").font(.body.weight(.semibold))
                 Text(address.oneLine)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                     .lineLimit(1)
             }
             Spacer()
             if pinned {
                 Image(systemName: "arrow.up.left.circle.fill")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)
             }
         }
         .padding(.vertical, 4)
@@ -186,12 +186,12 @@ struct AddressEntryView: View {
         HStack(spacing: 14) {
             Image(systemName: "mappin.circle.fill")
                 .font(.title3)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
                 .frame(width: 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.title).font(.body)
                 if !result.subtitle.isEmpty {
-                    Text(result.subtitle).font(.footnote).foregroundStyle(.secondary)
+                    Text(result.subtitle).font(.footnote).foregroundStyle(Theme.muted)
                 }
             }
             Spacer()

@@ -350,7 +350,7 @@ struct BookPickupView: View {
             ProgressView()
             Text("Completing your booking…")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
@@ -378,7 +378,7 @@ struct BookPickupView: View {
 
             Text(feeExplainer)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -405,7 +405,7 @@ struct BookPickupView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(Theme.accentFill)
             .controlSize(.large)
             .disabled(cleaner == nil || (selected.carriesCleaning && menu.isEmpty))
             .padding(.horizontal, 16)
@@ -449,7 +449,7 @@ struct BookPickupView: View {
                         .font(.subheadline.weight(.semibold))
                     Text(declaredSummary)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                 }
@@ -460,7 +460,7 @@ struct BookPickupView: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
             .padding(12)
             .background(Color(.secondarySystemGroupedBackground))
@@ -511,10 +511,10 @@ struct BookPickupView: View {
                         .font(.subheadline.weight(.semibold))
                     if let cleaner, let miles = cleaner.milesFrom(pickup.coordinate) {
                         Text(String(format: "%.1f mi away · %dh turnaround", miles, cleaner.turnaroundHours))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(Theme.muted)
                     } else {
                         Text("Tap to pick a partner shop")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(Theme.muted)
                     }
                 }
                 Spacer()
@@ -523,7 +523,7 @@ struct BookPickupView: View {
                     .foregroundStyle(Theme.accent)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)
             }
             .padding(12)
             .background(Color(.secondarySystemGroupedBackground))
@@ -559,7 +559,7 @@ struct BookPickupView: View {
                                 .foregroundStyle(Theme.accent)
                         }
                     }
-                    Text(option.blurb).font(.footnote).foregroundStyle(.secondary)
+                    Text(option.blurb).font(.footnote).foregroundStyle(Theme.muted)
                 }
 
                 Spacer()
@@ -569,7 +569,7 @@ struct BookPickupView: View {
                         .font(.body.weight(.semibold).monospacedDigit())
                     if let eta = option.pickupEtaMinutes {
                         Text("driver ~\(eta) min")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(Theme.muted)
                     }
                 }
             }

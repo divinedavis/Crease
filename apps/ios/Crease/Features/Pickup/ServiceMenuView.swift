@@ -126,7 +126,7 @@ struct ServiceMenuView: View {
                     .font(.footnote.weight(.semibold))
                 Text("You've also got \(other.label.lowercased()) in this bag. They're cleaned on different machines and come back on different days, so they have to be booked separately.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
             Spacer(minLength: 8)
             Button("Remove") { clear(other) }
@@ -156,7 +156,7 @@ struct ServiceMenuView: View {
                     Text(item.label).font(.subheadline.weight(.medium))
                     Text(priceLine(item))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                 }
                 Spacer(minLength: 8)
                 Text(entered > 0 ? enteredLabel(item, entered) : "—")
@@ -206,7 +206,7 @@ struct ServiceMenuView: View {
                 // booked last time here, not a number the app made up.
                 Text("Same as your last order at \(shopName). Change it if this bag is different.")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             } else if entered == ServicePricing.startingUnits(item), item.minimumUnits > 0 {
                 // Why the line already has a number in it. A count nobody
                 // typed needs saying, or it reads as the app having decided how
@@ -214,7 +214,7 @@ struct ServiceMenuView: View {
                 // can state without guessing.
                 Text("That's \(shopName)'s minimum, so it's where this starts. Add pounds if your bag is bigger.")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
         }
         .padding(.vertical, 2)
@@ -233,7 +233,7 @@ struct ServiceMenuView: View {
                     // one number and is charged the sum of both.
                     Text("Courier fee is charged separately")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                 }
                 Spacer()
                 Text(subtotal.asMoney)

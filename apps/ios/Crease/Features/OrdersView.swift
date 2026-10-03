@@ -89,7 +89,7 @@ struct OrdersView: View {
                         HStack {
                             Text("Past orders")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.muted)
                             Spacer()
                         }
                         .padding(.top, 12)
@@ -277,7 +277,7 @@ struct OrdersView: View {
                     .font(.title2.weight(.semibold))
                 Text("Where should we collect from?")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
             Spacer()
         }
@@ -302,7 +302,7 @@ struct OrdersView: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.accent)
                 Text("Enter your address")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                 Spacer()
                 Image(systemName: "arrow.right.circle.fill")
                     .font(.title3)
@@ -374,14 +374,14 @@ private struct ActiveOrderCard: View {
                     if !order.statusDetail.isEmpty {
                         Text(order.statusDetail)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.muted)
             }
 
             JourneyTrack(order: order)
@@ -392,14 +392,14 @@ private struct ActiveOrderCard: View {
                         .foregroundStyle(Theme.accent)
                     Text(courier + (leg.courierVehicle.map { " · \($0)" } ?? ""))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.muted)
                 }
             }
 
             HStack {
                 Text(order.cleaner?.name ?? "—")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
                 Spacer()
                 // No number until the shop has one. "$0.00 est." is not a
                 // cheap order, it is the absence of a price rendered as money.
@@ -409,12 +409,12 @@ private struct ActiveOrderCard: View {
                     if order.isEstimate {
                         Text("est.")
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Theme.muted)
                     }
                 } else {
                     Text("Priced after counting")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.muted)
                 }
             }
         }
@@ -432,7 +432,7 @@ private struct PastOrderRow: View {
                     .font(.subheadline.weight(.medium))
                 Text(order.createdAt.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.muted)
             }
             Spacer()
             StatusPill(status: order.status)
@@ -440,7 +440,7 @@ private struct PastOrderRow: View {
             // an em dash is the honest column.
             Text(order.priceText ?? "—")
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
         }
         .creaseCard()
     }
@@ -451,12 +451,12 @@ private struct EmptyState: View {
         VStack(spacing: 12) {
             Image(systemName: "bag")
                 .font(.system(size: 42))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Theme.muted)
             Text("No orders yet")
                 .font(.headline)
             Text("Schedule a pickup and we'll collect your bag, get it cleaned, and bring it back.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         }

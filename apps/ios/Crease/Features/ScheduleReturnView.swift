@@ -71,7 +71,7 @@ struct ScheduleReturnView: View {
                                 .font(.headline)
                             Text("\(order.cleaner?.name ?? "The shop") finished \(readyAgo).")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.muted)
                         }
                     }
                     .padding(.vertical, 4)
