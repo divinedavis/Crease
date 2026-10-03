@@ -66,16 +66,44 @@ const TEST_CUSTOMER_IDS = (process.env.CREASE_TEST_CUSTOMER_IDS ?? '')
   .map((id) => id.trim())
   .filter((id) => /^[0-9a-f-]{36}$/i.test(id));
 
-/** Rows a range filter applies to, by their own time column. */
-function sinceFor(range: string | undefined): string | null {
-  const days: Record<string, number> = { today: 1, month: 30, '3m': 90, '6m': 182 };
-  const n = days[String(range ?? 'all')];
-  if (!n) return null;
-  const from = new Date();
-  if (range === 'today') from.setUTCHours(0, 0, 0, 0);
-  else from.setUTCDate(from.getUTCDate() - n);
-  return from.toISOString();
+/**
+ * Rows a range filter applies to, by their own time column.
+ *
+ * "This month" and "Today" are calendar windows in New York, the same ones the
+ * owner dashboard prints in its header ("Oct 1 → now"). A rolling 30 days here
+ * put September requests under an October heading.
+ */
+function sinceFor(range: string | undefined, now = new Date()): string | null {
+  const r = String(range ?? 'all');
+  if (r === '6m' || r === '3m') {
+    return new Date(now.getTime() - (r === '6m' ? 182 : 91) * 864e5).toISOString();
+  }
+  if (r !== 'month' && r !== 'today') return null;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, Number(p.value)]),
+  ) as Record<string, number>;
+  return nyMidnight(parts.year, parts.month, r === 'month' ? 1 : parts.day).toISOString();
 }
+
+/** Midnight on a New York calendar day, as an instant (EST or EDT as it falls). */
+function nyMidnight(year: number, month: number, day: number): Date {
+  const utc = Date.UTC(year, month - 1, day);
+  const nyHour = Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' })
+      .format(new Date(utc)),
+  );
+  // At 00:00 UTC New York reads 19:00 or 20:00 the day before.
+  return new Date(utc + (24 - nyHour) * 36e5);
+}
+
+export { sinceFor };
 
 export async function dashboardStats(
   db: SupabaseClient,
@@ -126,7 +154,9 @@ export async function dashboardStats(
     .sort((a, b) => b.checks - a.checks)
     .slice(0, 8);
 
-  const reqWindow = both(sinceOn('created_at'), notOwner);
+  // Bot submissions stay in the table for the record but are nobody waiting.
+  const notSpam = (q: any) => q.neq('status', 'spam');
+  const reqWindow = both(both(sinceOn('created_at'), notOwner), notSpam);
   const [reqTotal, reqNew, reqContacted, reqBooked, reqDeclined] = await Promise.all([
     count('pickup_requests', reqWindow),
     count('pickup_requests', both(reqWindow, (q) => q.eq('status', 'new'))),

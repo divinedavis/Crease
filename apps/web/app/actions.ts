@@ -3,6 +3,7 @@
 import { cookies, headers } from 'next/headers';
 import { nearestShop, SERVICE_RADIUS_MILES, type Shop } from '@/lib/coverage';
 import { geocodeBrooklyn } from '@/lib/geocode';
+import { looksLikeSpam, looksLikeStreetAddress } from '@/lib/spam';
 import { serviceClient } from '@/lib/supabase';
 
 export interface CheckResult {
@@ -192,12 +193,22 @@ export async function requestPickup(_prev: unknown, formData: FormData): Promise
   const email = field('email', 320).toLowerCase();
 
   if (name.length < 1) return { ok: false, message: 'Tell us your name so we know who to text.' };
+  // Bots fill the hidden field, or put a link where a name goes. They get the
+  // same thank-you a person does, so there is nothing to tune against, and
+  // nothing is saved.
+  if (looksLikeSpam(field('company', 200), name)) {
+    return { ok: true, message: "We'll text you to confirm the pickup window and the price before anything is charged." };
+  }
   // Loose on purpose: US mobiles arrive as (718) 555-0142, +1 718 555 0142 and
   // 7185550142, and rejecting a real number over punctuation loses the order.
   if (phone.replace(/\D/g, '').length < 7) {
     return { ok: false, message: 'That phone number looks short — we confirm pickups by text.' };
   }
-  if (address.length < 3) return { ok: false, message: 'We need a street address to collect from.' };
+  // A street address has a number and a street, so at least one space. The
+  // spam that got through sent six random characters here.
+  if (!looksLikeStreetAddress(address)) {
+    return { ok: false, message: 'We need a street address to collect from.' };
+  }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return { ok: false, message: 'That email looks off — leave it blank if you would rather not.' };
   }

@@ -59,6 +59,13 @@ export function OrderForm({
     <form action={submit} className="check" style={{ display: 'grid', gap: 12 }}>
       {state && !state.ok && <div className="answer">{state.message}</div>}
 
+      {/* Bot trap: off-screen and out of the tab order, so a person never fills it. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+        <label>
+          Company
+          <input name="company" type="text" tabIndex={-1} autoComplete="off" defaultValue="" />
+        </label>
+      </div>
       <input name="name" required autoComplete="name" placeholder="Your name" aria-label="Your name" />
       <input
         name="phone"
