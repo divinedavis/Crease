@@ -72,7 +72,10 @@ run() {   # run <result bundle> <log> <xcodebuild test args...>
 }
 
 echo "==> gates 1+2: unit tests (XCTest + Swift Testing) and every XCUITest incl. the accessibility audit"
-run "$DD/Gates.xcresult" "$DD/gates.log" -enableCodeCoverage YES \
+# A test that fails is run once more (Xcode's own retry): these tests talk to
+# production over the network, and one slow response or dropped tap should not
+# block a ship. A real regression fails both times and still stops it.
+run "$DD/Gates.xcresult" "$DD/gates.log" -enableCodeCoverage YES -retry-tests-on-failure -test-iterations 2 \
   -skip-testing:CreaseUITests/MarketingScreenshots -skip-testing:CreaseUITests/PerformanceTests
 # xcodebuild passes with zero tests run; make each gate prove it ran
 grep -qE "Test run with [1-9][0-9]* tests?.* passed" "$DD/gates.log" \
