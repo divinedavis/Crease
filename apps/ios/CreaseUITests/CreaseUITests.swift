@@ -1100,4 +1100,49 @@ final class CreaseUITests: XCTestCase {
             )
         }
     }
+
+    // MARK: - Screens the coverage gate found no test opening (2026-10-03)
+
+    /// A finished order asks one thing: when to deliver. The ready card opens
+    /// the schedule sheet, and "Not now" leaves without booking anything.
+    func testAReadyOrderOffersADeliveryTime() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        // Fails rather than skips: ios-gates.sh seeds a ready order every run.
+        let ready = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'ready' AND label != 'Book a pickup'")).firstMatch
+        guard ready.waitForExistence(timeout: 15) else {
+            XCTFail("no ready order on the list: " + app.buttons.allElementsBoundByIndex.prefix(8).map(\.label).joined(separator: " | "))
+            return
+        }
+        ready.tap()
+        let choose = app.buttons["Choose a delivery time"]
+        XCTAssertTrue(choose.waitForExistence(timeout: 10), "a ready order must offer a delivery time")
+        choose.tap()
+        XCTAssertTrue(app.navigationBars["Schedule delivery"].waitForExistence(timeout: 10),
+                      "the schedule sheet should open")
+        XCTAssertTrue(app.staticTexts["When should we bring it back?"].exists)
+        attach(app, "schedule-delivery")
+        app.buttons["Not now"].tap()
+        XCTAssertTrue(choose.waitForExistence(timeout: 10), "Not now returns to the order without booking")
+    }
+
+    /// A typed (not saved) address goes through the pin step, where the
+    /// customer puts the pin on the right door before booking.
+    func testATypedAddressAsksForThePickupPoint() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let field = app.textFields["Street address"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()   // also lets the interruption monitor answer the location prompt
+        field.typeText("1 Hanson Pl")
+        let result = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Hanson'")).firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 15), "address search should suggest the typed street")
+        result.tap()
+        XCTAssertTrue(app.staticTexts["Set your pickup point"].waitForExistence(timeout: 15),
+                      "a typed address should open the pin step")
+        XCTAssertTrue(app.buttons["Confirm pickup point"].exists)
+        attach(app, "pin-confirm")
+    }
 }

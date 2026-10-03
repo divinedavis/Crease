@@ -115,6 +115,12 @@ const ORDERS = [
   {
     short_code: 'C1F53A',
     status: 'ready',
+    // What the shop's "ready" step writes. Without it the app never offers a
+    // delivery time (Order.needsReturnScheduling), and the return window is
+    // cleared so a scheduling run by the UI tests does not stick.
+    ready_at: new Date(now - 2 * hour).toISOString(),
+    return_window_start: null,
+    return_window_end: null,
     pickup_window_start: new Date(now - 50 * hour).toISOString(),
     pickup_window_end: new Date(now - 48 * hour).toISOString(),
     estimate_subtotal_cents: 3200,
