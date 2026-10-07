@@ -120,7 +120,7 @@ struct CheckoutView: View {
             if selected.pickupEtaMinutes == nil { scheduledPickup = nil }
         }
         .sheet(isPresented: $editingPin) {
-            PinConfirmView(address: pickup) { confirmed, notes in
+            PinConfirmView(address: pickup, startsAtCurrentLocation: true) { confirmed, notes in
                 pickup = confirmed
                 // Only when they wrote one. The field in that sheet starts
                 // empty every time, so treating a blank as an answer would
