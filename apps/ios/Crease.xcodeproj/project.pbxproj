@@ -54,6 +54,7 @@
 		E4CD2FB5594370A0F986D845 /* Push.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61376034577AEFE05F4DD391 /* Push.swift */; };
 		E5C6078A0B5BAF12AD112831 /* ScheduleReturnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */; };
 		FC60CCABC97DB389285ED304 /* DispatchAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED5BE30554309513304A64C /* DispatchAPI.swift */; };
+		FD67D6FD472FA6DCB2542E05 /* PinAddressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E67D04CA816739B72F1F413 /* PinAddressTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 		0ED5BE30554309513304A64C /* DispatchAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DispatchAPI.swift; sourceTree = "<group>"; };
 		10202027BD39F23F960C6AEF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		104032AB1B2E2F303B93931F /* OrderDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderDetailView.swift; sourceTree = "<group>"; };
+		1E67D04CA816739B72F1F413 /* PinAddressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinAddressTests.swift; sourceTree = "<group>"; };
 		279324D013D034F3598EEE41 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		28F98B89C26D57784841B735 /* MarketingScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketingScreenshots.swift; sourceTree = "<group>"; };
 		2A9740EB7DC2492BCDC52958 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -124,7 +126,7 @@
 		F44E2D932E82FFF02FB60B57 /* ScheduleReturnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleReturnView.swift; sourceTree = "<group>"; };
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_0464FBBF-1401-4BF1-A4D4-62418709766E" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_2AA95F63-C440-4605-9FA6-FA82E2340999" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -251,6 +253,7 @@
 				040BD61FED150B768839549C /* FinishedLegTests.swift */,
 				C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */,
 				E1D0E45DE69E5FEE27E4B0E3 /* PhoneNumberTests.swift */,
+				1E67D04CA816739B72F1F413 /* PinAddressTests.swift */,
 				38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */,
 				D84BDAB8D963C5F6DB747A16 /* PricingInvariantTests.swift */,
 				030570AB33B09D580983F6ED /* ReadyEstimateTests.swift */,
@@ -260,10 +263,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_DFF5242C-E651-4E00-A838-0D7F6EE0E7FE" /* ios */ = {
+		"TEMP_A4A70F9B-DD34-44A2-805F-F02D648AA304" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_0464FBBF-1401-4BF1-A4D4-62418709766E" /* Secrets.xcconfig */,
+				"TEMP_2AA95F63-C440-4605-9FA6-FA82E2340999" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -439,6 +442,7 @@
 				0E067E517FD8D8E7F3E2B3E9 /* FinishedLegTests.swift in Sources */,
 				2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */,
 				0423DDDA8376942EB9937AFD /* PhoneNumberTests.swift in Sources */,
+				FD67D6FD472FA6DCB2542E05 /* PinAddressTests.swift in Sources */,
 				85ED285AC05AF7E2B27D5B61 /* PriceCopyTests.swift in Sources */,
 				73491AC787ADF58079A43717 /* PricingInvariantTests.swift in Sources */,
 				085CDCA72441BA5A897F5F53 /* ReadyEstimateTests.swift in Sources */,
@@ -531,7 +535,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0464FBBF-1401-4BF1-A4D4-62418709766E" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_2AA95F63-C440-4605-9FA6-FA82E2340999" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -680,7 +684,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0464FBBF-1401-4BF1-A4D4-62418709766E" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_2AA95F63-C440-4605-9FA6-FA82E2340999" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
