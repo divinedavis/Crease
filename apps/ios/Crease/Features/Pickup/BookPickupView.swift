@@ -727,7 +727,9 @@ struct BookPickupView: View {
             pickup_window_start: windowStart,
             pickup_window_end: windowEnd,
             customer_notes: shopNote,
-            customer_item_count: declaredPieceCount > 0 ? declaredPieceCount : nil
+            customer_item_count: declaredPieceCount > 0 ? declaredPieceCount : nil,
+            weight_estimate_lb: selected.carriesCleaning && serviceKind == .washFold ? extras.weightEstimate?.pounds : nil,
+            weight_estimate_method: selected.carriesCleaning && serviceKind == .washFold ? extras.weightEstimate?.method : nil
         )) else {
             error = store.errorMessage ?? "Couldn't book that pickup."
             return

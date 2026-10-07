@@ -380,6 +380,10 @@ final class OrderStore: ObservableObject {
         /// How many pieces they say are in the bag. Optional — nil is encoded
         /// as an absent key, so an uncounted bag stays null rather than zero.
         var customer_item_count: Int? = nil
+        /// The photo weight estimate the customer accepted, and how it was
+        /// made ('container' or 'lidar'), so counter weigh-ins can calibrate it.
+        var weight_estimate_lb: Double? = nil
+        var weight_estimate_method: String? = nil
     }
 
     /// The customer's own bag count, editable for as long as the row is still

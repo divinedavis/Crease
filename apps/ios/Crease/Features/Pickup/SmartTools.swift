@@ -1,3 +1,4 @@
+import ARKit
 import PhotosUI
 import SwiftUI
 
@@ -12,6 +13,8 @@ final class OrderExtras: ObservableObject {
     @Published var ticket: String = ""
     /// A time the customer named in "Describe your order", for checkout to adopt.
     @Published var requestedPickup: Date?
+    /// The photo weight estimate the customer used, recorded on the order.
+    @Published var weightEstimate: (pounds: Double, method: String)?
 
     var canAddPhoto: Bool { photos.count < OrderPhoto.maxPerOrder }
 
@@ -167,7 +170,14 @@ struct SmartOrderTools: View {
     @State private var description = ""
     @State private var working = false
     @State private var result: String?
+    @State private var estimatingWeight = false
     @FocusState private var typing: Bool
+
+    /// The shop's by-the-pound line, when wash & fold is what's on screen.
+    private var weighedLine: ServiceItem? {
+        guard kind == .washFold || !offered.contains(.dryClean) else { return nil }
+        return menu.first { $0.isByWeight }
+    }
 
     var body: some View {
         Section {
@@ -182,6 +192,28 @@ struct SmartOrderTools: View {
                 Button("Fill in") { Task { await fillFromText() } }
                     .buttonStyle(.bordered)
                     .disabled(description.trimmingCharacters(in: .whitespaces).isEmpty || working)
+            }
+
+            if let laundry = weighedLine {
+                Button {
+                    estimatingWeight = true
+                } label: {
+                    Label("Estimate weight from a photo", systemImage: "scalemass")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .font(.subheadline)
+                .sheet(isPresented: $estimatingWeight) {
+                    WeightEstimateView(line: laundry) { estimate, method, photo in
+                        kind = .washFold
+                        quantities[laundry.id] = max(estimate.pounds, ServicePricing.startingUnits(laundry))
+                        extras.weightEstimate = (estimate.pounds, method)
+                        if let photo { extras.addHandoff(photo) }
+                        result = "Set to \(Int(estimate.pounds)) lb. \(laundry.label) is weighed at the counter, and that's what you pay."
+                        estimatingWeight = false
+                    }
+                    .presentationDetents([.large])
+                }
             }
 
             HStack(spacing: 10) {
@@ -468,4 +500,191 @@ struct StainNoteView: View {
             }
         }
     }
+}
+
+
+// MARK: - Weight from a photo
+
+/// Pick the container, say how full, and get a rough weight — or, on a Pro
+/// iPhone, measure the pile with LiDAR. The counter's scale still sets the bill.
+struct WeightEstimateView: View {
+    @Environment(\.dismiss) private var dismiss
+    let line: ServiceItem
+    let onUse: (WeightEstimate, String, UIImage?) -> Void
+
+    @State private var photo: UIImage?
+    @State private var container: LaundryContainer = .basket
+    @State private var fullness = 0.75
+    @State private var heavy = false
+    @State private var detected: String?
+    @State private var scanning = false
+    @State private var measuredCubicFeet: Double?
+
+    private var estimate: WeightEstimate {
+        if let measuredCubicFeet { return .from(cubicFeet: measuredCubicFeet, heavy: heavy) }
+        return .from(container: container, fullness: fullness, heavy: heavy)
+    }
+
+    private var method: String { measuredCubicFeet == nil ? "container" : "lidar" }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 12) {
+                        if let photo {
+                            Image(uiImage: photo)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 64, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .accessibilityLabel("Your laundry photo")
+                        }
+                        ImageSourceButton(onImage: { image in Task { await recognise(image) } }) {
+                            Label(photo == nil ? "Take a photo of it" : "Retake", systemImage: "camera")
+                        }
+                    }
+                    if let detected {
+                        Text(detected).font(.caption).foregroundStyle(Theme.muted)
+                    }
+                    if PileScanner.isSupported {
+                        Button {
+                            scanning = true
+                        } label: {
+                            Label(measuredCubicFeet == nil ? "Measure it with LiDAR" : "Measure again", systemImage: "cube.transparent")
+                        }
+                    }
+                } footer: {
+                    Text(PileScanner.isSupported
+                         ? "LiDAR measures the pile's size. Without it, the estimate comes from the container and how full it is."
+                         : "The estimate comes from the container and how full it is.")
+                }
+
+                if measuredCubicFeet == nil {
+                    Section("What's it in?") {
+                        Picker("Container", selection: $container) {
+                            ForEach(LaundryContainer.allCases) { Text($0.label).tag($0) }
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("How full? \(fullnessLabel)")
+                            Slider(value: $fullness, in: 0.25...1.2, step: 0.05)
+                                .accessibilityValue(fullnessLabel)
+                        }
+                    }
+                } else if let measuredCubicFeet {
+                    Section("Measured") {
+                        Text(String(format: "About %.1f cubic feet of laundry", measuredCubicFeet))
+                        Button("Use the container instead") { self.measuredCubicFeet = nil }
+                    }
+                }
+
+                Section {
+                    Toggle("Mostly towels, jeans or bedding", isOn: $heavy)
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("About \(Int(estimate.pounds)) lb")
+                            .font(.title2.weight(.semibold))
+                            .accessibilityIdentifier("weight-estimate")
+                        Text("Likely \(Int(estimate.low))–\(Int(estimate.high)) lb. \(line.label) is weighed at the counter, and that weight is what you pay.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.muted)
+                    }
+                    Button("Use \(Int(estimate.pounds)) lb") { onUse(estimate, method, photo) }
+                        .fontWeight(.semibold)
+                }
+            }
+            .navigationTitle("Estimate weight")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .fullScreenCover(isPresented: $scanning) {
+                PileScanView { cubicFeet in
+                    scanning = false
+                    if let cubicFeet { measuredCubicFeet = cubicFeet }
+                }
+            }
+        }
+    }
+
+    private var fullnessLabel: String {
+        switch fullness {
+        case ..<0.375: return "About a quarter"
+        case ..<0.625: return "About half"
+        case ..<0.875: return "About three quarters"
+        case ..<1.05: return "Full"
+        default: return "Overflowing"
+        }
+    }
+
+    private func recognise(_ image: UIImage) async {
+        photo = image
+        let labels = await OnDeviceVision.classify(image)
+        if let found = LaundryContainer.from(labels: labels) {
+            container = found
+            detected = "Looks like a \(found.label.lowercased()). Change it if not."
+        } else {
+            detected = "Couldn't tell the container. Pick it below."
+        }
+    }
+}
+
+/// The camera view for a LiDAR measurement.
+struct PileScanView: View {
+    let onDone: (Double?) -> Void
+    @StateObject private var scanner = PileScanner()
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            ARCameraView(scanner: scanner).ignoresSafeArea()
+            VStack(spacing: 12) {
+                Text(scanner.floorFound
+                     ? "Frame the whole pile in the middle, from a step back."
+                     : "Point at the floor next to the pile.")
+                    .font(.subheadline.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .padding(12)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                HStack(spacing: 12) {
+                    Button("Cancel") {
+                        scanner.stop()
+                        onDone(nil)
+                    }
+                    .buttonStyle(.bordered)
+                    Button {
+                        Task {
+                            await scanner.measure()
+                            scanner.stop()
+                            onDone(scanner.cubicFeet)
+                        }
+                    } label: {
+                        Text(scanner.measuring ? "Measuring…" : "Measure")
+                            .frame(minWidth: 120)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accentFill)
+                    .disabled(!scanner.floorFound || scanner.measuring)
+                }
+            }
+            .padding(.bottom, 32)
+            .padding(.horizontal, 16)
+        }
+    }
+}
+
+private struct ARCameraView: UIViewRepresentable {
+    let scanner: PileScanner
+
+    func makeUIView(context: Context) -> ARSCNView {
+        let view = ARSCNView()
+        view.automaticallyUpdatesLighting = false
+        scanner.attach(view.session)
+        return view
+    }
+
+    func updateUIView(_ view: ARSCNView, context: Context) {}
 }

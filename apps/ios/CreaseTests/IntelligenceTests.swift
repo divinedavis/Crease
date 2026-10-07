@@ -197,4 +197,48 @@ final class IntelligenceTests: XCTestCase {
         XCTAssertNil(NoteTranslator.targetLanguage(shop: nil, phone: english))
         XCTAssertEqual(NoteTranslator.targetLanguage(shop: "ko", phone: english), "ko")
     }
+
+    // MARK: Weight from a photo
+
+    func testAContainerAndFullnessGiveARoughWeight() {
+        let half = WeightEstimate.from(container: .basket, fullness: 0.5, heavy: false)
+        XCTAssertEqual(half.pounds, 6)
+        XCTAssertEqual(WeightEstimate.from(container: .basket, fullness: 1, heavy: false).pounds, 12)
+        XCTAssertEqual(WeightEstimate.from(container: .basket, fullness: 1, heavy: true).pounds, 16,
+                       "towels and bedding weigh about a third more")
+        let full = WeightEstimate.from(container: .hamper, fullness: 1, heavy: false)
+        XCTAssertLessThan(full.low, full.pounds)
+        XCTAssertGreaterThan(full.high, full.pounds)
+    }
+
+    func testTheEstimateNeverLeavesTheSteppersRange() {
+        XCTAssertGreaterThanOrEqual(WeightEstimate.from(cubicFeet: 0, heavy: false).pounds, 1)
+        XCTAssertLessThanOrEqual(WeightEstimate.from(cubicFeet: 500, heavy: true).pounds, 200)
+    }
+
+    func testTheContainerIsReadFromVisionsLabels() {
+        XCTAssertEqual(LaundryContainer.from(labels: [("basket_container", 0.6), ("clothing", 0.9)]), .basket)
+        XCTAssertEqual(LaundryContainer.from(labels: [("sack", 0.4)]), .laundryBag)
+        XCTAssertNil(LaundryContainer.from(labels: [("clothing", 0.9)]))
+    }
+
+    /// A 40 x 40 cm pile, 30 cm tall, sampled every 2 cm on top, over a floor
+    /// at y = -1.2 m: 0.048 m³ = 1.70 ft³. Points on the floor itself and a
+    /// stray ceiling reading must not count.
+    func testThePileVolumeIsTheHeightFieldAboveTheFloor() {
+        let floor: Float = -1.2
+        var points: [SIMD3<Float>] = []
+        // Sampled inside cells (0.01, 0.03, ...): points exactly on a 4 cm
+        // border fall either side through float rounding and add a ring.
+        for x in stride(from: Float(0.01), to: 0.4, by: 0.02) {
+            for z in stride(from: Float(0.01), to: 0.4, by: 0.02) {
+                points.append(SIMD3(x, floor + 0.3, z))
+                points.append(SIMD3(x + 0.6, floor, z))
+            }
+        }
+        points.append(SIMD3(0.1, floor + 2.5, 0.1))
+        let cubicFeet = PileVolume.cubicFeet(points: points, floorY: floor)
+        XCTAssertEqual(cubicFeet, 1.70, accuracy: 0.05)
+        XCTAssertEqual(WeightEstimate.from(cubicFeet: cubicFeet, heavy: false).pounds, 11)
+    }
 }

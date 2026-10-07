@@ -1212,4 +1212,41 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(proceed.waitForExistence(timeout: 20), "the usual should open with its lines already priced")
         attach(app, "usual-booking")
     }
+
+    /// Weight from a photo: the estimate screen opens from Quick add and its
+    /// answer lands in the wash & fold stepper.
+    func testAPhotoWeightEstimateSetsTheBag() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+        let opener = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Choose what' OR label BEGINSWITH 'Wash & fold'"))
+            .firstMatch
+        guard opener.waitForExistence(timeout: 15) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+        opener.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+        let estimateButton = app.buttons["Estimate weight from a photo"]
+        guard estimateButton.waitForExistence(timeout: 5) else {
+            throw XCTSkip("this shop sells nothing by the pound")
+        }
+        estimateButton.tap()
+        XCTAssertTrue(app.navigationBars["Estimate weight"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["weight-estimate"].waitForExistence(timeout: 5))
+        attach(app, "weight-estimate")
+        let use = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use ' AND label ENDSWITH ' lb'")).firstMatch
+        XCTAssertTrue(use.exists)
+        use.tap()
+        let result = app.staticTexts["smart-result"]
+        XCTAssertTrue(result.waitForExistence(timeout: 10))
+        XCTAssertTrue(result.label.hasPrefix("Set to"), "got: \(result.label)")
+    }
 }

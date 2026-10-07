@@ -383,3 +383,111 @@ enum ShopNote {
         return String("\(translated)\n\n— Original —\n\(original)".prefix(2000))
     }
 }
+
+// MARK: - Bag weight from a photo
+
+/// A rough weight for a bag of laundry, so a big load is priced near what the
+/// counter will weigh instead of at the shop's floor.
+///
+/// It is an estimate and only ever an estimate: the shop's scale sets the bill,
+/// and a heavier count already stops to ask before charging more. Two ways in:
+///   - container + how full (every iPhone): typical full weights below;
+///   - measured volume (Pro iPhones with LiDAR) x a laundry density.
+/// The starting numbers come from published laundry-load guides (a full basket
+/// of dry mixed clothes is roughly 8-15 lb) and are deliberately middle-of-the-
+/// road; `calibration` is the lever real counter weigh-ins move.
+enum LaundryContainer: String, CaseIterable, Identifiable {
+    case basket, hamper, laundryBag, trashBag, paperBag
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .basket: return "Basket"
+        case .hamper: return "Hamper"
+        case .laundryBag: return "Laundry bag"
+        case .trashBag: return "Trash bag"
+        case .paperBag: return "Shopping bag"
+        }
+    }
+
+    /// Pounds of dry mixed clothes when full.
+    var fullPounds: Double {
+        switch self {
+        case .basket: return 12
+        case .hamper: return 18
+        case .laundryBag: return 16
+        case .trashBag: return 14
+        case .paperBag: return 5
+        }
+    }
+
+    /// From Vision's classifier identifiers; nil when nothing container-like was seen.
+    static func from(labels: [(identifier: String, confidence: Float)]) -> LaundryContainer? {
+        let map: [String: LaundryContainer] = [
+            "basket_container": .basket, "sack": .laundryBag, "bag": .laundryBag,
+            "paper_bag": .paperBag, "cardboard_box": .basket,
+        ]
+        return labels
+            .filter { $0.confidence >= 0.15 }
+            .sorted { $0.confidence > $1.confidence }
+            .compactMap { map[$0.identifier] }
+            .first
+    }
+}
+
+struct WeightEstimate: Equatable {
+    let pounds: Double
+    let low: Double
+    let high: Double
+
+    /// Towels, jeans and bedding weigh about a third more than the same
+    /// volume of shirts.
+    static let heavyFactor = 1.35
+    /// Loose dry laundry, pounds per cubic foot, as piled in a basket.
+    static let poundsPerCubicFoot = 6.5
+    /// Real weigh-ins / estimates, once there are enough of them. 1 until then.
+    static var calibration = 1.0
+
+    /// ±30%: what a photo can honestly claim before any calibration.
+    private static func make(_ raw: Double) -> WeightEstimate {
+        let p = min(max((raw * calibration).rounded(), 1), 200)
+        return WeightEstimate(pounds: p, low: max(1, (p * 0.7).rounded()), high: (p * 1.3).rounded())
+    }
+
+    static func from(container: LaundryContainer, fullness: Double, heavy: Bool) -> WeightEstimate {
+        let f = min(max(fullness, 0.1), 1.2)
+        return make(container.fullPounds * f * (heavy ? heavyFactor : 1))
+    }
+
+    static func from(cubicFeet: Double, heavy: Bool) -> WeightEstimate {
+        make(max(cubicFeet, 0) * poundsPerCubicFoot * (heavy ? heavyFactor : 1))
+    }
+}
+
+/// The volume of a pile from depth points, as a height field over the floor.
+///
+/// Points are world coordinates in metres (y up). Each 4 cm floor cell keeps
+/// the tallest point above the floor; the volume is the sum of those columns.
+/// That over-counts the hollow under a basket's rim a little, adds up to one
+/// cell around the edge (about +20% on a 40 cm pile), and ignores anything
+/// hidden behind the pile. Systematic, so `WeightEstimate.calibration` from
+/// real weigh-ins absorbs it; erring heavy is the right side for a starting
+/// estimate the counter corrects.
+enum PileVolume {
+    static let cell: Float = 0.04
+    static let minHeight: Float = 0.02
+    static let maxHeight: Float = 1.2
+
+    static func cubicFeet(points: [SIMD3<Float>], floorY: Float) -> Double {
+        var tallest: [SIMD2<Int32>: Float] = [:]
+        for p in points {
+            let h = p.y - floorY
+            guard h >= minHeight, h <= maxHeight else { continue }
+            let key = SIMD2(Int32((p.x / cell).rounded(.down)), Int32((p.z / cell).rounded(.down)))
+            tallest[key] = max(tallest[key] ?? 0, h)
+        }
+        let cubicMetres = tallest.values.reduce(0) { $0 + Double($1) } * Double(cell * cell)
+        return cubicMetres * 35.3147
+    }
+}
