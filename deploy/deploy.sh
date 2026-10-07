@@ -4,7 +4,7 @@
 #   ./deploy/deploy.sh
 #
 # Gates, in order: clean tree -> scripts/test.sh -> build -> snapshot of what
-# is live (deploy/snapshot.sh) -> upload -> deploy/health.sh. Anything that
+# is live (deploy/snapshot.sh) -> upload -> deploy/health.sh -> deploy/journeys.sh. Anything that
 # fails after the snapshot restores it (deploy/rollback.sh) and exits 1.
 #
 # Secrets are never committed and never scp'd from the repo: the droplet's
@@ -302,4 +302,13 @@ ssh "$HOST" 'rm -f /etc/cron.d/crease-purge-events'
 # A failure here trips on_exit, which restores the snapshot.
 echo "==> verifying"
 CREASE_HOST="$HOST" "$ROOT/deploy/health.sh"
+
+# Pages rendering is not the same as orders working. Book, dispatch, cancel,
+# refund and the RLS walls, live, with one retry for flakes; a failure here
+# rolls back like any other (on_exit). CREASE_SKIP_JOURNEYS=1 only for an
+# emergency, said in the commit.
+if [ "${CREASE_SKIP_JOURNEYS:-0}" != "1" ]; then
+  echo "==> live journeys"
+  CREASE_HOST="$HOST" "$ROOT/deploy/journeys.sh"
+fi
 echo "==> done"

@@ -2,6 +2,10 @@
 # Ship the canvass tool and the expansion roadmap. Both committed pages carry
 # placeholders; the Supabase URL and anon key are substituted here from the
 # local .env, so the public repo never carries a project credential.
+#
+# Gated like deploy.sh: the canvass browser tests -> snapshot of the live
+# directory to /var/backups/crease-prospects/<ts> (15 kept) -> copy -> checks
+# below. A failed check restores the snapshot and exits 1.
 set -euo pipefail
 
 HOST="${CREASE_HOST:?set CREASE_HOST=root@your.server.ip}"
@@ -10,6 +14,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 URL="$(grep '^SUPABASE_URL=' "$ROOT/services/dispatch/.env" | cut -d= -f2)"
 ANON="$(grep '^SUPABASE_ANON_KEY=' "$ROOT/services/dispatch/.env" | cut -d= -f2)"
 [ -n "$URL" ] && [ -n "$ANON" ] || { echo "missing Supabase env"; exit 1; }
+
+if [ "${CREASE_SKIP_TESTS:-0}" != "1" ]; then
+  echo "==> canvass browser tests"
+  "$ROOT/scripts/test.sh" --browser | sed 's/^/    /' \
+    || { echo "refusing to deploy: tests failed" >&2; exit 1; }
+fi
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -34,6 +44,11 @@ cp "$ROOT/growth/prospects/apple-touch-icon.png" "$STAGE/apple-touch-icon.png"
 
 # /var/www, not /root: nginx's workers cannot traverse root's home.
 ssh "$HOST" 'mkdir -p /var/www/crease-prospects'
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+ssh "$HOST" "set -e; B=/var/backups/crease-prospects; mkdir -p \$B && chmod 700 \$B
+  cp -a /var/www/crease-prospects \$B/$TS
+  ls -1 \$B | sort | head -n -15 | while read -r old; do rm -rf \"\$B/\$old\"; done"
+echo "==> snapshot /var/backups/crease-prospects/$TS"
 scp -q "$STAGE/index.html" "$STAGE/roadmap.html" "$STAGE/supabase.js" \
   "$STAGE/session-cookie.js" "$STAGE/icon.svg" \
   "$STAGE/apple-touch-icon.png" "$HOST:/var/www/crease-prospects/"
@@ -67,4 +82,10 @@ done
 
 code="$(curl -sL -o /dev/null -w '%{http_code}' "https://portal.creasenyc.com/prospects/session-cookie.js")"
 [ "$code" = "200" ] || { echo "  FAIL: session-cookie.js not served ($code)"; fail=1; }
-exit $fail
+
+if [ "$fail" != 0 ]; then
+  echo "!! checks failed — restoring /var/backups/crease-prospects/$TS" >&2
+  ssh "$HOST" "rsync -a --delete /var/backups/crease-prospects/$TS/ /var/www/crease-prospects/"
+  exit 1
+fi
+echo "==> prospects deployed"

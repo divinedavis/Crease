@@ -11,6 +11,16 @@
 #   CREASE_HOST=root@<ip> ./deploy/deploy-landing.sh
 set -euo pipefail
 
+# RETIRED 2026-10-07. usecreaseapp.com 301s to creasenyc.com and the live nginx
+# config is ahead of this script; running it now would undo that (the landing
+# script rsync --deletes and swaps the vhost, the domains script repoints
+# dispatch PUBLIC_URL at the old host and restarts it). Kept for the record
+# only. CREASE_RUN_RETIRED=1 if you really mean to rebuild the old domain.
+if [ "${CREASE_RUN_RETIRED:-0}" != "1" ]; then
+  echo "$(basename "$0") is retired: usecreaseapp.com redirects to creasenyc.com. Deploy with deploy/deploy.sh." >&2
+  exit 1
+fi
+
 # Not defaulted in a public repo: the box is shared with several unrelated
 # production sites.
 HOST="${CREASE_HOST:?set CREASE_HOST=root@your.server.ip}"

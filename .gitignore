@@ -64,3 +64,4 @@ secrets/
 *.p8
 .gsc_key.json
 gsc-service-account.json
+.venv/

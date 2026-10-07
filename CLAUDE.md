@@ -6,10 +6,22 @@
   `CREASE_HOST=root@<droplet> ./deploy/deploy.sh`. `main` is an old ancestor;
   its deploy.sh wiped the customer site on 2026-09-05. Merge main INTO the
   branch, never the other way.
+- Same deploy rules as Find A Crib (owner, 2026-10-07).
 - deploy.sh: clean-tree check -> `scripts/test.sh` -> build -> `deploy/snapshot.sh`
   (live tree + systemd units to `/var/backups/crease-app/<ts>`, 15 kept) ->
-  upload -> `deploy/health.sh`. Any failure after the snapshot runs
-  `deploy/rollback.sh <ts>` and exits 1.
+  upload -> `deploy/health.sh` -> `deploy/journeys.sh` (the live journey
+  suite over an SSH tunnel: e2e, cancel, confirm, stripe-webhook,
+  service-area, rls-check; failures re-run once). Any failure after the
+  snapshot runs `deploy/rollback.sh <ts>` and exits 1.
+  `CREASE_SKIP_JOURNEYS=1` only for an emergency, said in the commit.
+- `deploy/deploy-prospects.sh`: `scripts/test.sh --browser` -> snapshot to
+  `/var/backups/crease-prospects/<ts>` (15 kept) -> copy -> checks -> restore
+  on failure. Browser tests use `.venv` (playwright), created with
+  `python3 -m venv .venv && .venv/bin/pip install playwright`.
+- `deploy-landing.sh` and `deploy-app-domains.sh` are RETIRED (usecreaseapp.com
+  301s to creasenyc.com); they refuse to run.
+- Uptime: dhcr-map `monitoring/uptime_watch.py` watches creasenyc.com,
+  portal /login, api /healthz and the crease.divinedavis.com alias.
 - Manual rollback: `CREASE_HOST=... deploy/rollback.sh` lists snapshots,
   `deploy/rollback.sh <ts>` restores one, verifies md5s and health.
 - iOS: TestFlight only (`scripts/testflight.sh`). Never

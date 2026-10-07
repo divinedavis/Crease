@@ -17,7 +17,11 @@ cd "$ROOT"
 
 BROWSER=0
 [ "${1:-}" = "--browser" ] && BROWSER=1
-PY="${CREASE_PYTHON:-python3}"
+# The repo's own venv when there is one (it carries playwright for --browser,
+# which the deploy-prospects gate needs); otherwise whatever python3 is.
+DEFAULT_PY=python3
+[ -x "$ROOT/.venv/bin/python" ] && DEFAULT_PY="$ROOT/.venv/bin/python"
+PY="${CREASE_PYTHON:-$DEFAULT_PY}"
 step() { printf '==> %s\n' "$*"; }
 
 # A test file no runner picks up is a test that silently never runs. Each
