@@ -143,6 +143,57 @@ check(
   `${otherProfiles?.length ?? 0} rows`,
 );
 
+// --- order photos (migration 0049) ----------------------------------------
+// Private bucket: the order's own customer may add (never replace or delete),
+// the order's shop may read, nobody else may do either.
+console.log('\nORDER PHOTOS');
+const BUCKET = 'order-photos';
+// A 1x1 JPEG; the policies are about who, not what.
+const jpeg = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/yQALCAABAAEBAREA/8wABgAQEAX/2gAIAQEAAD8A0s8g/9k=',
+  'base64',
+);
+const seeded = `${rivalOrder.id}/1-handoff.jpg`;
+await admin.storage.from(BUCKET).upload(seeded, jpeg, { contentType: 'image/jpeg', upsert: true });
+
+const { data: staffList } = await web.storage.from(BUCKET).list(rivalOrder.id);
+check("a shop cannot list another shop's order photos", (staffList ?? []).length === 0, `${staffList?.length ?? 0} listed`);
+const { data: staffGet } = await web.storage.from(BUCKET).download(seeded);
+check("a shop cannot download another shop's order photo", staffGet == null);
+const { error: staffPut } = await web.storage
+  .from(BUCKET)
+  .upload(`${rivalOrder.id}/9-handoff.jpg`, jpeg, { contentType: 'image/jpeg' });
+check("a shop cannot add photos to an order it doesn't serve", !!staffPut, staffPut ? 'refused' : 'ACCEPTED');
+
+const owner = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);
+const { error: ownerAuth } = await owner.auth.signInWithPassword({ email: TEST_EMAIL, password: TEST_PASSWORD });
+check('customer can sign in', !ownerAuth, ownerAuth?.message);
+const { error: ownerPut } = await owner.storage
+  .from(BUCKET)
+  .upload(`${rivalOrder.id}/2-stain.jpg`, jpeg, { contentType: 'image/jpeg' });
+check('the customer can add a photo to their own order', !ownerPut, ownerPut?.message);
+const { data: ownerList } = await owner.storage.from(BUCKET).list(rivalOrder.id);
+check('the customer can see their own order photos', (ownerList ?? []).length >= 2, `${ownerList?.length ?? 0} listed`);
+const { error: ownerReplace } = await owner.storage
+  .from(BUCKET)
+  .upload(seeded, jpeg, { contentType: 'image/jpeg', upsert: true });
+check('the customer cannot replace a handoff photo', !!ownerReplace, ownerReplace ? 'refused' : 'REPLACED');
+await owner.storage.from(BUCKET).remove([seeded]);
+const { data: stillThere } = await admin.storage.from(BUCKET).list(rivalOrder.id);
+check(
+  'the customer cannot delete a handoff photo',
+  (stillThere ?? []).some((f) => f.name === '1-handoff.jpg'),
+);
+
+const anonPhotos = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);
+const { data: anonList } = await anonPhotos.storage.from(BUCKET).list(rivalOrder.id);
+check('anon cannot list order photos', (anonList ?? []).length === 0);
+
+const { data: leftovers } = await admin.storage.from(BUCKET).list(rivalOrder.id);
+if (leftovers?.length) {
+  await admin.storage.from(BUCKET).remove(leftovers.map((f) => `${rivalOrder.id}/${f.name}`));
+}
+
 // --- anon, no session at all ---------------------------------------------
 console.log('\nANONYMOUS (no session)');
 const anon = await makeClient(webEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, URL);

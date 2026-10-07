@@ -12,6 +12,7 @@ struct OrderDetailView: View {
 
     let order: Order
     @State private var approving = false
+    @State private var translatingShopNote = false
     @State private var confirmingCancel = false
     @State private var cancelling = false
     @State private var cancelError: String?
@@ -327,6 +328,15 @@ struct OrderDetailView: View {
             }
             if let notes = live.cleanerNotes, !notes.isEmpty {
                 labelled("From the cleaner", notes)
+                // Many shop counters write in their own language. Apple's
+                // on-device translation, in a popover; nothing is sent anywhere.
+                Button {
+                    translatingShopNote = true
+                } label: {
+                    Label("Translate", systemImage: "translate")
+                        .font(.caption.weight(.semibold))
+                }
+                .translatable(isPresented: $translatingShopNote, text: notes)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

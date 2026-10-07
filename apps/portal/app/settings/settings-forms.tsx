@@ -11,6 +11,7 @@ import {
   addServiceItem,
 } from './actions';
 import { SERVICE_TYPES, SERVICE_TYPE_LABEL, priceLine } from '@/lib/price-list';
+import { NOTE_LANGUAGES } from '@/lib/languages';
 
 type ActionResult = { ok?: boolean; error?: string; relocated?: boolean } | null;
 
@@ -33,6 +34,7 @@ export function ShopDetailsForm({
     state: string;
     postal_code: string;
     turnaround_hours: number;
+    notes_language: string | null;
   };
 }) {
   const [state, action, pending] = useActionState(saveShopDetails.bind(null, shop.id), null);
@@ -88,6 +90,18 @@ export function ShopDetailsForm({
             defaultValue={shop.turnaround_hours}
             required
           />
+        </div>
+        <div className="field">
+          <label htmlFor="notes_language">Customer notes language</label>
+          <select id="notes_language" name="notes_language" defaultValue={shop.notes_language ?? 'en'}>
+            {NOTE_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+          <p className="sub" style={{ marginTop: 4 }}>
+            Customers&apos; notes (stains, tickets, instructions) arrive translated into this language,
+            with the original underneath. Translation happens on the customer&apos;s phone.
+          </p>
         </div>
         <button className="primary" type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save details'}

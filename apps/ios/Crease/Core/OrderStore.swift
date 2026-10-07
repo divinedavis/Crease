@@ -110,7 +110,7 @@ final class OrderStore: ObservableObject {
     func loadCleaners() async {
         cleaners = (try? await client
             .from("cleaners")
-            .select("id, name, phone, line1, city, state, turnaround_hours, lat, lng")
+            .select("id, name, phone, line1, city, state, turnaround_hours, lat, lng, notes_language")
             .eq("active", value: true)
             .order("name")
             .execute()
@@ -224,6 +224,33 @@ final class OrderStore: ObservableObject {
     /// A failure is not fatal to the booking. The estimate is already on the
     /// order, the hold is sized from it, and the shop counts the bag anyway —
     /// losing the itemised list costs the counter a head start, not the order.
+    /// Attach the customer's photos to an order, after it exists.
+    ///
+    /// Private bucket, path `<order_id>/<n>-<kind>.jpg`; migration 0049 lets
+    /// only this customer add them (never replace or delete) and only this
+    /// customer and the order's shop read them. Best effort: a photo that
+    /// fails to upload costs the custody record a picture, not the booking.
+    /// Returns how many landed.
+    @discardableResult
+    func uploadOrderPhotos(orderId: UUID, photos: [OrderPhoto]) async -> Int {
+        var landed = 0
+        for (index, photo) in photos.prefix(OrderPhoto.maxPerOrder).enumerated() {
+            guard let jpeg = photo.image.uploadJPEG() else { continue }
+            let path = "\(orderId.uuidString.lowercased())/\(index + 1)-\(photo.kind.rawValue).jpg"
+            do {
+                try await client.storage.from(OrderPhoto.bucket).upload(
+                    path,
+                    data: jpeg,
+                    options: FileOptions(contentType: "image/jpeg", upsert: false)
+                )
+                landed += 1
+            } catch {
+                continue
+            }
+        }
+        return landed
+    }
+
     @discardableResult
     func replaceDeclaredItems(orderId: UUID, lines: [(item: ServiceItem, entered: Double)]) async -> Bool {
         struct NewLine: Encodable {

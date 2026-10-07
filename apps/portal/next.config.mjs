@@ -48,7 +48,9 @@ const securityHeaders = [
       "object-src 'none'",
       "frame-ancestors 'self'",
       "form-action 'self'",
-      "img-src 'self' data: blob:",
+      // Customer order photos are shown through short-lived signed URLs
+      // straight from the project's storage.
+      ["img-src 'self' data: blob:", supabaseOrigin].filter(Boolean).join(' '),
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",

@@ -67,4 +67,35 @@ for (const [fn, label, overrideDays] of jobs) {
     console.log(`${stamp} ${label}: ${data} (older than ${window}d)`);
   }
 }
+// Order photos (handoff + stain, migration 0049): a custody record matters
+// while a dispute is still possible, not forever. Removed through the Storage
+// API, never by deleting storage.objects rows, which would orphan the files.
+// Bounded per run so a backlog cannot turn one weekly job into thousands of
+// calls; the next run picks up the rest.
+const PHOTO_DAYS = 90;
+const PHOTO_ORDERS_PER_RUN = 200;
+try {
+  const cutoff = new Date(Date.now() - PHOTO_DAYS * 86400_000).toISOString();
+  const { data: finished, error } = await db
+    .from('orders')
+    .select('id')
+    .in('status', ['delivered', 'cancelled', 'failed'])
+    .lt('updated_at', cutoff)
+    .order('updated_at', { ascending: true })
+    .limit(PHOTO_ORDERS_PER_RUN);
+  if (error) throw error;
+  let removed = 0;
+  for (const { id } of finished ?? []) {
+    const { data: files } = await db.storage.from('order-photos').list(id);
+    if (!files?.length) continue;
+    const { error: rmErr } = await db.storage.from('order-photos').remove(files.map((f) => `${id}/${f.name}`));
+    if (rmErr) throw rmErr;
+    removed += files.length;
+  }
+  console.log(`${new Date().toISOString()} order photos removed: ${removed} (orders finished over ${PHOTO_DAYS}d)`);
+} catch (err) {
+  console.error(`${new Date().toISOString()} order photo purge failed: ${err?.message ?? err}`);
+  failed = true;
+}
+
 process.exit(failed ? 1 : 0);

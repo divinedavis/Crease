@@ -59,7 +59,10 @@ targets:
         # feature is used — App Store processing rejects the binary with
         # ITMS-90683 on static analysis, which passes local validation and
         # passes a launch smoke test, and only surfaces as an email.
-        NSCameraUsageDescription: Crease can scan your payment card so you don't have to type it in.
+        NSCameraUsageDescription: Crease uses the camera to scan your clothes, care labels and shop tickets, to take photos for the shop, and to scan your payment card. Scanning happens on your iPhone.
+        # Speaking a pickup or stain note (iOS 26 SpeechAnalyzer, on device).
+        NSMicrophoneUsageDescription: Crease uses the microphone only while you speak a note for your courier or the shop. Your voice is transcribed on your iPhone and never sent anywhere.
+        NSSpeechRecognitionUsageDescription: Crease turns what you say into a note for your courier or the shop, on your iPhone.
         # Face ID / Touch ID app lock. Without this string, evaluating the
         # biometric policy terminates the app.
         NSFaceIDUsageDescription: Crease uses Face ID to unlock the app so your orders and address stay private.

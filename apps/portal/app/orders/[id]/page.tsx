@@ -48,6 +48,21 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   // The shop's own speed, for the services that do not override it. Taken from
   // the staff record rather than re-queried: the session already carries every
   // shop this user works for.
+  // The customer's handoff and stain photos (migration 0049: private bucket,
+  // readable by this order's shop staff). Signed for an hour, long enough to
+  // look at during intake; the page refreshes them on every load.
+  const { data: photoFiles } = await db.storage.from('order-photos').list(order.id, {
+    limit: 12,
+    sortBy: { column: 'name', order: 'asc' },
+  });
+  const photoPaths = (photoFiles ?? []).filter((f) => f.name.endsWith('.jpg')).map((f) => `${order.id}/${f.name}`);
+  const { data: signed } = photoPaths.length
+    ? await db.storage.from('order-photos').createSignedUrls(photoPaths, 3600)
+    : { data: [] as { path: string | null; signedUrl: string }[] };
+  const photos = (signed ?? []).flatMap((p) =>
+    p.signedUrl ? [{ url: p.signedUrl as string, stain: (p.path ?? '').includes('-stain') }] : [],
+  );
+
   const shop = staff.staff.find((s) => s.cleaner_id === order.cleaner_id)?.cleaners as any;
   const shopTurnaroundHours = Number(shop?.turnaround_hours) || DEFAULT_TURNAROUND_HOURS;
 
@@ -159,7 +174,32 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
             From the customer
           </div>
-          {order.customer_notes}
+          <div style={{ whiteSpace: 'pre-wrap' }}>{order.customer_notes}</div>
+        </div>
+      )}
+
+      {photos.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>
+            Customer photos — taken before pickup
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {photos.map((p, i) => (
+              <a key={i} href={p.url} target="_blank" rel="noreferrer" style={{ position: 'relative' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={p.stain ? `Stain photo ${i + 1}` : `Handoff photo ${i + 1}`}
+                  width={120}
+                  height={120}
+                  style={{ objectFit: 'cover', borderRadius: 10, display: 'block' }}
+                />
+                <span className="pill" style={{ position: 'absolute', left: 6, bottom: 6, fontSize: 11 }}>
+                  {p.stain ? 'Stain' : 'Handoff'}
+                </span>
+              </a>
+            ))}
+          </div>
         </div>
       )}
 

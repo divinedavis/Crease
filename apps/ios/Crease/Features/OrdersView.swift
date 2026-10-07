@@ -41,17 +41,21 @@ struct OrdersView: View {
         case address
         case pin(ResolvedAddress)
         case book(ResolvedAddress, String)
+        case usual(UsualOrder)
 
         var id: String {
             switch self {
             case .address: "address"
             case .pin: "pin"
             case .book: "book"
+            case .usual: "usual"
             }
         }
     }
 
     private var active: [Order] { store.orders.filter { $0.status.isActive } }
+    /// Worked out on the phone from this customer's own history.
+    private var usual: UsualOrder? { UsualOrder.from(store.orders) }
     private var past: [Order] { store.orders.filter { !$0.status.isActive } }
     /// Anything waiting on the customer: an intake above their hold, or clean
     /// clothes with no delivery time chosen.
@@ -65,6 +69,10 @@ struct OrdersView: View {
                 LazyVStack(spacing: 14) {
                     greeting
                     searchEntry
+
+                    if let usual {
+                        UsualOrderCard(usual: usual) { flow = .usual(usual) }
+                    }
 
                     ForEach(needsAttention) { order in
                         NavigationLink(value: order) {
@@ -220,6 +228,12 @@ struct OrdersView: View {
                     }
                 case let .book(resolved, notes):
                     BookPickupView(pickup: resolved, accessNotes: notes)
+                case let .usual(usual):
+                    BookPickupView(
+                        pickup: usual.address.asResolved,
+                        accessNotes: usual.address.accessNotes ?? "",
+                        usual: usual
+                    )
                 }
             }
         }
@@ -228,6 +242,14 @@ struct OrdersView: View {
             await store.startWatching()
         }
         .task(id: router.pendingOrderId) { await openTappedOrder() }
+        // "Hey Siri, book my usual Crease pickup": open the booking prefilled.
+        // Waits for the order history, which is what the usual is made from.
+        .task(id: router.wantsUsual) {
+            guard router.wantsUsual else { return }
+            if store.orders.isEmpty { await store.loadOrders() }
+            router.wantsUsual = false
+            if let usual { flow = .usual(usual) } else { flow = .address }
+        }
     }
 
     /// Success needs no message: the account is gone and `Session` has already
@@ -460,5 +482,47 @@ private struct EmptyState: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         }
+    }
+}
+
+
+/// The order this customer keeps placing, one tap from home.
+struct UsualOrderCard: View {
+    let usual: UsualOrder
+    let onBook: () -> Void
+
+    var body: some View {
+        Button(action: onBook) {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your usual")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(usual.summary) at \(usual.cleanerName)")
+                        .font(.caption)
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(2)
+                    if let day = usual.dayText {
+                        Text("You usually book on \(day)")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.muted)
+                    }
+                }
+                Spacer(minLength: 8)
+                Text("Book")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your usual: \(usual.summary) at \(usual.cleanerName). Book it again.")
+        .accessibilityIdentifier("usual-order")
     }
 }

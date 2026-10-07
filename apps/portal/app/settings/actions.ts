@@ -7,6 +7,7 @@ import { supabaseServer } from '@/lib/supabase';
 import { callDispatch } from '@/lib/dispatch';
 import { parseHoursForm } from '@/lib/hours';
 import { codeFor, parseServiceItemForm } from '@/lib/price-list';
+import { noteLanguage } from '@/lib/languages';
 
 /**
  * Every write here rides the staff member's own session, so RLS decides which
@@ -73,6 +74,10 @@ export async function saveShopDetails(cleanerId: string, _prev: unknown, formDat
     return { error: 'Standard turnaround must be a whole number of hours (1–336).' };
   }
   updates.turnaround_hours = turnaround;
+
+  const language = noteLanguage(field('notes_language') || 'en');
+  if (!language) return { error: 'Pick a language from the list.' };
+  updates.notes_language = language;
 
   // Couriers are quoted from lat/lng, not from the text. An address edit that
   // kept the old coordinates would keep sending drivers to the old storefront,

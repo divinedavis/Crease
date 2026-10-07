@@ -22,9 +22,14 @@ struct BookPickupView: View {
     @State private var pickup: ResolvedAddress
     @State private var dropoffNotes: String
 
-    init(pickup: ResolvedAddress, accessNotes: String) {
+    /// When booking "your usual": its shop and lines open prefilled.
+    private let usual: UsualOrder?
+    @State private var appliedUsual = false
+
+    init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil) {
         _pickup = State(initialValue: pickup)
         _dropoffNotes = State(initialValue: accessNotes)
+        self.usual = usual
     }
 
     @State private var camera: MapCameraPosition = .automatic
@@ -58,6 +63,8 @@ struct BookPickupView: View {
     /// whole bill before any money moves.
     @State private var reviewing = false
     @StateObject private var checkout = Checkout()
+    @StateObject private var extras = OrderExtras()
+    @StateObject private var translator = NoteTranslator()
     @State private var draft: Draft?
     /// Whether this screen is still the one presented.
     ///
@@ -151,6 +158,8 @@ struct BookPickupView: View {
                 serviceKind: $serviceKind,
                 quantities: $quantities,
                 scheduledPickup: $scheduledPickup,
+                extras: extras,
+                translator: translator,
                 addressLabel: addressLabel,
                 menu: menu,
                 lines: declaredLines,
@@ -176,7 +185,8 @@ struct BookPickupView: View {
                 shopName: cleaner?.name ?? "This shop",
                 menu: menu,
                 kind: $serviceKind,
-                quantities: $quantities
+                quantities: $quantities,
+                extras: extras
             )
             .presentationDetents([.large])
         }
@@ -212,11 +222,18 @@ struct BookPickupView: View {
         // it does — a route drawn to the door the customer just corrected away
         // from.
         .onChange(of: pickup) { _, _ in frameRoute() }
+        // A time named in "Describe your order". Under an hour out is what
+        // Standard already does, so it stays Standard rather than becoming a
+        // slot the scheduler would refuse.
+        .onChange(of: extras.requestedPickup) { _, when in
+            guard let when else { return }
+            scheduledPickup = when.timeIntervalSinceNow >= 3600 ? when : nil
+        }
         .task {
             if store.cleaners.isEmpty { await store.loadCleaners() }
             // Nearest, not first alphabetically — but the customer can change
             // it, which is the point.
-            cleaner = store.cleaners.min {
+            cleaner = store.cleaners.first { $0.id == usual?.cleanerId } ?? store.cleaners.min {
                 ($0.milesFrom(pickup.coordinate) ?? .greatestFiniteMagnitude)
                     < ($1.milesFrom(pickup.coordinate) ?? .greatestFiniteMagnitude)
             }
@@ -242,6 +259,18 @@ struct BookPickupView: View {
             // the small print and dial it in by hand on every order. Set here,
             // where the price list arrives, because this is the one spot
             // outside a view update that knows both the menu and the bag.
+            if let usual, !appliedUsual, id == usual.cleanerId {
+                appliedUsual = true
+                let lines = usual.quantities(on: menu)
+                if let first = lines.keys.first.flatMap({ key in menu.first { $0.id == key } }),
+                   let kind = ServiceKind(rawValue: first.serviceType) {
+                    serviceKind = kind
+                }
+                if !lines.isEmpty {
+                    quantities = lines
+                    return
+                }
+            }
             if let line = ServicePricing.lineToOpenAtMinimum(
                 menu: menu,
                 serviceType: serviceKind.rawValue,
@@ -674,6 +703,14 @@ struct BookPickupView: View {
         // Priced at the tier the customer actually chose. Previously this was
         // always zero, so every booking was free — the screen promised a price
         // the order did not carry.
+        // What the shop reads at the counter: stain notes, care-label
+        // findings, the claim ticket and the handoff photo count — in the
+        // shop's own language too when it reads another one (original kept).
+        var shopNote = extras.shopNote(returnOnly: !selected.carriesCleaning)
+        if let note = shopNote, let language = NoteTranslator.targetLanguage(shop: cleaner.notesLanguage) {
+            shopNote = ShopNote.withTranslation(note, translated: await translator.translate(note, into: language))
+        }
+
         guard let created = await store.createOrder(.init(
             customer_id: userId,
             cleaner_id: cleaner.id,
@@ -689,7 +726,7 @@ struct BookPickupView: View {
             service_type: serviceKind.rawValue,
             pickup_window_start: windowStart,
             pickup_window_end: windowEnd,
-            customer_notes: nil,
+            customer_notes: shopNote,
             customer_item_count: declaredPieceCount > 0 ? declaredPieceCount : nil
         )) else {
             error = store.errorMessage ?? "Couldn't book that pickup."
@@ -701,6 +738,10 @@ struct BookPickupView: View {
         // order and the shop counts the bag regardless, so a failure here costs
         // a head start, not the booking.
         await store.replaceDeclaredItems(orderId: created.id, lines: declaredLines)
+        // The custody record and stain close-ups, before any courier is booked.
+        if !extras.photos.isEmpty {
+            await store.uploadOrderPhotos(orderId: created.id, photos: extras.photos)
+        }
         LastBagSize.remember(quantities, menu: menu)
 
         // The order exists as a draft and becomes scheduled only once it is

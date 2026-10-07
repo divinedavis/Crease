@@ -19,6 +19,7 @@ struct ServiceMenuView: View {
     let menu: [ServiceItem]
     @Binding var kind: ServiceKind
     @Binding var quantities: [UUID: Double]
+    @ObservedObject var extras: OrderExtras
 
     /// Only the services this shop actually sells, in a fixed order so the tabs
     /// do not reshuffle between shops.
@@ -81,6 +82,15 @@ struct ServiceMenuView: View {
                 }
 
                 List {
+                    if !offered.isEmpty {
+                        SmartOrderTools(
+                            menu: menu,
+                            offered: offered,
+                            kind: $kind,
+                            quantities: $quantities,
+                            extras: extras
+                        )
+                    }
                     Section {
                         ForEach(items) { item in
                             row(item)

@@ -1145,4 +1145,71 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Confirm pickup point"].exists)
         attach(app, "pin-confirm")
     }
+
+    /// Quick add: words become steppers, and the photo tools are offered.
+    /// Uses the shop's weighed line, the one every seeded shop sells.
+    func testQuickAddFillsTheOrderFromWords() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        let opener = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Choose what' OR label BEGINSWITH 'Wash & fold'"))
+            .firstMatch
+        guard opener.waitForExistence(timeout: 15) else {
+            throw XCTSkip("this shop published no price list; run scripts/seed.mjs")
+        }
+        opener.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Scan clothes"].exists, "the order sheet should offer clothes scanning")
+        XCTAssertTrue(app.buttons["Care label"].exists, "the order sheet should offer care-label reading")
+
+        let field = app.textFields["Describe your order"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("15 lbs of laundry")
+        app.buttons["Fill in"].tap()
+        let result = app.staticTexts["smart-result"]
+        XCTAssertTrue(result.waitForExistence(timeout: 15), "filling in should say what it did")
+        XCTAssertTrue(result.label.contains("Added"), "got: \(result.label)")
+        attach(app, "quick-add")
+        app.buttons["Done"].tap()
+
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 15))
+        proceed.tap()
+        XCTAssertTrue(app.staticTexts["Checkout"].waitForExistence(timeout: 10))
+        let photos = app.staticTexts["Photos for the shop"]
+        app.swipeUp()
+        XCTAssertTrue(photos.waitForExistence(timeout: 5), "checkout should offer photos for the shop")
+        XCTAssertTrue(app.buttons["Handoff photo"].exists)
+        XCTAssertTrue(app.buttons["Stain"].exists)
+        attach(app, "checkout-photos")
+    }
+
+    /// A returning customer's usual, one tap from home, opens a prefilled booking.
+    func testTheUsualOrderIsOneTapFromHome() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        let usual = app.buttons["usual-order"]
+        guard usual.waitForExistence(timeout: 15) else {
+            throw XCTSkip("no usual: the test customer needs two paid orders at an ACTIVE shop (its history is at Bedford, which is switched off)")
+        }
+        attach(app, "usual-card")
+        usual.tap()
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 20), "the usual should open with its lines already priced")
+        attach(app, "usual-booking")
+    }
 }

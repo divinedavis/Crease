@@ -155,10 +155,14 @@ struct Cleaner: Codable, Identifiable, Hashable {
     // going to the same place regardless of which shop it was going to.
     let lat: Double?
     let lng: Double?
+    /// The language the shop's counter reads notes in (BCP-47, e.g. "ko").
+    /// Optional so an order's embedded cleaner, selected without it, decodes.
+    var notesLanguage: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, name, phone, line1, city, state, lat, lng
         case turnaroundHours = "turnaround_hours"
+        case notesLanguage = "notes_language"
     }
 
     /// The number as a person reads it.

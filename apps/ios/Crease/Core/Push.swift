@@ -154,6 +154,8 @@ final class PushRouter: ObservableObject {
     static let shared = PushRouter()
 
     @Published var pendingOrderId: UUID?
+    /// Set by the "Book my usual pickup" Siri / Shortcuts intent.
+    @Published var wantsUsual = false
 
     func handle(_ userInfo: [AnyHashable: Any]) {
         // `orderId` is what the sender writes; the snake_case fallback is for

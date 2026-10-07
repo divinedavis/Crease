@@ -38,11 +38,15 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
-	<string>Crease can scan your payment card so you don't have to type it in.</string>
+	<string>Crease uses the camera to scan your clothes, care labels and shop tickets, to take photos for the shop, and to scan your payment card. Scanning happens on your iPhone.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Crease uses Face ID to unlock the app so your orders and address stay private.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Crease uses the microphone only while you speak a note for your courier or the shop. Your voice is transcribed on your iPhone and never sent anywhere.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Crease turns what you say into a note for your courier or the shop, on your iPhone.</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_HOST</key>

@@ -41,6 +41,10 @@ struct CheckoutView: View {
     /// there — which is what every booking used to be with no way to say
     /// otherwise.
     @Binding var scheduledPickup: Date?
+    /// Photos, care notes and the claim ticket gathered for the shop.
+    @ObservedObject var extras: OrderExtras
+    /// Hosts the on-device translation of the shop note while checkout is up.
+    @ObservedObject var translator: NoteTranslator
 
     /// What the saved address is called, when it is one. Purely a label: the
     /// address itself travels in `pickup`.
@@ -96,6 +100,12 @@ struct CheckoutView: View {
                     detailsCard
                     timeSection
                     summarySection
+                    ShopExtrasCard(
+                        extras: extras,
+                        returnOnly: !carriesCleaning,
+                        shops: store.cleaners,
+                        cleaner: $cleaner
+                    )
                     totals
                     paymentRow
                     holdNote
@@ -106,6 +116,7 @@ struct CheckoutView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+        .hostsNoteTranslation(translator)
         .background(Color(.systemBackground))
         .safeAreaInset(edge: .bottom) { placeOrderBar }
         .interactiveDismissDisabled(working)
@@ -157,7 +168,8 @@ struct CheckoutView: View {
                 shopName: cleaner?.name ?? "This shop",
                 menu: menu,
                 kind: $serviceKind,
-                quantities: $quantities
+                quantities: $quantities,
+                extras: extras
             )
             .presentationDetents([.large])
         }
@@ -798,12 +810,17 @@ struct DropoffNotesView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.muted)
 
-                TextField("Meet at my door", text: $draft, axis: .vertical)
-                    .lineLimit(3, reservesSpace: true)
-                    .focused($focused)
-                    .padding(12)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                HStack(alignment: .top, spacing: 8) {
+                    TextField("Meet at my door", text: $draft, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                        .focused($focused)
+                        .padding(12)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    // Spoken, then (with Apple Intelligence) made into one
+                    // line a courier can read at a glance.
+                    DictateButton(text: $draft) { await OnDeviceLanguage.courierNote(from: $0) }
+                }
 
                 FlowingChips(options: Self.suggestions) { draft = $0 }
 

@@ -26,7 +26,7 @@ export default async function SettingsPage({
         .from('cleaners')
         .select(
           `id, name, phone, email, line1, line2, city, state, postal_code,
-           turnaround_hours, hours`,
+           turnaround_hours, hours, notes_language`,
         )
         .eq('id', cleanerId)
         .maybeSingle()
