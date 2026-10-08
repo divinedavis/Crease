@@ -53,47 +53,41 @@ struct OrdersView: View {
         }
     }
 
-    private var active: [Order] { store.orders.filter { $0.status.isActive } }
     /// Worked out on the phone from this customer's own history.
     private var usual: UsualOrder? { UsualOrder.from(store.orders) }
-    private var past: [Order] { store.orders.filter { !$0.status.isActive } }
-    /// Anything waiting on the customer: an intake above their hold, or clean
-    /// clothes with no delivery time chosen.
-    private var needsAttention: [Order] {
-        store.orders.filter { $0.status == .awaitingApproval || $0.needsReturnScheduling }
-    }
 
     var body: some View {
+        let lists = OrderLists(store.orders)
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: 14) {
                     greeting
                     searchEntry
 
-                    if let usual {
+                    if let usual = lists.usual {
                         UsualOrderCard(usual: usual) { flow = .usual(usual) }
                     }
 
-                    ForEach(needsAttention) { order in
+                    ForEach(lists.attention) { order in
                         NavigationLink(value: order) {
                             ApprovalBanner(order: order)
                         }
                         .buttonStyle(.plain)
                     }
 
-                    if active.isEmpty && store.orders.isEmpty && !store.isLoading {
+                    if lists.active.isEmpty && store.orders.isEmpty && !store.isLoading {
                         EmptyState()
                             .padding(.top, 40)
                     }
 
-                    ForEach(active.filter { !needsAttention.contains($0) }) { order in
+                    ForEach(lists.activeOther) { order in
                         NavigationLink(value: order) {
                             ActiveOrderCard(order: order)
                         }
                         .buttonStyle(.plain)
                     }
 
-                    if !past.isEmpty {
+                    if !lists.past.isEmpty {
                         HStack {
                             Text("Past orders")
                                 .font(.footnote.weight(.semibold))
@@ -102,7 +96,7 @@ struct OrdersView: View {
                         }
                         .padding(.top, 12)
 
-                        ForEach(past) { order in
+                        ForEach(lists.past) { order in
                             NavigationLink(value: order) {
                                 PastOrderRow(order: order)
                             }
@@ -240,6 +234,19 @@ struct OrdersView: View {
         .task {
             await store.loadAll()
             await store.startWatching()
+        }
+        // No live socket while the app is in the background: iOS suspends it
+        // anyway, and a socket left open keeps the radio awake on the way
+        // there. Coming back reconnects and reloads once, which also picks up
+        // whatever changed while it was away.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+            Task { await store.stopWatching() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            Task {
+                await store.loadOrders()
+                await store.startWatching()
+            }
         }
         .task(id: router.pendingOrderId) { await openTappedOrder() }
         // "Hey Siri, book my usual Crease pickup": open the booking prefilled.
@@ -524,5 +531,36 @@ struct UsualOrderCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Your usual: \(usual.summary) at \(usual.cleanerName). Book it again.")
         .accessibilityIdentifier("usual-order")
+    }
+}
+
+
+/// The home screen's sections, split from the order list in one pass per
+/// redraw instead of re-filtering it for each section (and a contains() per
+/// row inside one of them).
+struct OrderLists {
+    let attention: [Order]
+    let active: [Order]
+    let activeOther: [Order]
+    let past: [Order]
+    let usual: UsualOrder?
+
+    init(_ orders: [Order]) {
+        var attention: [Order] = [], active: [Order] = [], other: [Order] = [], past: [Order] = []
+        for order in orders {
+            let needs = order.status == .awaitingApproval || order.needsReturnScheduling
+            if needs { attention.append(order) }
+            if order.status.isActive {
+                active.append(order)
+                if !needs { other.append(order) }
+            } else {
+                past.append(order)
+            }
+        }
+        self.attention = attention
+        self.active = active
+        self.activeOther = other
+        self.past = past
+        self.usual = UsualOrder.from(orders)
     }
 }

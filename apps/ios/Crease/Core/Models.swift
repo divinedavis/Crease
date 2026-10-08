@@ -634,9 +634,17 @@ struct Order: Codable, Identifiable, Hashable {
     /// "~05:50" reads like a clock readout rather than a time of day. A locale
     /// that has no marker, or puts it somewhere other than the end, is left
     /// exactly as it formatted itself.
+    /// Built once: this runs from status text on every redraw of the order
+    /// list, and a DateFormatter is one of the costlier objects to create.
+    private static let shortTime: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = .autoupdatingCurrent
+        f.timeStyle = .short
+        return f
+    }()
+
     private static func timeWithoutDayPeriod(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
+        let formatter = shortTime
         let text = formatter.string(from: date)
         for marker in [formatter.amSymbol, formatter.pmSymbol].compactMap({ $0 })
         where !marker.isEmpty && text.hasSuffix(marker) {
@@ -671,11 +679,18 @@ struct Order: Codable, Identifiable, Hashable {
 extension Int {
     /// Cents to display currency. Money is integer cents everywhere; this is
     /// the only place it becomes a string.
-    var asMoney: String {
+    /// Created once and shared: prices render in every row of every list,
+    /// on every redraw, and a NumberFormatter per call was pure CPU churn.
+    private static let currency: NumberFormatter = {
         let f = NumberFormatter()
+        f.locale = .autoupdatingCurrent
         f.numberStyle = .currency
         f.currencyCode = "USD"
-        return f.string(from: NSNumber(value: Double(self) / 100)) ?? "$0.00"
+        return f
+    }()
+
+    var asMoney: String {
+        Int.currency.string(from: NSNumber(value: Double(self) / 100)) ?? "$0.00"
     }
 }
 

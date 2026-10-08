@@ -129,11 +129,15 @@ struct ScheduleReturnView: View {
         }
     }
 
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .full
+        return f
+    }()
+
     private var readyAgo: String {
         guard let readyAt = order.readyAt else { return "just now" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: readyAt, relativeTo: Date())
+        return Self.relative.localizedString(for: readyAt, relativeTo: Date())
     }
 
     private func submit() async {

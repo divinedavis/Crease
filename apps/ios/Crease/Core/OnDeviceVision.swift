@@ -15,6 +15,10 @@ enum OnDeviceVision {
 
     /// Kinds of things in the photo, most confident first.
     static func classify(_ image: UIImage) async -> [(identifier: String, confidence: Float)] {
+        await Perf.measure("Vision classify") { await classifyNow(image) }
+    }
+
+    private static func classifyNow(_ image: UIImage) async -> [(identifier: String, confidence: Float)] {
         guard let cg = image.downscaled(to: analysisEdge).cgImage else { return [] }
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
         return await Task.detached(priority: .userInitiated) {
@@ -29,6 +33,10 @@ enum OnDeviceVision {
 
     /// Lines of printed text, top to bottom (Live Text's recogniser).
     static func readText(_ image: UIImage) async -> [String] {
+        await Perf.measure("Vision read text") { await readTextNow(image) }
+    }
+
+    private static func readTextNow(_ image: UIImage) async -> [String] {
         guard let cg = image.downscaled(to: 2400).cgImage else { return [] }
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
         return await Task.detached(priority: .userInitiated) {

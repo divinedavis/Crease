@@ -17,6 +17,7 @@
 		1FE0DB3420D993E2657D63B1 /* ServicePricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54ED6198D1876257662CFF80 /* ServicePricing.swift */; };
 		2353E947E6F92FB311CC48DA /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1359A272E99CE20543C8B6C /* Metrics.swift */; };
 		23D075356D7E21820C04A245 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30AC955AC6547945C1018CD /* PerformanceTests.swift */; };
+		24DD121BF361B3C9F78F6886 /* Perf.swift in Sources */ = {isa = PBXBuildFile; fileRef = C25F8F0FCBDDBE2CEF736AD9 /* Perf.swift */; };
 		2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */; };
 		2F3FD22A0A96B510AA7CBE53 /* ServicePricingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */; };
 		372A54856F0A7E0DBE6A2B4A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A9740EB7DC2492BCDC52958 /* Models.swift */; };
@@ -44,6 +45,8 @@
 		8720FC51070189C85F80B303 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08676723DF8AA03131E96937 /* SignInView.swift */; };
 		87BD7A7D13AB7DA6359710D0 /* SecurityOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDB8576D702E552AB330954 /* SecurityOverlay.swift */; };
 		92B390FAF0CED6D747E33C1B /* CreaseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 046C115A5D80AFC2989AC77A /* CreaseApp.swift */; };
+		A34F6577A8131F2FD33228CB /* OrderCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 427B9790FE999BADB62C80F6 /* OrderCache.swift */; };
+		AC6127698B4B579A9D062A99 /* OrderCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1A0B70823F26347C091DD2 /* OrderCacheTests.swift */; };
 		AD8DF9D9B8AC121FA1F1D0EE /* OrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0EAE8D5AB3D0426370E058 /* OrdersView.swift */; };
 		ADB3B9921399ECCF6C895613 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 255D110BBBD201B5E80C7E7F /* StripePaymentSheet */; };
 		ADE0CACEF48F2D5DE749C189 /* OnDeviceLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D977A2EA8C6AB701E09E2689 /* OnDeviceLanguage.swift */; };
@@ -104,11 +107,13 @@
 		2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePricingTests.swift; sourceTree = "<group>"; };
 		38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceCopyTests.swift; sourceTree = "<group>"; };
 		39B2121EE8C6FDE0D63F2C17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		427B9790FE999BADB62C80F6 /* OrderCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderCache.swift; sourceTree = "<group>"; };
 		4C395C640617FD12B1D85D3B /* BiometricAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuth.swift; sourceTree = "<group>"; };
 		4D8D339EC7C4BB27F9FCC546 /* CreaseTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		54ED6198D1876257662CFF80 /* ServicePricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePricing.swift; sourceTree = "<group>"; };
 		5BAC00BF5438D954783BADAB /* ServiceMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceMenuView.swift; sourceTree = "<group>"; };
 		5CAD0311BBE9B3E27DD97C97 /* PileScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PileScanner.swift; sourceTree = "<group>"; };
+		5E1A0B70823F26347C091DD2 /* OrderCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderCacheTests.swift; sourceTree = "<group>"; };
 		61376034577AEFE05F4DD391 /* Push.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Push.swift; sourceTree = "<group>"; };
 		6264503E411044C4344A0946 /* ServiceArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceArea.swift; sourceTree = "<group>"; };
 		65CDD7EB235F4833E4AB572E /* PinConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinConfirmView.swift; sourceTree = "<group>"; };
@@ -128,6 +133,7 @@
 		A41498AEAD969430E5EA4715 /* Intelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intelligence.swift; sourceTree = "<group>"; };
 		AB696D3EE6A52919F9E72D81 /* OrderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderStore.swift; sourceTree = "<group>"; };
 		C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyTrackTests.swift; sourceTree = "<group>"; };
+		C25F8F0FCBDDBE2CEF736AD9 /* Perf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Perf.swift; sourceTree = "<group>"; };
 		C57D978D1F2305CEEC98E55E /* BookPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookPickupView.swift; sourceTree = "<group>"; };
 		C70F19541F2E18076F5FA80D /* Checkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
 		CC7A8FDD347AF1823F8CCFA9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
@@ -146,7 +152,7 @@
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F939BB829C1004564DF9307F /* NoteTranslation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTranslation.swift; sourceTree = "<group>"; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_7C165C17-AB90-4053-A5CF-A8F717D3252A" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_A2832985-0B4E-47C2-8B22-D20AD2935FF0" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,8 +220,10 @@
 				2A9740EB7DC2492BCDC52958 /* Models.swift */,
 				D977A2EA8C6AB701E09E2689 /* OnDeviceLanguage.swift */,
 				6D5271B16B3ACCE8C801FA18 /* OnDeviceVision.swift */,
+				427B9790FE999BADB62C80F6 /* OrderCache.swift */,
 				F2F93E0893498CAA056A8784 /* OrderPhoto.swift */,
 				AB696D3EE6A52919F9E72D81 /* OrderStore.swift */,
+				C25F8F0FCBDDBE2CEF736AD9 /* Perf.swift */,
 				5CAD0311BBE9B3E27DD97C97 /* PileScanner.swift */,
 				61376034577AEFE05F4DD391 /* Push.swift */,
 				7EDB8576D702E552AB330954 /* SecurityOverlay.swift */,
@@ -282,6 +290,7 @@
 				040BD61FED150B768839549C /* FinishedLegTests.swift */,
 				F16FE076F93E9FCF41C83892 /* IntelligenceTests.swift */,
 				C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */,
+				5E1A0B70823F26347C091DD2 /* OrderCacheTests.swift */,
 				E1D0E45DE69E5FEE27E4B0E3 /* PhoneNumberTests.swift */,
 				1E67D04CA816739B72F1F413 /* PinAddressTests.swift */,
 				38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */,
@@ -293,10 +302,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_14734ECF-ECCE-4685-84D8-4BB332F41468" /* ios */ = {
+		"TEMP_AB6C0609-7F96-432F-A95F-386E22D5290D" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_7C165C17-AB90-4053-A5CF-A8F717D3252A" /* Secrets.xcconfig */,
+				"TEMP_A2832985-0B4E-47C2-8B22-D20AD2935FF0" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -453,10 +462,12 @@
 				3F04AEE69E18A24318AF284F /* NoteTranslation.swift in Sources */,
 				ADE0CACEF48F2D5DE749C189 /* OnDeviceLanguage.swift in Sources */,
 				7D5F4A62142F27ACAF36BFDC /* OnDeviceVision.swift in Sources */,
+				A34F6577A8131F2FD33228CB /* OrderCache.swift in Sources */,
 				B3A8D805084A810FF6881096 /* OrderDetailView.swift in Sources */,
 				CC5F2BB03CF57E03EB49FB4E /* OrderPhoto.swift in Sources */,
 				62CAA121325D196E5626A169 /* OrderStore.swift in Sources */,
 				AD8DF9D9B8AC121FA1F1D0EE /* OrdersView.swift in Sources */,
+				24DD121BF361B3C9F78F6886 /* Perf.swift in Sources */,
 				84E539C256C830D71DF65B70 /* PileScanner.swift in Sources */,
 				7166AD11F708FC67757EF404 /* PinConfirmView.swift in Sources */,
 				E4CD2FB5594370A0F986D845 /* Push.swift in Sources */,
@@ -481,6 +492,7 @@
 				0E067E517FD8D8E7F3E2B3E9 /* FinishedLegTests.swift in Sources */,
 				EF688AE9FAF34DCE39108524 /* IntelligenceTests.swift in Sources */,
 				2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */,
+				AC6127698B4B579A9D062A99 /* OrderCacheTests.swift in Sources */,
 				0423DDDA8376942EB9937AFD /* PhoneNumberTests.swift in Sources */,
 				FD67D6FD472FA6DCB2542E05 /* PinAddressTests.swift in Sources */,
 				85ED285AC05AF7E2B27D5B61 /* PriceCopyTests.swift in Sources */,
@@ -575,7 +587,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C165C17-AB90-4053-A5CF-A8F717D3252A" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_A2832985-0B4E-47C2-8B22-D20AD2935FF0" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -724,7 +736,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_7C165C17-AB90-4053-A5CF-A8F717D3252A" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_A2832985-0B4E-47C2-8B22-D20AD2935FF0" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

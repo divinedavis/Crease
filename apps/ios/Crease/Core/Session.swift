@@ -277,6 +277,7 @@ final class Session: ObservableObject {
 
     func signOut() async {
         try? await client.auth.signOut()
+        OrderCache.clearAll()
         state = .signedOut
     }
 
@@ -294,6 +295,7 @@ final class Session: ObservableObject {
     func deleteAccount() async throws {
         do {
             try await client.rpc("delete_account").execute()
+            OrderCache.clearAll()
         } catch {
             let raw = error.localizedDescription
             if raw.contains("staff accounts must be removed") {

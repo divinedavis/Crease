@@ -23,13 +23,32 @@ final class OrderStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let client: SupabaseClient
+    /// Whose orders these are; keys the on-disk cache.
+    private let userId: UUID?
     private var channel: RealtimeChannelV2?
     /// The one task listening to both tables, and the refetch it has queued.
     private var watcher: Task<Void, Never>?
     private var pendingReload: Task<Void, Never>?
+    /// Orders a burst of realtime events touched, refetched together.
+    private var changedOrderIds: Set<UUID> = []
+    /// An event that could not be pinned to one order: refetch everything.
+    private var needsFullReload = false
 
-    init(client: SupabaseClient) {
+    init(client: SupabaseClient, userId: UUID? = nil) {
         self.client = client
+        self.userId = userId
+        // Draw the last known list straight away; loadAll() refreshes it.
+        if let userId, let cached = OrderCache.load(for: userId) {
+            Perf.event("Orders drawn from cache")
+            orders = cached.orders
+            cleaners = cached.cleaners
+            addresses = cached.addresses
+        }
+    }
+
+    private func saveCache() {
+        guard let userId else { return }
+        OrderCache.save(OrderCache(orders: orders, cleaners: cleaners, addresses: addresses, savedAt: Date()), for: userId)
     }
 
     /// The signed-in customer's access token, refreshed if needed.
@@ -57,6 +76,7 @@ final class OrderStore: ObservableObject {
         async let a: () = loadAddresses()
         async let p: () = loadProfile()
         _ = await (o, c, a, p)
+        saveCache()
     }
 
     /// The statuses that put an order in the past — the mirror of
@@ -78,6 +98,10 @@ final class OrderStore: ObservableObject {
     /// and a plain `.limit()` on a single query is exactly what would drop it.
     /// Finished orders are history, so they get a ceiling.
     func loadOrders() async {
+        await Perf.measure("Load orders") { await fetchOrders() }
+    }
+
+    private func fetchOrders() async {
         do {
             async let open: [Order] = client
                 .from("orders")
@@ -96,6 +120,7 @@ final class OrderStore: ObservableObject {
                 .value
             let (active, past) = try await (open, history)
             orders = (active + past).sorted { $0.createdAt > $1.createdAt }
+            saveCache()
         } catch {
             // The message the customer sees says nothing about why, and nothing
             // else recorded it either — an Orders screen that fails to decode
@@ -628,9 +653,56 @@ final class OrderStore: ObservableObject {
         // and neither can outlive the channel it reads from.
         watcher = Task { [weak self] in
             await withTaskGroup(of: Void.self) { group in
-                group.addTask { for await _ in changes { await self?.reloadSoon() } }
-                group.addTask { for await _ in legChanges { await self?.reloadSoon() } }
+                group.addTask { for await change in changes { await self?.noted(change, idKey: "id") } }
+                group.addTask { for await change in legChanges { await self?.noted(change, idKey: "order_id") } }
             }
+        }
+    }
+
+    /// Which order an event is about. A delete of an order is applied at once;
+    /// anything that cannot be pinned to one order falls back to a full reload.
+    private func noted(_ change: AnyAction, idKey: String) {
+        let record: [String: AnyJSON]
+        switch change {
+        case .insert(let action): record = action.record
+        case .update(let action): record = action.record
+        case .delete(let action):
+            if idKey == "id", let id = action.oldRecord["id"]?.stringValue.flatMap(UUID.init(uuidString:)) {
+                orders.removeAll { $0.id == id }
+                saveCache()
+                return
+            }
+            record = action.oldRecord
+        default:
+            needsFullReload = true
+            reloadSoon()
+            return
+        }
+        if let id = record[idKey]?.stringValue.flatMap(UUID.init(uuidString:)) {
+            changedOrderIds.insert(id)
+        } else {
+            needsFullReload = true
+        }
+        reloadSoon()
+    }
+
+    /// Refetch just the orders that changed and merge them into the list,
+    /// rather than the whole history for every courier ping.
+    private func refresh(_ ids: Set<UUID>) async {
+        Perf.event("Realtime refresh")
+        do {
+            let fresh: [Order] = try await client
+                .from("orders")
+                .select(Self.orderSelect)
+                .in("id", values: ids.map(\.uuidString))
+                .execute()
+                .value
+            var merged = orders.filter { !ids.contains($0.id) }
+            merged.append(contentsOf: fresh)
+            orders = merged.sorted { $0.createdAt > $1.createdAt }
+            saveCache()
+        } catch {
+            await loadOrders()
         }
     }
 
@@ -650,7 +722,11 @@ final class OrderStore: ObservableObject {
             // Cleared first, so a change landing during the fetch schedules
             // the next one instead of being dropped.
             pendingReload = nil
-            await loadOrders()
+            let ids = changedOrderIds
+            let full = needsFullReload || ids.isEmpty
+            changedOrderIds = []
+            needsFullReload = false
+            if full { await loadOrders() } else { await refresh(ids) }
         }
     }
 

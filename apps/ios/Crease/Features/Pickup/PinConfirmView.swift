@@ -30,6 +30,7 @@ struct PinConfirmView: View {
     /// coordinate and leave the old street on the order.
     @State private var underPin: ResolvedAddress
     @State private var isGeocoding = false
+    @State private var geocoder = CLGeocoder()
     @State private var movedToCurrentLocation = false
     @State private var notes = ""
     @State private var isDragging = false
@@ -156,7 +157,10 @@ struct PinConfirmView: View {
     private func lookUpAddress(at point: CLLocationCoordinate2D) async {
         isGeocoding = true
         defer { isGeocoding = false }
-        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(
+        // One geocoder for the screen; a new drag cancels the lookup in flight
+        // rather than leaving it to finish for a point nobody wants any more.
+        geocoder.cancelGeocode()
+        let placemarks = try? await geocoder.reverseGeocodeLocation(
             CLLocation(latitude: point.latitude, longitude: point.longitude)
         )
         guard !Task.isCancelled else { return }

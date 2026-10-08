@@ -154,7 +154,7 @@ private struct SignedInRoot: View {
     init(session: Session, userId: UUID) {
         self.session = session
         self.userId = userId
-        _store = StateObject(wrappedValue: OrderStore(client: session.client))
+        _store = StateObject(wrappedValue: OrderStore(client: session.client, userId: userId))
     }
 
     var body: some View {

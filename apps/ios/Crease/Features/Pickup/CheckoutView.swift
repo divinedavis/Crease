@@ -68,7 +68,6 @@ struct CheckoutView: View {
     let working: Bool
     let onPay: () -> Void
 
-    @State private var camera: MapCameraPosition = .automatic
     @State private var editingPin = false
     @State private var editingNotes = false
     @State private var editingPhone = false
@@ -121,9 +120,6 @@ struct CheckoutView: View {
         .safeAreaInset(edge: .bottom) { placeOrderBar }
         .interactiveDismissDisabled(working)
         .task { await store.loadProfile() }
-        .onAppear(perform: frameRoute)
-        .onChange(of: cleaner?.id) { _, _ in frameRoute() }
-        .onChange(of: pickup) { _, _ in frameRoute() }
         // A scheduled time belongs to the tier it was chosen under: switching
         // to a tier that collects nothing leaves a pickup time for a pickup
         // that never happens.
@@ -227,17 +223,11 @@ struct CheckoutView: View {
     /// "where is this going"; here the only question left is "is that my door",
     /// which is what Edit Pin is for.
     private var mapCard: some View {
-        Map(position: $camera, interactionModes: []) {
-            Marker(addressLabel, systemImage: "house.fill", coordinate: pickup.coordinate)
-                .tint(Theme.accent)
-            if let coordinate = cleaner?.coordinate {
-                Marker(cleaner?.name ?? "Cleaner", systemImage: "building.2.fill", coordinate: coordinate)
-                    .tint(Theme.warn)
-                MapPolyline(coordinates: [pickup.coordinate, coordinate])
-                    .stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [2, 8]))
-            }
-        }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        // A still image of the route, not a live map: nothing here is
+        // interactive, and a live MapKit view keeps tiles loading and the GPU
+        // compositing for a picture that never moves. Re-rendered only when
+        // the pin, the shop, the width or light/dark mode change.
+        RouteSnapshot(pickup: pickup.coordinate, shop: cleaner?.coordinate, shopName: cleaner?.name)
         .frame(height: 132)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
         .overlay(alignment: .topTrailing) {
@@ -739,26 +729,6 @@ struct CheckoutView: View {
 
     // MARK: - Map framing
 
-    private func frameRoute() {
-        guard let shop = cleaner?.coordinate else {
-            camera = .region(MKCoordinateRegion(
-                center: pickup.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
-            ))
-            return
-        }
-        let midLat = (pickup.coordinate.latitude + shop.latitude) / 2
-        let midLon = (pickup.coordinate.longitude + shop.longitude) / 2
-        let spanLat = abs(pickup.coordinate.latitude - shop.latitude) * 2.4 + 0.006
-        let spanLon = abs(pickup.coordinate.longitude - shop.longitude) * 2.4 + 0.006
-        withAnimation(.easeInOut(duration: 0.5)) {
-            camera = .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
-                span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
-            ))
-        }
-    }
-
     // MARK: - Formatting
 
     private func timeText(_ date: Date) -> String {
@@ -1091,5 +1061,106 @@ private struct SetUpApplePayButton: UIViewRepresentable {
 
     final class Coordinator: NSObject {
         @objc func open() { PKPassLibrary().openPaymentSetup() }
+    }
+}
+
+// MARK: - Route picture
+
+/// The pickup-to-shop route as one rendered image (MKMapSnapshotter), with
+/// the two pins and the dashed line drawn on top.
+struct RouteSnapshot: View {
+    let pickup: CLLocationCoordinate2D
+    let shop: CLLocationCoordinate2D?
+    let shopName: String?
+
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+
+    private struct Key: Equatable {
+        let pickup: PinPoint
+        let shop: PinPoint?
+        let width: Int
+        let dark: Bool
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Color(.secondarySystemBackground)
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .transition(.opacity)
+                }
+            }
+            .task(id: Key(pickup: PinPoint(pickup), shop: shop.map(PinPoint.init), width: Int(geo.size.width), dark: scheme == .dark)) {
+                guard geo.size.width > 0 else { return }
+                let rendered = await render(size: CGSize(width: geo.size.width, height: geo.size.height))
+                withAnimation(.easeOut(duration: 0.2)) { image = rendered }
+            }
+        }
+        .accessibilityElement()
+        .accessibilityLabel(shopName.map { "Map of the route from your pickup to \($0)" } ?? "Map of your pickup point")
+    }
+
+    private var region: MKCoordinateRegion {
+        guard let shop else {
+            return MKCoordinateRegion(center: pickup, span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006))
+        }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: (pickup.latitude + shop.latitude) / 2,
+                                           longitude: (pickup.longitude + shop.longitude) / 2),
+            span: MKCoordinateSpan(latitudeDelta: abs(pickup.latitude - shop.latitude) * 2.4 + 0.006,
+                                   longitudeDelta: abs(pickup.longitude - shop.longitude) * 2.4 + 0.006)
+        )
+    }
+
+    private func render(size: CGSize) async -> UIImage? {
+        let options = MKMapSnapshotter.Options()
+        options.region = region
+        options.size = size
+        options.scale = displayScale
+        options.pointOfInterestFilter = .excludingAll
+        options.traitCollection = UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
+        guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
+
+        let accent = UIColor(Theme.accent)
+        let warn = UIColor(Theme.warn)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = displayScale
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            snapshot.image.draw(at: .zero)
+            let home = snapshot.point(for: pickup)
+            if let shop {
+                let there = snapshot.point(for: shop)
+                let line = UIBezierPath()
+                line.move(to: home)
+                line.addLine(to: there)
+                line.lineWidth = 3
+                line.lineCapStyle = .round
+                line.setLineDash([2, 8], count: 2, phase: 0)
+                accent.setStroke()
+                line.stroke()
+                drawPin(at: there, symbol: "building.2.fill", color: warn, in: ctx.cgContext)
+            }
+            drawPin(at: home, symbol: "house.fill", color: accent, in: ctx.cgContext)
+        }
+    }
+
+    private func drawPin(at point: CGPoint, symbol: String, color: UIColor, in cg: CGContext) {
+        let r: CGFloat = 13
+        let circle = UIBezierPath(ovalIn: CGRect(x: point.x - r, y: point.y - r, width: r * 2, height: r * 2))
+        cg.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: UIColor.black.withAlphaComponent(0.3).cgColor)
+        color.setFill()
+        circle.fill()
+        cg.setShadow(offset: .zero, blur: 0, color: nil)
+        UIColor.white.setStroke()
+        circle.lineWidth = 2
+        circle.stroke()
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        if let icon = UIImage(systemName: symbol, withConfiguration: config)?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+            icon.draw(at: CGPoint(x: point.x - icon.size.width / 2, y: point.y - icon.size.height / 2))
+        }
     }
 }

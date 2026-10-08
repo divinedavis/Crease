@@ -51,10 +51,16 @@ struct DispatchAPI {
     /// which arrives as a nonsense timestamp rather than as an error.
     @discardableResult
     func post<T: Decodable>(_ path: String, body: some Encodable, as type: T.Type) async throws -> T {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        return try await send(path, body: try encoder.encode(body), as: type)
+        return try await send(path, body: try Self.encoder.encode(body), as: type)
     }
+
+    /// Shared coders rather than one per request.
+    private static let decoder = JSONDecoder()
+    private static let encoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
 
     private func send<T: Decodable>(_ path: String, body: Data, as type: T.Type) async throws -> T {
         guard isConfigured, let url = URL(string: baseURL + path) else {
@@ -73,7 +79,7 @@ struct DispatchAPI {
             // Surface the server's reason. A carrier refusing to cancel after
             // pickup is a real answer the customer needs to read, not a
             // generic failure to retry against.
-            let failure = try? JSONDecoder().decode(ErrorBody.self, from: data)
+            let failure = try? Self.decoder.decode(ErrorBody.self, from: data)
             throw Failure(
                 message: failure?.readable ?? "That didn't work (\(status)).",
                 code: failure?.code,
@@ -81,7 +87,7 @@ struct DispatchAPI {
             )
         }
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try Self.decoder.decode(T.self, from: data)
         } catch {
             // A proxy error page decodes as nothing. Don't surface the raw
             // gateway body to the customer (it can leak infrastructure detail);
