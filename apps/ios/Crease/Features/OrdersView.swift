@@ -267,8 +267,6 @@ struct ServiceTile: View {
 /// couriers actually reach. No invented discounts: there are none.
 struct PromoCard: View {
     let onLearnMore: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var drift = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -295,14 +293,15 @@ struct PromoCard: View {
             .padding(16)
             Spacer(minLength: 0)
             ZStack {
+                // Still, like a ride app's promo art. A forever-animation here
+                // kept Home redrawing for nothing, including under the address
+                // screen, which is drawn over Home.
                 Circle()
                     .fill(.white.opacity(0.10))
                     .frame(width: 120, height: 120)
-                    .scaleEffect(drift ? 1.06 : 0.94)
                 Image(systemName: "hanger")
                     .font(.system(size: 54, weight: .semibold))
                     .foregroundStyle(.white)
-                    .rotationEffect(.degrees(drift ? 4 : -4), anchor: .top)
                     .accessibilityHidden(true)
             }
             .frame(width: 120)
@@ -310,10 +309,6 @@ struct PromoCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 150)
         .background(Theme.promo, in: RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { drift = true }
-        }
     }
 }
 
