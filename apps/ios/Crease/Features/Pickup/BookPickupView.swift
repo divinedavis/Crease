@@ -24,6 +24,12 @@ struct BookPickupView: View {
 
     /// When booking "your usual": its shop and lines open prefilled.
     private let usual: UsualOrder?
+    /// The service the customer tapped on Home or Services, if any. Kept even
+    /// when the chosen shop has no price for it: the booking says so rather
+    /// than quietly turning a dry-cleaning order into wash & fold (owner,
+    /// 2026-10-08).
+    private let requestedKind: ServiceKind?
+    @State private var kindUnavailable = false
     @State private var appliedUsual = false
 
     init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil, intent: BookingIntent = BookingIntent()) {
@@ -36,6 +42,7 @@ struct BookPickupView: View {
             _selected = State(initialValue: tier)
         }
         if let kind = intent.kind { _serviceKind = State(initialValue: kind) }
+        requestedKind = intent.kind
         if let when = intent.when, when.timeIntervalSinceNow >= 3600 {
             _scheduledPickup = State(initialValue: when)
         }
@@ -124,6 +131,18 @@ struct BookPickupView: View {
             }
     }
 
+    /// Whether the chosen shop has published prices for the chosen service.
+    /// True while the price list is still loading, so the screen does not
+    /// flash "not offered" before it knows.
+    private var kindOffered: Bool {
+        menu.isEmpty || menu.contains { $0.serviceType == serviceKind.rawValue }
+    }
+
+    /// The services this shop does sell, for the "not offered" choices.
+    private var offeredKinds: [ServiceKind] {
+        ServiceKind.allCases.filter { k in menu.contains { $0.serviceType == k.rawValue } }
+    }
+
     /// What the cleaning is expected to cost at this shop's prices. Zero until
     /// something is picked — and zero is honest there, not a quote of free.
     private var estimateCents: Int { ServicePricing.subtotalCents(declaredLines) }
@@ -202,6 +221,27 @@ struct BookPickupView: View {
             }
             .environmentObject(store)
         }
+        .confirmationDialog(
+            "\(cleaner?.name ?? "This shop") doesn't offer \(serviceKind.label.lowercased()) yet",
+            isPresented: $kindUnavailable,
+            titleVisibility: .visible
+        ) {
+            ForEach(offeredKinds) { kind in
+                Button("Switch to \(kind.label)") {
+                    withAnimation(Motion.snappy) { serviceKind = kind }
+                    // Opens at the shop's floor, as a fresh booking would.
+                    if let line = ServicePricing.lineToOpenAtMinimum(menu: menu, serviceType: kind.rawValue, entered: quantities) {
+                        quantities[line.id] = ServicePricing.openingUnits(line)
+                    }
+                }
+            }
+            if store.cleaners.count > 1 {
+                Button("Choose another cleaner") { choosingCleaner = true }
+            }
+            Button("Keep \(serviceKind.label)", role: .cancel) {}
+        } message: {
+            Text("Prices come from the shop, and they haven't published \(serviceKind.label.lowercased()) prices.")
+        }
         .sheet(isPresented: $choosingItems) {
             ServiceMenuView(
                 shopName: cleaner?.name ?? "This shop",
@@ -270,7 +310,11 @@ struct BookPickupView: View {
             guard let id = cleaner?.id else { menu = []; return }
             quantities.removeAll()
             menu = await store.serviceMenu(for: id)
-            if !menu.contains(where: { $0.serviceType == serviceKind.rawValue }),
+            // Falls back to what the shop sells only when nobody asked for a
+            // service. A service the customer picked stays picked, and the
+            // screen says the shop does not offer it (see kindOffered).
+            if requestedKind == nil,
+               !menu.contains(where: { $0.serviceType == serviceKind.rawValue }),
                let first = ServiceKind.allCases.first(where: { k in menu.contains { $0.serviceType == k.rawValue } }) {
                 serviceKind = first
             }
@@ -478,7 +522,9 @@ struct BookPickupView: View {
                 // the hold cannot cover it, and the customer meets the real
                 // number after their clothes have gone. So the button does the
                 // only useful thing instead of refusing: it opens the list.
-                if selected.carriesCleaning && declaredLines.isEmpty {
+                if selected.carriesCleaning && !kindOffered {
+                    kindUnavailable = true
+                } else if selected.carriesCleaning && declaredLines.isEmpty {
                     choosingItems = true
                 } else {
                     reviewing = true
@@ -488,7 +534,9 @@ struct BookPickupView: View {
                 // charge a card for $29.95 while the customer was also, in the
                 // same transaction, paying for the cleaning — a number that
                 // appeared nowhere until their statement.
-                Text(selected.carriesCleaning && declaredLines.isEmpty
+                Text(selected.carriesCleaning && !kindOffered
+                     ? "\(serviceKind.label) isn't offered here"
+                     : selected.carriesCleaning && declaredLines.isEmpty
                      ? "Choose what you're sending"
                      : "Continue · \(totalCents.asMoney)")
                     .frame(maxWidth: .infinity)
@@ -526,6 +574,8 @@ struct BookPickupView: View {
     /// the approval flow. The customer found out what their clothes cost after
     /// they had already left the house.
     private var serviceRow: some View {
+        // Always the sheet: it shows every service, including ones this shop
+        // has not priced, so the customer can switch either way from there.
         Button { choosingItems = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: serviceKind.symbol)
@@ -564,6 +614,9 @@ struct BookPickupView: View {
     /// One line describing the bag: garments counted, or pounds estimated.
     /// Never a price on its own — the price lives beside it.
     private var declaredSummary: String {
+        guard kindOffered else {
+            return "\(cleaner?.name ?? "This shop") doesn't offer \(serviceKind.label.lowercased()) yet"
+        }
         guard !declaredLines.isEmpty else {
             return menu.isEmpty ? "Loading this shop's prices…" : "Tap to choose what you're sending"
         }

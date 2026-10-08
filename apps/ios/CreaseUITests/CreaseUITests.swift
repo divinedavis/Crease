@@ -1349,4 +1349,59 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(proceed.waitForExistence(timeout: 20), "a rebook should open with its lines already priced")
         attach(app, "rebook-booking")
     }
+
+    /// The service tapped on Home is the service on the booking screen — even
+    /// when the shop has no price for it, which it says instead of quietly
+    /// booking wash & fold (owner, 2026-10-08).
+    func testTheServiceTappedOnHomeStaysChosen() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book Dry cleaning"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Dry cleaning'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 15), "the booking should still say Dry cleaning")
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Wash & fold'")).firstMatch.exists,
+                       "the booking switched the service the customer picked")
+        attach(app, "dry-cleaning-kept")
+
+        let unavailable = app.buttons["Dry cleaning isn't offered here"]
+        guard unavailable.waitForExistence(timeout: 5) else { return }   // this shop sells it
+        unavailable.tap()
+        let switchTo = app.buttons["Switch to Wash & fold"]
+        guard let choice = button("Switch to Wash & fold", in: app) ?? (switchTo.exists ? switchTo : nil) else {
+            return XCTFail("the not-offered dialog should offer what the shop does sell")
+        }
+        choice.tap()
+        let washRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Wash & fold'")).firstMatch
+        XCTAssertTrue(washRow.waitForExistence(timeout: 5), "switching should be one tap")
+
+        // And back again from the service sheet, which lists every service
+        // even when the shop prices only one.
+        washRow.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+        let dry = app.segmentedControls.buttons["Dry cleaning"]
+        XCTAssertTrue(dry.waitForExistence(timeout: 5), "the sheet should offer Dry cleaning to switch to")
+        for attempt in 0..<3 where !dry.isSelected {
+            if attempt == 0 { dry.tap() } else { dry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+            _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: dry)], timeout: 2)
+        }
+        XCTAssertTrue(dry.isSelected)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS \"doesn't offer dry cleaning\"")).firstMatch
+            .waitForExistence(timeout: 5) || app.otherElements.matching(NSPredicate(format: "label CONTAINS \"doesn't offer dry cleaning\"")).firstMatch.exists,
+            "the sheet should say the shop doesn't price dry cleaning")
+        attach(app, "sheet-dry-cleaning-not-offered")
+        XCTAssertFalse(app.staticTexts["One service per order"].exists,
+                       "an unpriced service holds nothing, so nothing clashes with it")
+        XCTAssertTrue(app.buttons["Done"].isEnabled, "Done must not be blocked on an unpriced service")
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["Dry cleaning isn't offered here"].waitForExistence(timeout: 5),
+                      "the booking should carry the switch back to Dry cleaning")
+    }
 }

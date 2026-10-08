@@ -11,7 +11,10 @@ import SwiftUI
 ///
 /// Every price here is the chosen shop's own. Nothing is averaged, and there
 /// is no Crease price list to fall back on: if the shop has not published a
-/// price for a service, the service is not offered.
+/// price for a service, that tab says so and has nothing to count. All three
+/// tabs always show (owner, 2026-10-08), so a customer can switch to the
+/// service they want and see plainly that this shop does not do it, rather
+/// than finding the choice missing.
 struct ServiceMenuView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -47,7 +50,10 @@ struct ServiceMenuView: View {
     /// on every tab tap, which punished looking. Now the clash is shown, and
     /// it is one tap to resolve.
     private var conflicting: ServiceKind? {
-        offered.first { candidate in
+        // A tab this shop has not priced holds nothing, so nothing clashes:
+        // the booking just says the service is not offered.
+        guard !items.isEmpty else { return nil }
+        return offered.first { candidate in
             candidate != kind
                 && menu.contains { $0.serviceType == candidate.rawValue && (quantities[$0.id] ?? 0) > 0 }
         }
@@ -59,9 +65,9 @@ struct ServiceMenuView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if offered.count > 1 {
+                if !menu.isEmpty {
                     Picker("Service", selection: $kind) {
-                        ForEach(offered) { service in
+                        ForEach(ServiceKind.allCases) { service in
                             Text(service.label).tag(service)
                         }
                     }
@@ -92,13 +98,27 @@ struct ServiceMenuView: View {
                         )
                     }
                     Section {
+                        if items.isEmpty && !menu.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("\(shopName) doesn't offer \(kind.label.lowercased()) yet")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("They haven't published \(kind.label.lowercased()) prices, so it can't be booked with them. Pick another service above, or change the cleaner on the booking screen.")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
+                            .accessibilityElement(children: .combine)
+                        }
                         ForEach(items) { item in
                             row(item)
                         }
                     } header: {
                         Text(kind.prompt)
                     } footer: {
-                        Text("These are \(shopName)'s prices. They count the bag at the counter and that count is what you pay — this is what to expect.")
+                        if !items.isEmpty {
+                            Text("These are \(shopName)'s prices. They count the bag at the counter and that count is what you pay — this is what to expect.")
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -109,7 +129,9 @@ struct ServiceMenuView: View {
                 // by rebuilding both views repeatedly before it settles.
                 .onChange(of: kind) { prefillMinimum() }
 
-                total
+                // No "$0.00" for a service the shop cannot price: that reads
+                // as free, not as unavailable.
+                if !items.isEmpty { total }
             }
             .navigationTitle("Your order")
             .navigationBarTitleDisplayMode(.inline)
