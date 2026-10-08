@@ -306,7 +306,10 @@ struct BookPickupView: View {
     private var map: some View {
         Map(position: $camera) {
             Annotation("Pickup", coordinate: pickup.coordinate, anchor: .center) {
-                RouteEndpoint(square: false, caption: selected.pickupEtaMinutes.map { "\($0) min" })
+                // "Driver", not a bare duration: the only time this screen
+                // can honestly quote is the courier's arrival, never the
+                // whole cycle (testBookingQuotesOnlyTheDriverEta).
+                RouteEndpoint(square: false, caption: selected.pickupEtaMinutes.map { "Driver \($0) min" })
             }
             if let c = cleanerCoordinate {
                 Annotation(cleaner?.name ?? "Cleaner", coordinate: c, anchor: .center) {

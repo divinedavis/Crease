@@ -110,6 +110,10 @@ struct OrdersView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PressableStyle())
+                    // Not the bare service name: the booking sheet has its own
+                    // "Press only" button, and Home stays in the hierarchy
+                    // behind it.
+                    .accessibilityLabel("Book \(kind.label)")
                 }
             }
             .padding(.horizontal, 16)
@@ -214,7 +218,7 @@ struct OrdersView: View {
                             )
                         }
                         .buttonStyle(PressableStyle())
-                        .accessibilityLabel("\(option.name), \(option.priceCents.asMoney). \(option.blurb)")
+                        .accessibilityLabel("Book \(option.name), \(option.priceCents.asMoney). \(option.blurb)")
                         .staggeredAppear(i)
                     }
                 }
