@@ -15,11 +15,18 @@ FAIL when a "prefers smaller" metric's median is more than TOLERANCE over its
 baseline. The tolerance is wide on purpose: it is a simulator on a Mac that
 other work shares, so it catches a doubling, not a 10% wobble.
 
+A memory metric must ALSO have grown by more than MIN_GROWTH (owner,
+2026-10-08). "Memory added opening booking" sits around 0.4-0.9 MB and moves by
+half a megabyte between runs of the same build, so 1.5x of it failed the Uber
+redesign for +0.15 MB (0.2% of the app) while the unchanged old build landed at
+the line too. A real leak or a doubled image cache is megabytes, and still fails.
+
   python3 scripts/ios-perf-gate.py /tmp/crease-dd/Perf.xcresult [--record]
 """
 import json, os, statistics, subprocess, sys
 
 TOLERANCE = 0.5      # fail above baseline * 1.5
+MIN_GROWTH = {"kB": 1024}   # ...and, for memory, more than 1 MB above it
 KEEP = 5             # passing ships remembered per metric
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASELINE = os.path.join(HERE, "..", "apps", "ios", "perf_baseline.json")
@@ -38,6 +45,13 @@ def read_metrics(xcresult):
                 got[key] = {"median": statistics.median(m["measurements"]), "unit": m.get("unitOfMeasurement", ""),
                             "smaller": m.get("polarity", "prefers smaller") == "prefers smaller"}
     return got
+
+
+def regressed(now, ref, unit, smaller=True):
+    """Whether a metric's median is a regression against its baseline."""
+    if not smaller:
+        return now < ref * (1 - TOLERANCE)
+    return now > ref * (1 + TOLERANCE) and now - ref > MIN_GROWTH.get(unit, 0)
 
 
 def main():
@@ -62,7 +76,7 @@ def main():
             verdict, ref = "new (recorded)", None
         else:
             ref = statistics.median(hist)
-            over = m["median"] > ref * (1 + TOLERANCE) if m["smaller"] else m["median"] < ref * (1 - TOLERANCE)
+            over = regressed(m["median"], ref, m["unit"], m["smaller"])
             verdict = f"FAIL (>{int(TOLERANCE * 100)}% worse)" if over else "ok"
             if over:
                 failed.append(key)

@@ -29,7 +29,7 @@ step() { printf '==> %s\n' "$*"; }
 # would be skipped without a word, so refuse instead.
 step "every test file is reached by a runner"
 orphans="$(git ls-files | grep -E '\.test\.(ts|tsx|js|mjs)$|(^|/)test_[^/]*\.py$|_test\.py$' \
-  | grep -vE '^packages/[^/]+/src/[^/]+\.test\.ts$|^services/dispatch/src/.+\.test\.ts$|^apps/(portal|web)/lib/[^/]+\.test\.ts$|^growth/test_[^/]+\.py$' || true)"
+  | grep -vE '^packages/[^/]+/src/[^/]+\.test\.ts$|^services/dispatch/src/.+\.test\.ts$|^apps/(portal|web)/lib/[^/]+\.test\.ts$|^growth/test_[^/]+\.py$|^scripts/test_[^/]+\.py$' || true)"
 if [ -n "$orphans" ]; then
   echo "these test files are not run by any runner — move them or widen the runner:" >&2
   echo "$orphans" >&2
@@ -70,6 +70,10 @@ fi
 
 step "python unit tests (growth/)"
 run "python unit tests" "$PY" -m unittest discover -s growth -p 'test_*.py' -t .
+grep -E '^Ran ' "$LOG" | sed 's/^/    /'
+
+step "python unit tests (scripts/)"
+run "script unit tests" "$PY" -m unittest discover -s scripts -p 'test_*.py' -t scripts
 grep -E '^Ran ' "$LOG" | sed 's/^/    /'
 
 if [ "$BROWSER" = 1 ]; then

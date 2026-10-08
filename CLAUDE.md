@@ -32,7 +32,7 @@
 
 - One command: `scripts/test.sh` — refuses test files no runner reaches,
   typechecks every workspace, runs every node workspace's tests (each must
-  report >0) and the `growth/` Python tests. `scripts/test.sh --browser` adds
+  report >0) and the `growth/` and `scripts/test_*.py` Python tests. `scripts/test.sh --browser` adds
   the canvass page tests (`scripts/canvass-test/*-test.py`, needs python
   playwright + chromium).
 - Pre-push hook `.githooks/pre-push`: gitleaks over the pushed commits +
@@ -49,7 +49,8 @@
   XCUITest incl. `AccessibilityAuditTests` (light AND dark), the
   `ios-coverage-gate.py` check that every `Features/` file is executed by a
   test, `PerformanceTests` judged by `ios-perf-gate.py` (fail > 1.5x the median
-  of the last 5 ships, baseline `apps/ios/perf_baseline.json`), MetricKit wiring,
+  of the last 5 ships, and for memory also > +1 MB (owner, 2026-10-08),
+  baseline `apps/ios/perf_baseline.json`), MetricKit wiring,
   and the Xcode Organizer report. A new screen needs a UI test that opens it.
   `CREASE_SKIP_GATES=1` only for an emergency, said in the commit.
 - **Every change adds, updates AND deletes tests in the same commit.** New
