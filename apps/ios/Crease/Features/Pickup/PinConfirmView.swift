@@ -43,9 +43,14 @@ struct PinConfirmView: View {
         self.address = address
         self.startsAtCurrentLocation = startsAtCurrentLocation
         self.onConfirm = onConfirm
-        _centre = State(initialValue: address.coordinate)
+        // Where the customer is, from the start, when the phone already knows:
+        // opening on the saved address and jumping a second later read as the
+        // map starting "some random place".
+        let start = startsAtCurrentLocation ? (LocationProvider.lastKnown ?? address.coordinate) : address.coordinate
+        _centre = State(initialValue: start)
         _underPin = State(initialValue: address)
-        _camera = State(initialValue: Self.region(address.coordinate))
+        _camera = State(initialValue: Self.region(start))
+        _movedToCurrentLocation = State(initialValue: startsAtCurrentLocation && LocationProvider.lastKnown != nil)
     }
 
     /// The pin's point once the map stops moving; nil mid-drag.
@@ -182,20 +187,10 @@ struct PinConfirmView: View {
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 10) {
-                Image(systemName: "mappin.circle.fill").foregroundStyle(Theme.accent)
-                Text(underPin.oneLine)
-                    .font(.subheadline)
-                    .lineLimit(2)
-                    .accessibilityIdentifier("pin-address")
-                Spacer(minLength: 0)
-                if isGeocoding { ProgressView().controlSize(.small) }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.tertiarySystemFill))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+            // No street address on this screen: the pin is the answer. The
+            // street under it is still looked up quietly, because Uber Direct
+            // needs an address string with every booking and geocodes the
+            // drop-off address itself (see underPin).
             TextField("Buzzer, floor, or where to meet you", text: $notes, axis: .vertical)
                 .lineLimit(1...3)
                 .padding(12)

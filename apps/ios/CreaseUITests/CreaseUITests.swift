@@ -1143,6 +1143,8 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Set your pickup point"].waitForExistence(timeout: 15),
                       "a typed address should open the pin step")
         XCTAssertTrue(app.buttons["Confirm pickup point"].exists)
+        // The pin is the answer; no street address is shown on this screen.
+        XCTAssertFalse(app.staticTexts["pin-address"].exists, "the pin screen should not show an address")
         attach(app, "pin-confirm")
     }
 

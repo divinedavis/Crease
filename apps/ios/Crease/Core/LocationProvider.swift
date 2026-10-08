@@ -26,6 +26,17 @@ final class LocationProvider: NSObject, ObservableObject {
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
+    /// The phone's last fix, if it is recent and the customer allowed it:
+    /// available instantly, before any new fix arrives.
+    static var lastKnown: CLLocationCoordinate2D? {
+        let manager = CLLocationManager()
+        guard [.authorizedWhenInUse, .authorizedAlways].contains(manager.authorizationStatus),
+              let fix = manager.location,
+              fix.timestamp.timeIntervalSinceNow > -600,
+              fix.horizontalAccuracy >= 0, fix.horizontalAccuracy < 200 else { return nil }
+        return fix.coordinate
+    }
+
     /// Ask only at the point it pays for itself — when the address field opens
     /// — rather than at launch, where the prompt has no visible purpose and
     /// gets denied.
