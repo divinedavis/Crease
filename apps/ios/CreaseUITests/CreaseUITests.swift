@@ -285,7 +285,7 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
 
         // Open whichever order is at the top of the list.
-        let firstCard = app.scrollViews.buttons.firstMatch
+        let firstCard = app.buttons.matching(identifier: "order-card").firstMatch
         guard firstCard.waitForExistence(timeout: 10) else {
             XCTFail("no orders to open — run scripts/seed.mjs first")
             return
@@ -1250,5 +1250,103 @@ final class CreaseUITests: XCTestCase {
         let result = app.staticTexts["smart-result"]
         XCTAssertTrue(result.waitForExistence(timeout: 10))
         XCTAssertTrue(result.label.hasPrefix("Set to"), "got: \(result.label)")
+    }
+
+    // MARK: - Ride-hailing layout (2026-10-08)
+
+    /// iOS 26's floating tab bar ignores element taps; a coordinate tap lands,
+    /// and `isSelected` is the only trustworthy confirmation.
+    private func selectTab(_ name: String, in app: XCUIApplication) -> Bool {
+        let tab = app.tabBars.buttons[name]
+        guard tab.waitForExistence(timeout: 10) else { return false }
+        for attempt in 0..<3 {
+            if tab.isSelected { return true }
+            if attempt == 0 { tab.tap() } else { tab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
+            if XCTWaiter().wait(for: [selected], timeout: 3) == .completed { return true }
+        }
+        return false
+    }
+
+    /// Every tab opens its own screen, and the account controls that used to
+    /// hide in a menu are on the Account tab.
+    func testTheTabsOpenTheirScreens() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        attach(app, "tab-home")
+
+        XCTAssertTrue(selectTab("Services", in: app))
+        XCTAssertTrue(app.navigationBars["Services"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Get it cleaned"].exists)
+        attach(app, "tab-services")
+
+        XCTAssertTrue(selectTab("Activity", in: app))
+        XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Upcoming"].exists)
+        attach(app, "tab-activity")
+
+        XCTAssertTrue(selectTab("Account", in: app))
+        XCTAssertTrue(app.buttons["Sign out"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Delete account"].exists)
+        XCTAssertTrue(app.buttons["Download my data"].exists)
+        attach(app, "tab-account")
+
+        XCTAssertTrue(selectTab("Home", in: app))
+        XCTAssertTrue(app.buttons["Book a pickup"].waitForExistence(timeout: 10))
+    }
+
+    /// A tier tile on Services opens the booking with that tier already chosen.
+    func testAServiceTileCarriesIntoTheBooking() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        XCTAssertTrue(selectTab("Services", in: app))
+        // By id: Home stays loaded behind this tab and has its own Pickup only tile.
+        let tile = app.buttons["service-tile-pickup_only"]
+        XCTAssertTrue(tile.waitForExistence(timeout: 10))
+        tile.tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+        let option = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Pickup only'")).firstMatch
+        XCTAssertTrue(option.waitForExistence(timeout: 15))
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: option)
+        XCTAssertEqual(XCTWaiter().wait(for: [selected], timeout: 5), .completed,
+                       "the tier picked on Services should open selected")
+        sleep(2)   // the route draws in
+        attach(app, "booking-from-tile")
+    }
+
+    /// "Later" asks for the time first, then the address, like the ride apps.
+    func testLaterAsksForATimeFirst() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Schedule a pickup for later"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup time"].waitForExistence(timeout: 10))
+        attach(app, "later-time")
+        app.buttons["Set"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["Book a pickup"].waitForExistence(timeout: 10))
+    }
+
+    /// Rebook on a past order opens a booking with its shop and bag prefilled.
+    func testRebookFromActivity() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        XCTAssertTrue(selectTab("Activity", in: app))
+        let rebook = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Rebook'")).firstMatch
+        guard rebook.waitForExistence(timeout: 15) else {
+            throw XCTSkip("no past order with itemised lines to rebook; run scripts/seed.mjs")
+        }
+        rebook.tap()
+        let proceed = app.buttons
+            .matching(NSPredicate(format: "label BEGINSWITH 'Continue' AND label CONTAINS '$'"))
+            .firstMatch
+        XCTAssertTrue(proceed.waitForExistence(timeout: 20), "a rebook should open with its lines already priced")
+        attach(app, "rebook-booking")
     }
 }

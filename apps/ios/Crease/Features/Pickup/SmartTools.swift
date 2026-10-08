@@ -665,8 +665,7 @@ struct PileScanView: View {
                         Text(scanner.measuring ? "Measuring…" : "Measure")
                             .frame(minWidth: 120)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accentFill)
+                    .buttonStyle(InkButtonStyle())
                     .disabled(!scanner.floorFound || scanner.measuring)
                 }
             }

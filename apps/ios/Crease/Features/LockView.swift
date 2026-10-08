@@ -24,8 +24,7 @@ struct LockView: View {
                     Label("Unlock", systemImage: "lock.open")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accentFill)
+                .buttonStyle(InkButtonStyle())
                 .padding(.horizontal, 48)
                 .padding(.top, 6)
             }

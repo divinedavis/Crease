@@ -34,6 +34,10 @@ struct PinConfirmView: View {
     @State private var movedToCurrentLocation = false
     @State private var notes = ""
     @State private var isDragging = false
+    /// The pin's ground ring, pulsing while the map is still.
+    @State private var pulse = false
+    @State private var zoomedIn = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         address: ResolvedAddress,
@@ -49,17 +53,19 @@ struct PinConfirmView: View {
         let start = startsAtCurrentLocation ? (LocationProvider.lastKnown ?? address.coordinate) : address.coordinate
         _centre = State(initialValue: start)
         _underPin = State(initialValue: address)
-        _camera = State(initialValue: Self.region(start))
+        // Opens a few blocks out and flies in once on screen, the ride-app
+        // "confirm pickup spot" move: you see where you are, then the corner.
+        _camera = State(initialValue: Self.region(start, span: 0.018))
         _movedToCurrentLocation = State(initialValue: startsAtCurrentLocation && LocationProvider.lastKnown != nil)
     }
 
     /// The pin's point once the map stops moving; nil mid-drag.
     private var settledPoint: PinPoint? { isDragging ? nil : PinPoint(centre) }
 
-    private static func region(_ centre: CLLocationCoordinate2D) -> MapCameraPosition {
+    private static func region(_ centre: CLLocationCoordinate2D, span: Double = 0.003) -> MapCameraPosition {
         .region(MKCoordinateRegion(
             center: centre,
-            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+            span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
         ))
     }
 
@@ -100,13 +106,20 @@ struct PinConfirmView: View {
             header
         }
         .safeAreaInset(edge: .bottom) { sheet }
+        .task {
+            guard !zoomedIn else { return }
+            zoomedIn = true
+            try? await Task.sleep(for: .milliseconds(250))
+            if reduceMotion { camera = Self.region(centre); return }
+            withAnimation(.easeInOut(duration: 1.1)) { camera = Self.region(centre) }
+        }
     }
 
     private var pin: some View {
         VStack(spacing: 0) {
             Image(systemName: "mappin.circle.fill")
                 .font(.system(size: 38))
-                .foregroundStyle(Theme.accent, .white)
+                .foregroundStyle(Theme.onInk, Theme.ink)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
                 // Lifts while the map moves, so the pin reads as hovering over
                 // the map rather than stuck to it.
@@ -115,6 +128,20 @@ struct PinConfirmView: View {
                 .fill(.black.opacity(0.25))
                 .frame(width: 3, height: isDragging ? 14 : 6)
                 .blur(radius: 1)
+                .background {
+                    // Where the pin meets the street: a ring that ripples out
+                    // while the map is still, and stops when it is dragged.
+                    Circle()
+                        .stroke(Theme.ink.opacity(0.5), lineWidth: 2)
+                        .frame(width: 44, height: 44)
+                        .scaleEffect(pulse ? 1 : 0.2)
+                        .opacity(pulse && !isDragging ? 0 : (isDragging ? 0 : 0.8))
+                        .offset(y: 3)
+                }
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) { pulse = true }
         }
         // The pin marks the point at the centre of the map, and the map centre
         // is above the sheet, not the screen.
@@ -181,7 +208,8 @@ struct PinConfirmView: View {
                 .padding(.top, 8)
 
             Text("Set your pickup point")
-                .font(.title3.weight(.semibold))
+                .font(.title3.weight(.bold))
+                .frame(maxWidth: .infinity)
             Text("Move the map so the pin sits where the driver should meet you.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.muted)
@@ -208,14 +236,14 @@ struct PinConfirmView: View {
             }
             // Never confirm a street that belongs to where the pin used to be.
             .disabled(isDragging || isGeocoding || !underPin.isDeliverable)
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accentFill)
+            .buttonStyle(InkButtonStyle())
             .controlSize(.large)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
-        .background(.regularMaterial)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
+        .background(Theme.canvas)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 18, topTrailingRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: -2)
         .ignoresSafeArea(edges: .bottom)
     }
 }

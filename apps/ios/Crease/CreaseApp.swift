@@ -58,7 +58,7 @@ struct RootView: View {
             if showSplash {
                 SplashView(
                     ready: !isLoading,
-                    dimsTo: isSignedIn ? Color(.systemGroupedBackground) : Color(.systemBackground),
+                    dimsTo: isSignedIn ? Theme.canvas : Color(.systemBackground),
                     onReveal: { revealed = true },
                     onFinished: { showSplash = false }
                 )
@@ -119,7 +119,7 @@ struct RootView: View {
             ProgressView()
                 .controlSize(.large)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground))
+                .background(Theme.canvas)
         case .signedOut:
             SignInView()
         case let .signedIn(userId):
@@ -158,7 +158,7 @@ private struct SignedInRoot: View {
     }
 
     var body: some View {
-        OrdersView()
+        MainTabView()
             .environmentObject(store)
             // Keyed on the customer, not on appearance: signing in as
             // someone else has to move this device's token to their row,

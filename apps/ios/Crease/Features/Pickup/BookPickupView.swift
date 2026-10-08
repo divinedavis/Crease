@@ -26,13 +26,30 @@ struct BookPickupView: View {
     private let usual: UsualOrder?
     @State private var appliedUsual = false
 
-    init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil) {
+    init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil, intent: BookingIntent = BookingIntent()) {
         _pickup = State(initialValue: pickup)
         _dropoffNotes = State(initialValue: accessNotes)
         self.usual = usual
+        // A tile or "Later" on Home already answered one of this screen's
+        // questions; open with that answer chosen rather than asking again.
+        if let tier = ServiceOption.all.first(where: { $0.id == intent.tierId }) {
+            _selected = State(initialValue: tier)
+        }
+        if let kind = intent.kind { _serviceKind = State(initialValue: kind) }
+        if let when = intent.when, when.timeIntervalSinceNow >= 3600 {
+            _scheduledPickup = State(initialValue: when)
+        }
     }
 
     @State private var camera: MapCameraPosition = .automatic
+    /// The driving route to the shop, and how much of it is drawn so far: the
+    /// line grows from the door to the shop when the screen opens, the way a
+    /// ride app draws a trip in.
+    @State private var route: [CLLocationCoordinate2D] = []
+    @State private var drawnPoints = 0
+    /// The options sheet rises in once, after the map has started moving.
+    @State private var sheetShown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selected: ServiceOption = .recommended
     @State private var cleaner: Cleaner?
     @State private var submitting = false
@@ -134,7 +151,12 @@ struct BookPickupView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: submitting)
         }
-        .safeAreaInset(edge: .bottom) { optionsSheet }
+        .safeAreaInset(edge: .bottom) {
+            optionsSheet
+                .offset(y: sheetShown || reduceMotion ? 0 : 520)
+                .onAppear { withAnimation(Motion.settle.delay(0.15)) { sheetShown = true } }
+        }
+        .task(id: RouteKey(pickup: PinPoint(pickup.coordinate), shop: cleaner?.id)) { await drawRoute() }
         .sheet(isPresented: $choosingCleaner) {
             CleanerPickerView(
                 cleaners: store.cleaners,
@@ -283,17 +305,50 @@ struct BookPickupView: View {
 
     private var map: some View {
         Map(position: $camera) {
-            Marker("Pickup", systemImage: "bag.fill", coordinate: pickup.coordinate)
-                .tint(Theme.accent)
+            Annotation("Pickup", coordinate: pickup.coordinate, anchor: .center) {
+                RouteEndpoint(square: false, caption: selected.pickupEtaMinutes.map { "\($0) min" })
+            }
             if let c = cleanerCoordinate {
-                Marker(cleaner?.name ?? "Cleaner", systemImage: "building.2.fill", coordinate: c)
-                    .tint(.orange)
-                MapPolyline(coordinates: [pickup.coordinate, c])
-                    .stroke(Theme.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 10]))
+                Annotation(cleaner?.name ?? "Cleaner", coordinate: c, anchor: .center) {
+                    RouteEndpoint(square: true, caption: nil)
+                }
+                if drawnPoints > 1 {
+                    MapPolyline(coordinates: Array(route.prefix(drawnPoints)))
+                        .stroke(Theme.ink, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                }
             }
         }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .mapStyle(.standard(emphasis: .muted, pointsOfInterest: .excludingAll))
         .ignoresSafeArea()
+    }
+
+    private struct RouteKey: Equatable {
+        let pickup: PinPoint
+        let shop: UUID?
+    }
+
+    /// Fetches the driving route (one free MapKit request per pickup/shop
+    /// pair) and draws it in over half a second. Falls back to a straight
+    /// line when directions are unavailable, so the map never shows nothing.
+    private func drawRoute() async {
+        guard let shop = cleanerCoordinate else { route = []; drawnPoints = 0; return }
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: pickup.coordinate))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: shop))
+        request.transportType = .automobile
+        let found = try? await MKDirections(request: request).calculate().routes.first?.polyline.coordinates
+        guard !Task.isCancelled else { return }
+        route = RoutePath.densified(found ?? [pickup.coordinate, shop])
+        if reduceMotion { drawnPoints = route.count; return }
+        drawnPoints = 0
+        let frames = 28
+        for frame in 1...frames {
+            try? await Task.sleep(for: .milliseconds(18))
+            guard !Task.isCancelled else { return }
+            // Ease-out: fast from the door, settling as it reaches the shop.
+            let t = 1 - pow(1 - Double(frame) / Double(frames), 3)
+            drawnPoints = max(2, Int((Double(route.count) * t).rounded()))
+        }
     }
 
     private var cleanerCoordinate: CLLocationCoordinate2D? { cleaner?.coordinate }
@@ -304,7 +359,7 @@ struct BookPickupView: View {
         let midLon = (pickup.coordinate.longitude + c.longitude) / 2
         let spanLat = abs(pickup.coordinate.latitude - c.latitude) * 2.6 + 0.008
         let spanLon = abs(pickup.coordinate.longitude - c.longitude) * 2.6 + 0.008
-        withAnimation(.easeInOut(duration: 0.6)) {
+        withAnimation(.easeInOut(duration: 0.9)) {
             camera = .region(MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
                 span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
@@ -369,8 +424,9 @@ struct BookPickupView: View {
                 bookingControls
             }
         }
-        .background(.regularMaterial)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
+        .background(Theme.canvas)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 18, topTrailingRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: -2)
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -393,8 +449,9 @@ struct BookPickupView: View {
                 .padding(.bottom, 10)
 
             VStack(spacing: 8) {
-                ForEach(ServiceOption.all) { option in
+                ForEach(Array(ServiceOption.all.enumerated()), id: \.element.id) { i, option in
                     optionRow(option)
+                        .staggeredAppear(i + 2)
                 }
             }
             .padding(.horizontal, 16)
@@ -433,8 +490,7 @@ struct BookPickupView: View {
                      : "Continue · \(totalCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accentFill)
+            .buttonStyle(InkButtonStyle())
             .controlSize(.large)
             .disabled(cleaner == nil || (selected.carriesCleaning && menu.isEmpty))
             .padding(.horizontal, 16)
@@ -492,7 +548,7 @@ struct BookPickupView: View {
                     .foregroundStyle(Theme.muted)
             }
             .padding(12)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -555,7 +611,7 @@ struct BookPickupView: View {
                     .foregroundStyle(Theme.muted)
             }
             .padding(12)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .contentShape(Rectangle())
         }
@@ -568,48 +624,48 @@ struct BookPickupView: View {
         return Button {
             // A springy selection makes the tap feel answered even before the
             // price at the bottom updates.
-            withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) { selected = option }
+            withAnimation(Motion.snappy) { selected = option }
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: option.symbol)
-                    .font(.title3)
-                    .frame(width: 42, height: 42)
-                    .foregroundStyle(isSelected ? Theme.accent : .secondary)
-                    .background(isSelected ? Theme.accentSoft : Color(.tertiarySystemFill), in: Circle())
+                    .font(.system(size: 26, weight: .semibold))
+                    .frame(width: 48, height: 44)
+                    .foregroundStyle(Theme.ink)
+                    .scaleEffect(isSelected ? 1.08 : 1)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(option.name).font(.body.weight(.semibold))
+                        Text(option.name).font(.body.weight(.bold))
                         if option.isRecommended {
                             Text("Best value")
                                 .font(.caption2.weight(.bold))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Theme.accentSoft, in: Capsule())
-                                .foregroundStyle(Theme.accent)
+                                .background(Theme.tag, in: Capsule())
+                                .foregroundStyle(.white)
                         }
                     }
-                    Text(option.blurb).font(.footnote).foregroundStyle(Theme.muted)
+                    if let eta = option.pickupEtaMinutes {
+                        Text("Driver in ~\(eta) min")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.muted)
+                    }
+                    Text(option.blurb).font(.caption).foregroundStyle(Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(option.priceCents.asMoney)
-                        .font(.body.weight(.semibold).monospacedDigit())
-                    if let eta = option.pickupEtaMinutes {
-                        Text("driver ~\(eta) min")
-                            .font(.caption).foregroundStyle(Theme.muted)
-                    }
-                }
+                Text(option.priceCents.asMoney)
+                    .font(.body.weight(.bold).monospacedDigit())
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isSelected ? Theme.accentSoft.opacity(0.5) : Color(.secondarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? Theme.accentSoft : .clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Theme.accent : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? Theme.ink : .clear, lineWidth: 2.5)
             )
             .contentShape(Rectangle())
         }
@@ -817,5 +873,94 @@ struct BookPickupView: View {
         case .idle, .working:
             break
         }
+    }
+}
+
+
+/// A route's end as a ride app draws it: a ring for where the trip starts, a
+/// square for where it ends, ink on canvas so it reads on either map style.
+/// The start can carry a caption bubble (the driver's ETA).
+struct RouteEndpoint: View {
+    let square: Bool
+    let caption: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if let caption {
+                Text(caption)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.onInk)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.ink, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .transition(.scale.combined(with: .opacity))
+            }
+            ZStack {
+                if !square {
+                    Circle()
+                        .fill(Theme.ink.opacity(0.18))
+                        .frame(width: 34, height: 34)
+                        .scaleEffect(pulse ? 1.25 : 0.7)
+                        .opacity(pulse ? 0 : 1)
+                }
+                Group {
+                    if square {
+                        Rectangle().fill(Theme.ink).frame(width: 14, height: 14)
+                            .overlay(Rectangle().fill(Theme.onInk).frame(width: 5, height: 5))
+                    } else {
+                        Circle().fill(Theme.ink).frame(width: 16, height: 16)
+                            .overlay(Circle().fill(Theme.onInk).frame(width: 6, height: 6))
+                    }
+                }
+                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+            }
+            .frame(width: 34, height: 34)
+        }
+        .onAppear {
+            guard !square, !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+        }
+    }
+}
+
+/// Route geometry for the draw-in animation.
+enum RoutePath {
+    /// Directions come back with long straight runs as two points, which
+    /// would draw in jumps. Splits every leg so no step covers more than a
+    /// small share of the whole, giving the line an even speed.
+    static func densified(_ points: [CLLocationCoordinate2D], minimum: Int = 40) -> [CLLocationCoordinate2D] {
+        guard points.count >= 2 else { return points }
+        let lengths = zip(points, points.dropFirst()).map { distance($0, $1) }
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return points }
+        let step = total / Double(minimum)
+        var out: [CLLocationCoordinate2D] = [points[0]]
+        for (i, length) in lengths.enumerated() {
+            let a = points[i], b = points[i + 1]
+            let pieces = max(1, Int((length / step).rounded(.up)))
+            for k in 1...pieces {
+                let t = Double(k) / Double(pieces)
+                out.append(CLLocationCoordinate2D(
+                    latitude: a.latitude + (b.latitude - a.latitude) * t,
+                    longitude: a.longitude + (b.longitude - a.longitude) * t
+                ))
+            }
+        }
+        return out
+    }
+
+    private static func distance(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> Double {
+        let dLat = a.latitude - b.latitude, dLon = (a.longitude - b.longitude) * cos(a.latitude * .pi / 180)
+        return (dLat * dLat + dLon * dLon).squareRoot()
+    }
+}
+
+extension MKPolyline {
+    var coordinates: [CLLocationCoordinate2D] {
+        var points = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: pointCount)
+        getCoordinates(&points, range: NSRange(location: 0, length: pointCount))
+        return points
     }
 }

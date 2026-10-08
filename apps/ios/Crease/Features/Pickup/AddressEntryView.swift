@@ -19,6 +19,10 @@ struct AddressEntryView: View {
     let onPickedSaved: (Address) -> Void
 
     @State private var resolving = false
+    /// Drives the fade-in over Home: the cover itself is presented without a
+    /// slide (see MainTabView), so this screen eases its own content in.
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A short list beats a long one here: the right answer is nearly always
     /// in the first few, and a wall of near-identical streets is harder to
@@ -49,7 +53,7 @@ struct AddressEntryView: View {
                             savedRow(home, pinned: true)
                         }
                         .buttonStyle(.plain)
-                        .listRowBackground(Theme.accentSoft.opacity(0.35))
+                        .listRowBackground(Color.clear)
                     }
 
                     ForEach(search.results.prefix(suggestionLimit), id: \.self) { result in
@@ -103,6 +107,7 @@ struct AddressEntryView: View {
                 .listStyle(.plain)
                 .animation(.easeOut(duration: 0.18), value: search.results.count)
             }
+            .background(Theme.canvas)
             .navigationTitle("Pickup address")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -126,13 +131,20 @@ struct AddressEntryView: View {
                 search.setRegion(location.searchRegion)
             }
         }
+        .opacity(appeared || reduceMotion ? 1 : 0)
+        .offset(y: appeared || reduceMotion ? 0 : 24)
+        .onAppear { withAnimation(.easeOut(duration: 0.22)) { appeared = true } }
     }
 
     private var field: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Theme.muted)
-            TextField("Street address", text: $search.query)
+        HStack(spacing: 12) {
+            // The start of a trip, as the booking map draws it.
+            Circle()
+                .fill(Theme.ink)
+                .frame(width: 10, height: 10)
+                .overlay(Circle().fill(Theme.canvas).frame(width: 4, height: 4))
+                .accessibilityHidden(true)
+            TextField("Where from?", text: $search.query)
                 .focused($focused)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
@@ -146,11 +158,11 @@ struct AddressEntryView: View {
             }
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Theme.accent.opacity(focused ? 0.9 : 0), lineWidth: 2)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Theme.ink.opacity(focused ? 1 : 0), lineWidth: 2)
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
@@ -161,9 +173,9 @@ struct AddressEntryView: View {
         HStack(spacing: 14) {
             Image(systemName: address.symbol)
                 .font(.body)
-                .foregroundStyle(Theme.accent)
-                .frame(width: 34, height: 34)
-                .background(Theme.accentSoft, in: Circle())
+                .foregroundStyle(Theme.ink)
+                .frame(width: 36, height: 36)
+                .background(Theme.surface, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(address.label ?? "Saved").font(.body.weight(.semibold))
                 Text(address.oneLine)
@@ -184,10 +196,11 @@ struct AddressEntryView: View {
 
     private func suggestionRow(_ result: MKLocalSearchCompletion) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.title3)
-                .foregroundStyle(Theme.muted)
-                .frame(width: 34)
+            Image(systemName: "mappin")
+                .font(.body)
+                .foregroundStyle(Theme.ink)
+                .frame(width: 36, height: 36)
+                .background(Theme.surface, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.title).font(.body)
                 if !result.subtitle.isEmpty {

@@ -2,365 +2,343 @@ import SwiftUI
 
 /// Home.
 ///
-/// The live order gets the whole top of the screen because it is the only
-/// reason most people open this app. Everything else — history, scheduling —
-/// is secondary to answering "where are my clothes" without a tap.
+/// Laid out like a ride-hailing home screen (owner, 2026-10-08): one search bar
+/// that pins to the top as the page scrolls, the places this customer books
+/// from right under it, then whatever needs them, then everything else Crease
+/// does. The live order still sits above the fold — it is the only reason most
+/// people open this app.
 struct OrdersView: View {
-    @EnvironmentObject private var session: Session
     @EnvironmentObject private var store: OrderStore
-    @EnvironmentObject private var lock: AppLock
 
-    @State private var flow: BookingStep?
-    /// Owned here so a tapped notification can push a screen the customer
-    /// never navigated to.
-    @State private var path: [Order] = []
-    @ObservedObject private var router = PushRouter.shared
+    @Binding var path: [Order]
+    let start: (BookingIntent) -> Void
+    let startSaved: (Address, BookingIntent) -> Void
+    let startUsual: (UsualOrder) -> Void
 
-    @State private var confirmingDelete = false
-    @State private var deleting = false
-    @State private var deleteError: String?
-
-    @State private var exporting = false
-    @State private var exportFile: ExportFile?
-    // Held separately so it can be deleted in the sheet's onDismiss: the item
-    // binding is already nil by the time that fires.
-    @State private var lastExportURL: URL?
-    @State private var exportError: String?
-
-    /// The finished export, identified by where it was written so the sheet
-    /// presents once per file rather than once per tap.
-    private struct ExportFile: Identifiable {
-        let url: URL
-        var id: String { url.path }
-    }
-
-    /// The booking flow, one step at a time. Modelled as an enum rather than a
-    /// pile of booleans so two sheets can never be presented at once — the
-    /// failure that produces a half-dismissed screen with no way back.
-    enum BookingStep: Identifiable {
-        case address
-        case pin(ResolvedAddress)
-        case book(ResolvedAddress, String)
-        case usual(UsualOrder)
-
-        var id: String {
-            switch self {
-            case .address: "address"
-            case .pin: "pin"
-            case .book: "book"
-            case .usual: "usual"
-            }
-        }
-    }
-
-    /// Worked out on the phone from this customer's own history.
-    private var usual: UsualOrder? { UsualOrder.from(store.orders) }
+    @State private var scheduling = false
+    @State private var laterTime: Date?
+    @State private var showingArea = false
 
     var body: some View {
         let lists = OrderLists(store.orders)
         NavigationStack(path: $path) {
             ScrollView {
-                LazyVStack(spacing: 14) {
-                    greeting
-                    searchEntry
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    serviceStrip
+                        .padding(.bottom, 6)
 
-                    if let usual = lists.usual {
-                        UsualOrderCard(usual: usual) { flow = .usual(usual) }
-                    }
+                    Section {
+                        VStack(alignment: .leading, spacing: 14) {
+                            recents
 
-                    ForEach(lists.attention) { order in
-                        NavigationLink(value: order) {
-                            ApprovalBanner(order: order)
+                            if let usual = lists.usual {
+                                UsualOrderCard(usual: usual) { startUsual(usual) }
+                                    .staggeredAppear(0)
+                            }
+
+                            ForEach(Array(lists.attention.enumerated()), id: \.element.id) { i, order in
+                                NavigationLink(value: order) {
+                                    ApprovalBanner(order: order)
+                                }
+                                .buttonStyle(PressableStyle())
+                                .accessibilityIdentifier("order-card")
+                                .staggeredAppear(i + 1)
+                            }
+
+                            ForEach(Array(lists.activeOther.enumerated()), id: \.element.id) { i, order in
+                                NavigationLink(value: order) {
+                                    ActiveOrderCard(order: order)
+                                }
+                                .buttonStyle(PressableStyle())
+                                .accessibilityIdentifier("order-card")
+                                .staggeredAppear(i + 2)
+                            }
+
+                            if lists.active.isEmpty && store.orders.isEmpty && !store.isLoading {
+                                EmptyState()
+                                    .padding(.vertical, 16)
+                            }
+
+                            PromoCard { showingArea = true }
+                                .padding(.top, 4)
+
+                            forYou
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                        .padding(.bottom, 24)
+                    } header: {
+                        searchBar
                     }
+                }
+            }
+            .background(Theme.canvas)
+            .navigationTitle("Crease")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
+            .refreshable { await store.loadAll() }
+            .sheet(isPresented: $scheduling, onDismiss: {
+                // "Later" is a time first and an address second, like the
+                // ride apps: the time is asked here, then the usual flow.
+                if let laterTime {
+                    self.laterTime = nil
+                    start(BookingIntent(when: laterTime))
+                }
+            }) {
+                SchedulePickupView(title: "Pickup time", earliest: Date().addingTimeInterval(3600), chosen: $laterTime)
+                    .presentationDetents([.height(260)])
+            }
+            .sheet(isPresented: $showingArea) {
+                ServiceAreaSheet()
+                    .presentationDetents([.medium])
+            }
+            .task { if store.addresses.isEmpty { await store.loadAddresses() } }
+        }
+    }
 
-                    if lists.active.isEmpty && store.orders.isEmpty && !store.isLoading {
-                        EmptyState()
-                            .padding(.top, 40)
+    /// The top strip: what Crease does, as tabs-that-are-shortcuts. Each one
+    /// opens the booking with that service already chosen.
+    private var serviceStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 18) {
+                ForEach(ServiceKind.allCases) { kind in
+                    Button { start(BookingIntent(kind: kind)) } label: {
+                        Label(kind.label, systemImage: kind.symbol)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.ink)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
 
-                    ForEach(lists.activeOther) { order in
-                        NavigationLink(value: order) {
-                            ActiveOrderCard(order: order)
-                        }
-                        .buttonStyle(.plain)
-                    }
+    /// Looks like a text field, behaves like a button, and pins to the top
+    /// once the page scrolls under it. Tapping opens the address screen with
+    /// the keyboard already up.
+    private var searchBar: some View {
+        HStack(spacing: 0) {
+            Button { start(BookingIntent()) } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.body.weight(.bold))
+                    Text("Where from?")
+                        .font(.body.weight(.semibold))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Theme.ink)
+                .padding(.leading, 16)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Book a pickup")
 
-                    if !lists.past.isEmpty {
-                        HStack {
-                            Text("Past orders")
+            Button { scheduling = true } label: {
+                Label("Later", systemImage: "calendar")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.canvas, in: Capsule())
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel("Schedule a pickup for later")
+            .padding(.trailing, 8)
+        }
+        .frame(height: 52)
+        .background(Theme.surface, in: Capsule())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Theme.canvas)
+    }
+
+    /// Saved places, newest first, two at most: the right answer is nearly
+    /// always one of them, and a tap books straight from it.
+    @ViewBuilder private var recents: some View {
+        let places = Array(store.addresses.prefix(2))
+        if !places.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(Array(places.enumerated()), id: \.element.id) { i, place in
+                    Button { startSaved(place, BookingIntent()) } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: place.label == nil ? "clock.fill" : place.symbol)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.ink)
+                                .frame(width: 36, height: 36)
+                                .background(Theme.surface, in: Circle())
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(place.label ?? place.line1)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Theme.ink)
+                                Text(place.oneLine)
+                                    .font(.footnote)
+                                    .foregroundStyle(Theme.muted)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Theme.muted)
-                            Spacer()
                         }
-                        .padding(.top, 12)
-
-                        ForEach(lists.past) { order in
-                            NavigationLink(value: order) {
-                                PastOrderRow(order: order)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(PressableStyle())
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Book from \(place.label ?? place.line1), \(place.oneLine)")
+                    .staggeredAppear(i)
+                    if i < places.count - 1 { Divider().padding(.leading, 50) }
                 }
-                .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Crease")
-            .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        if lock.biometry != .none {
-                            Button {
-                                Task { await lock.setEnabled(!lock.isEnabled) }
-                            } label: {
-                                Label(
-                                    lock.isEnabled
-                                        ? "Turn off \(lock.biometry.label) lock"
-                                        : "Lock with \(lock.biometry.label)",
-                                    systemImage: lock.isEnabled ? "lock.open" : "lock"
-                                )
-                            }
-                        }
-                        // The other half of "delete my account": people are
-                        // entitled to a copy of what we hold on them, and it
-                        // is all readable under their own session anyway.
-                        Button {
-                            Task { await performExport() }
-                        } label: {
-                            Label(
-                                exporting ? "Preparing…" : "Download my data",
-                                systemImage: "square.and.arrow.down"
+        }
+    }
+
+    /// The booking tiers as square tiles, the "For you" row.
+    private var forYou: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("For you")
+                .font(.title3.weight(.bold))
+                .accessibilityAddTraits(.isHeader)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(ServiceOption.all.enumerated()), id: \.element.id) { i, option in
+                        Button { start(BookingIntent(tierId: option.id)) } label: {
+                            ServiceTile(
+                                title: option.name,
+                                symbol: option.symbol,
+                                badge: option.isRecommended ? "Best value" : nil
                             )
                         }
-                        .disabled(exporting)
-                        Button("Sign out", role: .destructive) {
-                            Task { await session.signOut() }
-                        }
-                        Button(role: .destructive) {
-                            confirmingDelete = true
-                        } label: {
-                            Label(deleting ? "Deleting…" : "Delete account", systemImage: "trash")
-                        }
-                        .disabled(deleting)
-                    } label: {
-                        Image(systemName: "person.crop.circle")
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel("\(option.name), \(option.priceCents.asMoney). \(option.blurb)")
+                        .staggeredAppear(i)
                     }
-                    .accessibilityLabel("Account")
                 }
-            }
-            // Deleting is irreversible and takes the order history with it, so
-            // it is asked for twice: once to open this, once to confirm. Apple
-            // requires the confirmation, and so does anyone who has fat-fingered
-            // a menu.
-            .confirmationDialog(
-                "Delete your account?",
-                isPresented: $confirmingDelete,
-                titleVisibility: .visible
-            ) {
-                Button("Delete account", role: .destructive) {
-                    Task { await performDelete() }
-                }
-                Button("Keep my account", role: .cancel) {}
-            } message: {
-                Text(
-                    "This permanently deletes your orders, saved addresses and account details. It cannot be undone."
-                )
-            }
-            .alert(
-                "Account not deleted",
-                isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })
-            ) {
-                Button("OK", role: .cancel) { deleteError = nil }
-            } message: {
-                Text(deleteError ?? "")
-            }
-            .sheet(item: $exportFile, onDismiss: {
-                // The share sheet is done: delete the PII export rather than
-                // leaving it in tmp for iOS to purge whenever it chooses.
-                if let url = lastExportURL {
-                    try? FileManager.default.removeItem(at: url)
-                    lastExportURL = nil
-                }
-            }) { file in
-                ShareSheet(url: file.url)
-            }
-            .alert(
-                "Couldn't prepare your data",
-                isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
-            ) {
-                Button("OK", role: .cancel) { exportError = nil }
-            } message: {
-                Text(exportError ?? "")
-            }
-            .refreshable { await store.loadAll() }
-            .fullScreenCover(item: $flow) { step in
-                switch step {
-                case .address:
-                    AddressEntryView(
-                        onPicked: { resolved in
-                            // Re-present as the next step rather than nesting,
-                            // so Back always means one step, never "out".
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                flow = .pin(resolved)
-                            }
-                        },
-                        onPickedSaved: { saved in
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                flow = .book(saved.asResolved, saved.accessNotes ?? "")
-                            }
-                        }
-                    )
-                case let .pin(resolved):
-                    PinConfirmView(address: resolved) { confirmed, notes in
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            flow = .book(confirmed, notes)
-                        }
-                        flow = nil
-                    }
-                case let .book(resolved, notes):
-                    BookPickupView(pickup: resolved, accessNotes: notes)
-                case let .usual(usual):
-                    BookPickupView(
-                        pickup: usual.address.asResolved,
-                        accessNotes: usual.address.accessNotes ?? "",
-                        usual: usual
-                    )
-                }
+                .padding(.vertical, 2)
             }
         }
-        .task {
-            await store.loadAll()
-            await store.startWatching()
-        }
-        // No live socket while the app is in the background: iOS suspends it
-        // anyway, and a socket left open keeps the radio awake on the way
-        // there. Coming back reconnects and reloads once, which also picks up
-        // whatever changed while it was away.
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-            Task { await store.stopWatching() }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            Task {
-                await store.loadOrders()
-                await store.startWatching()
-            }
-        }
-        .task(id: router.pendingOrderId) { await openTappedOrder() }
-        // "Hey Siri, book my usual Crease pickup": open the booking prefilled.
-        // Waits for the order history, which is what the usual is made from.
-        .task(id: router.wantsUsual) {
-            guard router.wantsUsual else { return }
-            if store.orders.isEmpty { await store.loadOrders() }
-            router.wantsUsual = false
-            if let usual { flow = .usual(usual) } else { flow = .address }
-        }
-    }
-
-    /// Success needs no message: the account is gone and `Session` has already
-    /// flipped to signed-out, so this view is replaced by the sign-in screen
-    /// while the dialog is still dismissing.
-    private func performDelete() async {
-        deleting = true
-        defer { deleting = false }
-        do {
-            try await session.deleteAccount()
-        } catch {
-            deleteError = error.localizedDescription
-        }
-    }
-
-    /// Gather the account's data and hand it to the share sheet.
-    private func performExport() async {
-        exporting = true
-        defer { exporting = false }
-        do {
-            let url = try await store.exportAccountData()
-            lastExportURL = url
-            exportFile = ExportFile(url: url)
-        } catch {
-            exportError = "We couldn't put your data together just now. Please try again."
-        }
-    }
-
-    /// A tapped notification names an order id; this screen needs the order.
-    ///
-    /// On a cold start the tap is delivered before anything has loaded, so the
-    /// id waits here until there is a list to resolve it against — otherwise
-    /// the notification that took someone straight to their order takes them
-    /// to the list instead, exactly on the launch where it mattered.
-    private func openTappedOrder() async {
-        guard let id = router.pendingOrderId else { return }
-        if store.orders.isEmpty { await store.loadOrders() }
-        guard let order = store.orders.first(where: { $0.id == id }) else { return }
-        router.pendingOrderId = nil
-        if path.last?.id != order.id { path.append(order) }
-    }
-
-    private var greeting: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(greetingText)
-                    .font(.title2.weight(.semibold))
-                Text("Where should we collect from?")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.muted)
-            }
-            Spacer()
-        }
-        .padding(.top, 4)
-    }
-
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let part = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
-        return part
-    }
-
-    /// Looks like a text field, behaves like a button. Tapping opens a
-    /// dedicated screen with the keyboard already up, rather than trying to
-    /// type into a row inside a scrolling list.
-    private var searchEntry: some View {
-        Button {
-            flow = .address
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                Text("Enter your address")
-                    .foregroundStyle(Theme.muted)
-                Spacer()
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Theme.accent)
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Theme.accent.opacity(0.35), lineWidth: 1.5)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Book a pickup")
-        .padding(.bottom, 4)
     }
 }
 
-/// UIKit's share sheet, because `ShareLink` needs its item before the tap and
-/// this one only exists after a round trip to the database.
-private struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
+/// A square service tile with an optional red tag on its corner.
+struct ServiceTile: View {
+    let title: String
+    let symbol: String
+    var badge: String? = nil
+    var size: CGFloat = 84
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .frame(width: size, height: size * 0.82)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(alignment: .topLeading) {
+                    if let badge {
+                        Text(badge)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Theme.tag, in: Capsule())
+                            .offset(x: -4, y: -6)
+                    }
+                }
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(width: size)
+        }
     }
+}
 
-    func updateUIViewController(_: UIActivityViewController, context: Context) {}
+/// The promo card: navy, illustrated, one fact worth knowing — where the
+/// couriers actually reach. No invented discounts: there are none.
+struct PromoCard: View {
+    let onLearnMore: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var drift = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Pickups across Brooklyn")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("A courier collects within three miles of Fulton Street and brings it back clean.")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.88))
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(action: onLearnMore) {
+                    Text("Learn more")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.white, in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
+                .padding(.top, 4)
+            }
+            .padding(16)
+            Spacer(minLength: 0)
+            ZStack {
+                Circle()
+                    .fill(.white.opacity(0.10))
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(drift ? 1.06 : 0.94)
+                Image(systemName: "hanger")
+                    .font(.system(size: 54, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .rotationEffect(.degrees(drift ? 4 : -4), anchor: .top)
+                    .accessibilityHidden(true)
+            }
+            .frame(width: 120)
+            .padding(.trailing, 8)
+        }
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .background(Theme.promo, in: RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { drift = true }
+        }
+    }
+}
+
+/// What "Learn more" opens: the service area, in words.
+struct ServiceAreaSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Where we collect", systemImage: "mappin.and.ellipse")
+                    .font(.headline)
+                Text(ServiceArea.blurb)
+                    .font(.body)
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .navigationTitle("Service area")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
 }
 
 private struct ApprovalBanner: View {
@@ -391,7 +369,7 @@ private struct ApprovalBanner: View {
     }
 }
 
-private struct ActiveOrderCard: View {
+struct ActiveOrderCard: View {
     let order: Order
 
     var body: some View {
@@ -451,7 +429,7 @@ private struct ActiveOrderCard: View {
     }
 }
 
-private struct PastOrderRow: View {
+struct PastOrderRow: View {
     let order: Order
 
     var body: some View {
@@ -475,7 +453,7 @@ private struct PastOrderRow: View {
     }
 }
 
-private struct EmptyState: View {
+struct EmptyState: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "bag")
@@ -524,7 +502,7 @@ struct UsualOrderCard: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)

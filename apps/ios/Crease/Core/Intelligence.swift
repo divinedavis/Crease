@@ -337,6 +337,24 @@ struct UsualOrder: Equatable {
         )
     }
 
+    /// "Rebook" on one past order: the same shop, door and bag, booked again.
+    /// Nil when the order cannot be repeated — no shop, no address on file,
+    /// or nothing itemised to carry over.
+    static func rebook(_ order: Order) -> UsualOrder? {
+        guard let cleaner = order.cleaner, let address = order.address,
+              let items = order.orderItems, !items.isEmpty else { return nil }
+        var lines: [String: Double] = [:]
+        for item in items { lines[item.label, default: 0] += Double(item.quantity) }
+        return UsualOrder(
+            cleanerId: cleaner.id,
+            cleanerName: cleaner.name,
+            address: address,
+            lines: lines,
+            weekday: nil,
+            timesBooked: 1
+        )
+    }
+
     /// The usual's lines on a shop's current price list. Lines the shop no
     /// longer sells are dropped rather than booked at a stale price.
     func quantities(on menu: [ServiceItem]) -> [UUID: Double] {

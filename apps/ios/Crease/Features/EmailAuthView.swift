@@ -179,7 +179,7 @@ struct EmailAuthSheet: View {
                     } label: {
                         Group {
                             if isSubmitting {
-                                ProgressView().tint(.white)
+                                ProgressView().tint(Theme.onInk)
                             } else {
                                 Text(mode == .signIn ? "Sign In" : "Create Account")
                                     .font(.headline)
@@ -187,8 +187,8 @@ struct EmailAuthSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .foregroundStyle(.white)
-                        .background(Capsule().fill(Theme.accentFill))
+                        .foregroundStyle(Theme.onInk)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentFill))
                     }
                     .disabled(!canSubmit || isSubmitting)
                     .opacity(canSubmit ? 1 : 0.4)
@@ -342,7 +342,7 @@ private struct UnderlinedSecureField: View {
 }
 
 #Preview("Email auth") {
-    Color(.systemGroupedBackground)
+    Theme.canvas
         .sheet(isPresented: .constant(true)) {
             EmailAuthSheet().environmentObject(Session())
         }

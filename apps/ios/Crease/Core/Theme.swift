@@ -8,16 +8,28 @@ import UIKit
 /// state that matters — the one live order, the one thing needing a decision —
 /// so it means something when it appears.
 enum Theme {
-    // Each colour has a dark-mode twin (2026-10-03): the light values read
-    // under 3:1 on a dark background, which Apple's accessibility audit
-    // failed on every order screen. Light values are unchanged except warn,
-    // which was 3.8:1 on white and under 4.5:1 on its own amber card (was 0.72/0.45/0.05). The dark accent keeps
-    // white button text above 3:1 (large/bold text) while reading 4.7:1 as text.
-    static let accent = adaptive(light: (0.12, 0.44, 0.36), dark: (0.27, 0.58, 0.47))
-    static let accentSoft = accent.opacity(0.12)
-    /// For FILLS under white text (prominent buttons, capsules): the light
-    /// green in both modes, so the white label stays 5.9:1 in dark mode too.
-    static let accentFill = Color(red: 0.12, green: 0.44, blue: 0.36)
+    // Monochrome since 2026-10-08, after the ride-hailing look the owner
+    // asked for: ink (black in light mode, white in dark) carries every
+    // primary action, and the rest is greys. Ink on the canvas is the
+    // highest contrast the system has, so Apple's audit cannot fail it in
+    // either mode — the green this replaced needed hand-tuned dark twins.
+    static let ink = Color(.label)
+    /// Text and icons drawn ON an ink fill.
+    static let onInk = Color(.systemBackground)
+    static let accent = ink
+    static let accentSoft = Color(.label).opacity(0.08)
+    /// For FILLS under `onInk` text (primary buttons, capsules).
+    static let accentFill = ink
+    /// The page: white in light mode, black in dark.
+    static let canvas = Color(.systemBackground)
+    /// Cards, search pills and tiles sitting on the canvas.
+    static let surface = Color(.secondarySystemBackground)
+    /// Raised a step above `surface` (rows inside a card, chips).
+    static let surfaceRaised = Color(.tertiarySystemBackground)
+    /// The one coloured surface: the promo card. White text on it is 12:1.
+    static let promo = Color(red: 0.04, green: 0.13, blue: 0.30)
+    /// "Best value" tags, used with white text (5.6:1).
+    static let tag = Color(red: 0.80, green: 0.10, blue: 0.12)
     /// Secondary text. The system's .secondary / .tertiary read "nearly
     /// passed" / "failed" in Apple's contrast audit on these backgrounds;
     /// this is ~7:1 in both modes.
@@ -33,14 +45,14 @@ enum Theme {
         })
     }
 
-    static let cardRadius: CGFloat = 16
+    static let cardRadius: CGFloat = 12
 }
 
 extension View {
     func creaseCard() -> some View {
         self
             .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 }

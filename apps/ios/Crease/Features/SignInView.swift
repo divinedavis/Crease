@@ -85,7 +85,7 @@ struct SignInView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color(.label))
-                .background(Color(.secondarySystemGroupedBackground))
+                .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -108,7 +108,7 @@ struct SignInView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color(.label))
-                .background(Color(.secondarySystemGroupedBackground))
+                .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)

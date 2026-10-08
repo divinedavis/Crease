@@ -68,6 +68,11 @@ final class AccessibilityAuditTests: XCTestCase {
         // against pixels that are not drawn. Scrolled up, it is audited.
         let window = app.windows.firstMatch.frame
         if issue.auditType.contains(.contrast), !window.isEmpty, e.frame.maxY > window.maxY - 34 { return true }
+        // Under the floating tab bar or in the iOS 26 scroll-edge fade just
+        // above it (since 2026-10-08): sampled against the bar's glass and the
+        // fade drawn over it. Scrolled up, it is audited.
+        let bar = app.tabBars.firstMatch
+        if issue.auditType.contains(.contrast), bar.exists, e.frame.maxY > bar.frame.minY - 48 { return true }
         return false
     }
 
@@ -167,7 +172,8 @@ final class AccessibilityAuditTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
         sleep(2)
         audit("Order list", app)
-        let cards = app.scrollViews.buttons.matching(NSPredicate(format: "label != 'Book a pickup'"))
+        // Only the orders: Home also carries shortcuts that start a booking.
+        let cards = app.scrollViews.buttons.matching(identifier: "order-card")
         let n = min(cards.count, 6)   // bounded: the seeded customer has a handful
         for i in 0..<n {
             let card = cards.element(boundBy: i)
@@ -179,6 +185,32 @@ final class AccessibilityAuditTests: XCTestCase {
             app.navigationBars.buttons.element(boundBy: 0).tap()
             XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10))
         }
+    }
+
+    /// The three tabs added with the ride-hailing layout (2026-10-08).
+    func testServicesActivityAndAccountTabs() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        for (tab, title) in [("Services", "Services"), ("Activity", "Activity"), ("Account", nil as String?)] {
+            XCTAssertTrue(selectTab(tab, in: app), "the \(tab) tab did not open")
+            if let title { XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10)) }
+            sleep(2)   // rows stagger in
+            audit(tab, app)
+        }
+    }
+
+    /// iOS 26's floating tab bar ignores element taps; a coordinate tap lands,
+    /// and `isSelected` is the only trustworthy confirmation.
+    private func selectTab(_ name: String, in app: XCUIApplication) -> Bool {
+        let tab = app.tabBars.buttons[name]
+        guard tab.waitForExistence(timeout: 10) else { return false }
+        for attempt in 0..<3 {
+            if tab.isSelected { return true }
+            if attempt == 0 { tab.tap() } else { tab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
+            if XCTWaiter().wait(for: [selected], timeout: 3) == .completed { return true }
+        }
+        return false
     }
 
     func testBookingAddressEntry() {

@@ -509,7 +509,7 @@ struct CheckoutView: View {
     private var shopTile: some View {
         Text(initials)
             .font(.caption.weight(.heavy))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.onInk)
             .frame(width: 38, height: 38)
             .background(Theme.accentFill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .accessibilityHidden(true)
@@ -703,15 +703,15 @@ struct CheckoutView: View {
         } label: {
             Group {
                 if working {
-                    ProgressView().tint(.white)
+                    ProgressView().tint(Theme.onInk)
                 } else {
                     Text(buttonLabel).font(.body.weight(.bold))
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
-            .background(Theme.accentFill, in: Capsule())
-            .foregroundStyle(.white)
+            .background(Theme.accentFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .foregroundStyle(Theme.onInk)
         }
         .buttonStyle(.plain)
         .disabled(working || cleaner == nil)
@@ -1128,7 +1128,10 @@ struct RouteSnapshot: View {
         options.traitCollection = UITraitCollection(userInterfaceStyle: scheme == .dark ? .dark : .light)
         guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
 
-        let accent = UIColor(Theme.accent)
+        // Resolved by hand: the renderer does not run under the snapshot's
+        // trait collection, and ink is black or white depending on it.
+        let accent: UIColor = scheme == .dark ? .white : .black
+        let glyph: UIColor = scheme == .dark ? .black : .white
         let warn = UIColor(Theme.warn)
         let format = UIGraphicsImageRendererFormat()
         format.scale = displayScale
@@ -1145,24 +1148,24 @@ struct RouteSnapshot: View {
                 line.setLineDash([2, 8], count: 2, phase: 0)
                 accent.setStroke()
                 line.stroke()
-                drawPin(at: there, symbol: "building.2.fill", color: warn, in: ctx.cgContext)
+                drawPin(at: there, symbol: "building.2.fill", color: warn, glyph: .white, in: ctx.cgContext)
             }
-            drawPin(at: home, symbol: "house.fill", color: accent, in: ctx.cgContext)
+            drawPin(at: home, symbol: "house.fill", color: accent, glyph: glyph, in: ctx.cgContext)
         }
     }
 
-    private func drawPin(at point: CGPoint, symbol: String, color: UIColor, in cg: CGContext) {
+    private func drawPin(at point: CGPoint, symbol: String, color: UIColor, glyph: UIColor, in cg: CGContext) {
         let r: CGFloat = 13
         let circle = UIBezierPath(ovalIn: CGRect(x: point.x - r, y: point.y - r, width: r * 2, height: r * 2))
         cg.setShadow(offset: CGSize(width: 0, height: 1), blur: 3, color: UIColor.black.withAlphaComponent(0.3).cgColor)
         color.setFill()
         circle.fill()
         cg.setShadow(offset: .zero, blur: 0, color: nil)
-        UIColor.white.setStroke()
+        glyph.setStroke()
         circle.lineWidth = 2
         circle.stroke()
         let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
-        if let icon = UIImage(systemName: symbol, withConfiguration: config)?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+        if let icon = UIImage(systemName: symbol, withConfiguration: config)?.withTintColor(glyph, renderingMode: .alwaysOriginal) {
             icon.draw(at: CGPoint(x: point.x - icon.size.width / 2, y: point.y - icon.size.height / 2))
         }
     }

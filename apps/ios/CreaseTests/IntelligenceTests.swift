@@ -119,9 +119,13 @@ final class IntelligenceTests: XCTestCase {
     }
 
     func testANamedTimeBecomesThePickup() {
-        let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 7, hour: 18))!
+        // NSDataDetector reads "tomorrow" against the real clock, not `now`,
+        // so the test anchors on today rather than a fixed date — which went
+        // stale the day after it was written.
+        let calendar = Calendar.current
+        let now = calendar.startOfDay(for: Date())
         let when = OrderTextParser.pickupDate(in: "pick up tomorrow at 9am", now: now)
-        let expected = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 8, hour: 9))!
+        let expected = calendar.date(byAdding: DateComponents(day: 1, hour: 9), to: now)!
         XCTAssertEqual(when, expected)
         XCTAssertNil(OrderTextParser.pickupDate(in: "yesterday at 9am", now: now), "past times are ignored")
     }

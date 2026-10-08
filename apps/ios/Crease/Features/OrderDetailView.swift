@@ -45,7 +45,7 @@ struct OrderDetailView: View {
             }
             .padding(16)
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.canvas)
         .navigationTitle("Crease")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $schedulingReturn) {
@@ -92,8 +92,7 @@ struct OrderDetailView: View {
                 Text(paying ? "Opening payment…" : "Pay \(live.deliveryFeeCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accentFill)
+            .buttonStyle(InkButtonStyle())
             .controlSize(.large)
             .disabled(paying)
         }
@@ -181,8 +180,7 @@ struct OrderDetailView: View {
             } label: {
                 Text("Choose a delivery time").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accentFill)
+            .buttonStyle(InkButtonStyle())
             .controlSize(.large)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -224,8 +222,7 @@ struct OrderDetailView: View {
                 Text(approving ? "Approving…" : "Approve \(live.displayCents.asMoney)")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accentFill)
+            .buttonStyle(InkButtonStyle())
             .controlSize(.large)
             .disabled(approving)
 

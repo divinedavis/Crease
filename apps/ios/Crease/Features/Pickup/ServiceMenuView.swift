@@ -144,7 +144,7 @@ struct ServiceMenuView: View {
                 .buttonStyle(.bordered)
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
