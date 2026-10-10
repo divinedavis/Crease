@@ -4,13 +4,12 @@ import SwiftUI
 ///
 /// Laid out like a ride-hailing home screen (owner, 2026-10-08): one search bar
 /// that pins to the top as the page scrolls, the places this customer books
-/// from right under it, then whatever needs them, then everything else Crease
-/// does. The live order still sits above the fold — it is the only reason most
-/// people open this app.
+/// from right under it, then everything else Crease does. Orders are not shown
+/// here (owner, 2026-10-10): they live on the Activity tab, which carries a
+/// badge when one needs the customer.
 struct OrdersView: View {
     @EnvironmentObject private var store: OrderStore
 
-    @Binding var path: [Order]
     let start: (BookingIntent) -> Void
     let startSaved: (Address, BookingIntent) -> Void
     let startUsual: (UsualOrder) -> Void
@@ -20,8 +19,7 @@ struct OrdersView: View {
     @State private var showingArea = false
 
     var body: some View {
-        let lists = OrderLists(store.orders)
-        NavigationStack(path: $path) {
+        NavigationStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                     serviceStrip
@@ -31,32 +29,9 @@ struct OrdersView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             recents
 
-                            if let usual = lists.usual {
+                            if let usual = UsualOrder.from(store.orders) {
                                 UsualOrderCard(usual: usual) { startUsual(usual) }
                                     .staggeredAppear(0)
-                            }
-
-                            ForEach(Array(lists.attention.enumerated()), id: \.element.id) { i, order in
-                                NavigationLink(value: order) {
-                                    ApprovalBanner(order: order)
-                                }
-                                .buttonStyle(PressableStyle())
-                                .accessibilityIdentifier("order-card")
-                                .staggeredAppear(i + 1)
-                            }
-
-                            ForEach(Array(lists.activeOther.enumerated()), id: \.element.id) { i, order in
-                                NavigationLink(value: order) {
-                                    ActiveOrderCard(order: order)
-                                }
-                                .buttonStyle(PressableStyle())
-                                .accessibilityIdentifier("order-card")
-                                .staggeredAppear(i + 2)
-                            }
-
-                            if lists.active.isEmpty && store.orders.isEmpty && !store.isLoading {
-                                EmptyState()
-                                    .padding(.vertical, 16)
                             }
 
                             PromoCard { showingArea = true }
@@ -75,7 +50,6 @@ struct OrdersView: View {
             .background(Theme.canvas)
             .navigationTitle("Crease")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
             .refreshable { await store.loadAll() }
             .sheet(isPresented: $scheduling, onDismiss: {
                 // "Later" is a time first and an address second, like the
@@ -340,7 +314,7 @@ struct ServiceAreaSheet: View {
     }
 }
 
-private struct ApprovalBanner: View {
+struct ApprovalBanner: View {
     let order: Order
 
     var body: some View {
@@ -452,24 +426,6 @@ struct PastOrderRow: View {
     }
 }
 
-struct EmptyState: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "bag")
-                .font(.system(size: 42))
-                .foregroundStyle(Theme.muted)
-            Text("No orders yet")
-                .font(.headline)
-            Text("Schedule a pickup and we'll collect your bag, get it cleaned, and bring it back.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-        }
-    }
-}
-
-
 /// The order this customer keeps placing, one tap from home.
 struct UsualOrderCard: View {
     let usual: UsualOrder
@@ -512,7 +468,7 @@ struct UsualOrderCard: View {
 }
 
 
-/// The home screen's sections, split from the order list in one pass per
+/// The Activity tab's sections, split from the order list in one pass per
 /// redraw instead of re-filtering it for each section (and a contains() per
 /// row inside one of them).
 struct OrderLists {
@@ -520,7 +476,6 @@ struct OrderLists {
     let active: [Order]
     let activeOther: [Order]
     let past: [Order]
-    let usual: UsualOrder?
 
     init(_ orders: [Order]) {
         var attention: [Order] = [], active: [Order] = [], other: [Order] = [], past: [Order] = []
@@ -538,6 +493,5 @@ struct OrderLists {
         self.active = active
         self.activeOther = other
         self.past = past
-        self.usual = UsualOrder.from(orders)
     }
 }

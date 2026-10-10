@@ -49,7 +49,7 @@ final class OrderCacheTests: XCTestCase {
         XCTAssertNil(OrderCache.load(for: me))
     }
 
-    func testHomeSectionsAreSplitInOnePass() {
+    func testActivitySectionsAreSplitInOnePass() {
         let waiting = order(.scheduled, attention: true)
         let moving = order(.scheduled)
         let done = order(.delivered)

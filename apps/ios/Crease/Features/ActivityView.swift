@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Upcoming and past orders (the "Activity" tab, 2026-10-08).
 ///
-/// Shaped like a ride app's trip history: what is coming up first, then the
-/// last order large with its route on a map, then the rest as rows that can be
+/// Shaped like a ride app's trip history: what is coming up first — anything
+/// waiting on the customer at the very top — then the last order large with its route on a map, then the rest as rows that can be
 /// booked again in one tap.
 struct ActivityView: View {
     @EnvironmentObject private var store: OrderStore
@@ -11,7 +11,7 @@ struct ActivityView: View {
     let start: (BookingIntent) -> Void
     let rebook: (UsualOrder) -> Void
 
-    @State private var path: [Order] = []
+    @Binding var path: [Order]
 
     var body: some View {
         let lists = OrderLists(store.orders)
@@ -24,11 +24,17 @@ struct ActivityView: View {
                     } else if lists.active.isEmpty {
                         noUpcoming
                     } else {
-                        ForEach(Array(lists.active.enumerated()), id: \.element.id) { i, order in
-                            NavigationLink(value: order) { ActiveOrderCard(order: order) }
+                        ForEach(Array(lists.attention.enumerated()), id: \.element.id) { i, order in
+                            NavigationLink(value: order) { ApprovalBanner(order: order) }
                                 .buttonStyle(PressableStyle())
                                 .accessibilityIdentifier("order-card")
                                 .staggeredAppear(i)
+                        }
+                        ForEach(Array(lists.activeOther.enumerated()), id: \.element.id) { i, order in
+                            NavigationLink(value: order) { ActiveOrderCard(order: order) }
+                                .buttonStyle(PressableStyle())
+                                .accessibilityIdentifier("order-card")
+                                .staggeredAppear(lists.attention.count + i)
                         }
                     }
 

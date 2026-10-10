@@ -48,21 +48,25 @@ struct MainTabView: View {
     @State private var flow: BookingStep?
     /// Owned here so a tapped notification can push a screen the customer
     /// never navigated to.
-    @State private var homePath: [Order] = []
+    @State private var activityPath: [Order] = []
 
     /// Worked out on the phone from this customer's own history.
     private var usual: UsualOrder? { UsualOrder.from(store.orders) }
 
     var body: some View {
         TabView(selection: $tab) {
-            OrdersView(path: $homePath, start: start, startSaved: startSaved, startUsual: startUsual)
+            OrdersView(start: start, startSaved: startSaved, startUsual: startUsual)
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(AppTab.home)
             ServicesView(start: start)
                 .tabItem { Label("Services", systemImage: "square.grid.2x2.fill") }
                 .tag(AppTab.services)
-            ActivityView(start: start, rebook: startUsual)
+            ActivityView(start: start, rebook: startUsual, path: $activityPath)
                 .tabItem { Label("Activity", systemImage: "list.bullet.rectangle.portrait.fill") }
+                // Home no longer shows orders, so an order waiting on the
+                // customer (approve a recount, pick a delivery time) is
+                // flagged here instead.
+                .badge(OrderLists(store.orders).attention.count)
                 .tag(AppTab.activity)
             AccountView()
                 .tabItem { Label("Account", systemImage: "person.fill") }
@@ -164,7 +168,7 @@ struct MainTabView: View {
         if store.orders.isEmpty { await store.loadOrders() }
         guard let order = store.orders.first(where: { $0.id == id }) else { return }
         router.pendingOrderId = nil
-        tab = .home
-        if homePath.last?.id != order.id { homePath.append(order) }
+        tab = .activity
+        if activityPath.last?.id != order.id { activityPath.append(order) }
     }
 }

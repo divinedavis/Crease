@@ -233,15 +233,24 @@ final class CreaseUITests: XCTestCase {
         attach(app, "after-resume")
     }
 
-    func testSignedInCustomerSeesTheirOrders() {
+    /// Home is for booking; orders are listed on Activity only (owner,
+    /// 2026-10-10 — the ready and draft cards used to fill Home).
+    func testOrdersAreOnActivityNotHome() {
         let app = launch(signedIn: true)
 
         XCTAssertTrue(
             app.navigationBars["Crease"].waitForExistence(timeout: 20),
-            "signed-in customer should land on the order list"
+            "signed-in customer should land on Home"
         )
-        XCTAssertTrue(app.buttons["Book a pickup"].exists,
-                      "the booking entry point moved to the top of the list")
+        XCTAssertTrue(app.buttons["Book a pickup"].exists)
+        sleep(3)   // let the orders load, so their absence means something
+        XCTAssertEqual(app.buttons.matching(identifier: "order-card").count, 0,
+                       "Home should not list orders")
+        attach(app, "home")
+
+        app.openActivity()
+        XCTAssertTrue(app.buttons.matching(identifier: "order-card").firstMatch.waitForExistence(timeout: 15),
+                      "the seeded orders should be on Activity — run scripts/seed.mjs first")
         attach(app, "orders-list")
     }
 
@@ -252,7 +261,7 @@ final class CreaseUITests: XCTestCase {
     /// `OrdersView`'s `.task` had already filled — and `.task` did not re-run,
     /// because the view's identity had not changed. `appActive` flips on the
     /// first `didBecomeActive` after launch and again on every resume, so a
-    /// customer with three orders read "No orders yet" until they pulled to
+    /// customer with three orders saw an empty list until they pulled to
     /// refresh. It is also how the App Store capture photographed the demo
     /// account as empty.
     ///
@@ -263,6 +272,7 @@ final class CreaseUITests: XCTestCase {
     func testTheOrderListSurvivesAResume() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
         let anyOrder = app.staticTexts.matching(
             NSPredicate(format: "label IN {'Ready for delivery', 'Being cleaned', 'Pickup scheduled'}")
@@ -275,7 +285,7 @@ final class CreaseUITests: XCTestCase {
 
         XCTAssertTrue(anyOrder.waitForExistence(timeout: 15),
                       "the order list emptied on resume — the store was rebuilt under the view")
-        XCTAssertFalse(app.staticTexts["No orders yet"].exists,
+        XCTAssertFalse(app.staticTexts["You have no upcoming pickups"].exists,
                        "the empty state is showing for an account that has orders")
         attach(app, "orders-after-resume")
     }
@@ -283,6 +293,7 @@ final class CreaseUITests: XCTestCase {
     func testOrderDetailShowsTheJourney() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
         // Open whichever order is at the top of the list.
         let firstCard = app.buttons.matching(identifier: "order-card").firstMatch
@@ -309,8 +320,9 @@ final class CreaseUITests: XCTestCase {
     func testTheAddressRowNamesOnlyTheLegsTheOrderBought() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
-        let card = app.buttons.containing(
+        let card = app.buttons.matching(identifier: "order-card").containing(
             NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
         ).firstMatch
         guard card.waitForExistence(timeout: 10) else {
@@ -350,6 +362,7 @@ final class CreaseUITests: XCTestCase {
     func testACompletedPickupIsReportedOnTheDetailScreen() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
         // Matched on the at-the-cleaner wording specifically: a bag that is at
         // the shop got there somehow, and on every tier but return-only a
@@ -930,6 +943,7 @@ final class CreaseUITests: XCTestCase {
     func testAtTheCleanerItSaysWhenItIsReadyAndHowToCallTheShop() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
         // Prefer an order that is actually at the shop, because that is where
         // the two rows swap over. Any order still proves the rest: the seeded
@@ -940,7 +954,7 @@ final class CreaseUITests: XCTestCase {
         let atCleaner = app.buttons.containing(
             NSPredicate(format: "label CONTAINS[c] 'At the cleaner' OR label CONTAINS[c] 'counting your items'")
         ).firstMatch
-        let anyOrder = app.buttons.containing(
+        let anyOrder = app.buttons.matching(identifier: "order-card").containing(
             NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
         ).firstMatch
         let card = atCleaner.waitForExistence(timeout: 10) ? atCleaner : anyOrder
@@ -1026,11 +1040,11 @@ final class CreaseUITests: XCTestCase {
     func testCancelIsOfferedAndConfirmed() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
 
-        // Order cards live inside the scroll view alongside the booking entry,
-        // so find one by its status text rather than by position — an index
-        // silently shifts the moment anything is added to the list.
-        let card = app.buttons.containing(
+        // Matched on the card id as well as its text: Activity's Rebook
+        // buttons name the cleaner too.
+        let card = app.buttons.matching(identifier: "order-card").containing(
             NSPredicate(format: "label CONTAINS[c] 'cleaner' OR label CONTAINS[c] 'Pickup scheduled'")
         ).firstMatch
         guard card.waitForExistence(timeout: 10) else {
@@ -1108,6 +1122,7 @@ final class CreaseUITests: XCTestCase {
     func testAReadyOrderOffersADeliveryTime() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
         // Fails rather than skips: ios-gates.sh seeds a ready order every run.
         let ready = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'ready' AND label != 'Book a pickup'")).firstMatch
         guard ready.waitForExistence(timeout: 15) else {
@@ -1254,20 +1269,6 @@ final class CreaseUITests: XCTestCase {
 
     // MARK: - Ride-hailing layout (2026-10-08)
 
-    /// iOS 26's floating tab bar ignores element taps; a coordinate tap lands,
-    /// and `isSelected` is the only trustworthy confirmation.
-    private func selectTab(_ name: String, in app: XCUIApplication) -> Bool {
-        let tab = app.tabBars.buttons[name]
-        guard tab.waitForExistence(timeout: 10) else { return false }
-        for attempt in 0..<3 {
-            if tab.isSelected { return true }
-            if attempt == 0 { tab.tap() } else { tab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
-            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
-            if XCTWaiter().wait(for: [selected], timeout: 3) == .completed { return true }
-        }
-        return false
-    }
-
     /// Every tab opens its own screen, and the account controls that used to
     /// hide in a menu are on the Account tab.
     func testTheTabsOpenTheirScreens() {
@@ -1275,23 +1276,23 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
         attach(app, "tab-home")
 
-        XCTAssertTrue(selectTab("Services", in: app))
+        XCTAssertTrue(app.selectTab("Services"))
         XCTAssertTrue(app.navigationBars["Services"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Get it cleaned"].exists)
         attach(app, "tab-services")
 
-        XCTAssertTrue(selectTab("Activity", in: app))
+        XCTAssertTrue(app.selectTab("Activity"))
         XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Upcoming"].exists)
         attach(app, "tab-activity")
 
-        XCTAssertTrue(selectTab("Account", in: app))
+        XCTAssertTrue(app.selectTab("Account"))
         XCTAssertTrue(app.buttons["Sign out"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["Delete account"].exists)
         XCTAssertTrue(app.buttons["Download my data"].exists)
         attach(app, "tab-account")
 
-        XCTAssertTrue(selectTab("Home", in: app))
+        XCTAssertTrue(app.selectTab("Home"))
         XCTAssertTrue(app.buttons["Book a pickup"].waitForExistence(timeout: 10))
     }
 
@@ -1299,7 +1300,7 @@ final class CreaseUITests: XCTestCase {
     func testAServiceTileCarriesIntoTheBooking() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
-        XCTAssertTrue(selectTab("Services", in: app))
+        XCTAssertTrue(app.selectTab("Services"))
         // By id: Home stays loaded behind this tab and has its own Pickup only tile.
         let tile = app.buttons["service-tile-pickup_only"]
         XCTAssertTrue(tile.waitForExistence(timeout: 10))
@@ -1337,7 +1338,7 @@ final class CreaseUITests: XCTestCase {
     func testRebookFromActivity() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
-        XCTAssertTrue(selectTab("Activity", in: app))
+        XCTAssertTrue(app.selectTab("Activity"))
         let rebook = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Rebook'")).firstMatch
         guard rebook.waitForExistence(timeout: 15) else {
             throw XCTSkip("no past order with itemised lines to rebook; run scripts/seed.mjs")

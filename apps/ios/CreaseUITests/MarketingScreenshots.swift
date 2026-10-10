@@ -40,9 +40,13 @@ final class MarketingScreenshots: XCTestCase {
     func testCaptureMarketingScreens() {
         let app = launch()
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 25))
+        shoot(app, "01-home")
+
+        // Orders are on Activity, not Home (2026-10-10).
+        app.openActivity()
 
         // Wait for the orders to actually arrive, pulling to refresh between
-        // checks. The first load fires from OrdersView's .task and can beat the
+        // checks. The first load fires from MainTabView's .task and can beat the
         // injected session onto the wire: the request goes out as anon, RLS
         // returns nothing, and the screen settles on "No orders yet" over an
         // account that has three. One swipe was not enough — three runs in a
@@ -57,7 +61,7 @@ final class MarketingScreenshots: XCTestCase {
             if attempt > 0 { app.scrollViews.firstMatch.swipeDown() }
             sleep(4)
         }
-        shoot(app, listed ? "01-home" : "09-home-empty")
+        shoot(app, listed ? "06-activity" : "09-activity-empty")
         XCTAssertTrue(listed, "Orders never loaded — the session was not honoured")
 
         // The order the shop has finished, taken now rather than after the
@@ -76,6 +80,7 @@ final class MarketingScreenshots: XCTestCase {
             app.navigationBars.buttons.firstMatch.tap()
             sleep(2)
         }
+        XCTAssertTrue(app.selectTab("Home"))
 
         // Address entry, showing the pinned home row.
         guard app.buttons["Book a pickup"].waitForExistence(timeout: 8) else { return }

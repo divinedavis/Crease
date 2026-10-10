@@ -19,6 +19,7 @@
 		2353E947E6F92FB311CC48DA /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1359A272E99CE20543C8B6C /* Metrics.swift */; };
 		23D075356D7E21820C04A245 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30AC955AC6547945C1018CD /* PerformanceTests.swift */; };
 		24DD121BF361B3C9F78F6886 /* Perf.swift in Sources */ = {isa = PBXBuildFile; fileRef = C25F8F0FCBDDBE2CEF736AD9 /* Perf.swift */; };
+		295C627E4E43027C76192D0F /* TabNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA617EF5CDE66451CE557C0 /* TabNavigation.swift */; };
 		2A5CB47F9CD7C778F30FA73F /* JourneyTrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20E01A1CBB18BB646D7C719 /* JourneyTrackTests.swift */; };
 		2F3FD22A0A96B510AA7CBE53 /* ServicePricingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */; };
 		372A54856F0A7E0DBE6A2B4A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A9740EB7DC2492BCDC52958 /* Models.swift */; };
@@ -131,6 +132,7 @@
 		7EDB8576D702E552AB330954 /* SecurityOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityOverlay.swift; sourceTree = "<group>"; };
 		878103286229AF62E1C35715 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		88D2741AE4AAB43D7ED21403 /* LocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProvider.swift; sourceTree = "<group>"; };
+		8BA617EF5CDE66451CE557C0 /* TabNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabNavigation.swift; sourceTree = "<group>"; };
 		92B412AE1AEF4CEB3B2396C3 /* AccessibilityAuditTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAuditTests.swift; sourceTree = "<group>"; };
 		94CCCF60E110ACED75AAD19D /* ServiceTierCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTierCopyTests.swift; sourceTree = "<group>"; };
 		96C6E03832EC16E4C2D5EE2C /* AppLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLock.swift; sourceTree = "<group>"; };
@@ -164,7 +166,7 @@
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F939BB829C1004564DF9307F /* NoteTranslation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTranslation.swift; sourceTree = "<group>"; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_16478DDC-AE8E-413D-BA57-47C321EFA92E" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_D82EE2BA-B793-4AB5-A95A-5AC649C43EDC" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -197,6 +199,7 @@
 				CF6168E4A19BF37752AA8944 /* CreaseUITests.swift */,
 				28F98B89C26D57784841B735 /* MarketingScreenshots.swift */,
 				F30AC955AC6547945C1018CD /* PerformanceTests.swift */,
+				8BA617EF5CDE66451CE557C0 /* TabNavigation.swift */,
 			);
 			path = CreaseUITests;
 			sourceTree = "<group>";
@@ -320,10 +323,10 @@
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_FF79F586-AC51-4142-A7C4-59B64B4F837E" /* ios */ = {
+		"TEMP_BEAC9286-DB33-4C64-9B59-489B5CC32C29" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_16478DDC-AE8E-413D-BA57-47C321EFA92E" /* Secrets.xcconfig */,
+				"TEMP_D82EE2BA-B793-4AB5-A95A-5AC649C43EDC" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -451,6 +454,7 @@
 				4C646A4E0FC83962FCD5E70E /* CreaseUITests.swift in Sources */,
 				BB81133CC3903567AC111BE1 /* MarketingScreenshots.swift in Sources */,
 				23D075356D7E21820C04A245 /* PerformanceTests.swift in Sources */,
+				295C627E4E43027C76192D0F /* TabNavigation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -577,7 +581,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -611,7 +615,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_16478DDC-AE8E-413D-BA57-47C321EFA92E" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_D82EE2BA-B793-4AB5-A95A-5AC649C43EDC" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -682,7 +686,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -760,7 +764,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_16478DDC-AE8E-413D-BA57-47C321EFA92E" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_D82EE2BA-B793-4AB5-A95A-5AC649C43EDC" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

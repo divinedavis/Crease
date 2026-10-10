@@ -170,9 +170,10 @@ final class AccessibilityAuditTests: XCTestCase {
     func testOrderListAndEveryOrder() {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.openActivity()
         sleep(2)
         audit("Order list", app)
-        // Only the orders: Home also carries shortcuts that start a booking.
+        // Only the orders: Activity also carries Rebook buttons.
         let cards = app.scrollViews.buttons.matching(identifier: "order-card")
         let n = min(cards.count, 6)   // bounded: the seeded customer has a handful
         for i in 0..<n {
@@ -183,7 +184,7 @@ final class AccessibilityAuditTests: XCTestCase {
             sleep(2)
             audit("Order \(i + 1) (\(title))", app)
             app.navigationBars.buttons.element(boundBy: 0).tap()
-            XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10))
+            XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 10))
         }
     }
 
@@ -192,25 +193,11 @@ final class AccessibilityAuditTests: XCTestCase {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
         for (tab, title) in [("Services", "Services"), ("Activity", "Activity"), ("Account", nil as String?)] {
-            XCTAssertTrue(selectTab(tab, in: app), "the \(tab) tab did not open")
+            XCTAssertTrue(app.selectTab(tab), "the \(tab) tab did not open")
             if let title { XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 10)) }
             sleep(2)   // rows stagger in
             audit(tab, app)
         }
-    }
-
-    /// iOS 26's floating tab bar ignores element taps; a coordinate tap lands,
-    /// and `isSelected` is the only trustworthy confirmation.
-    private func selectTab(_ name: String, in app: XCUIApplication) -> Bool {
-        let tab = app.tabBars.buttons[name]
-        guard tab.waitForExistence(timeout: 10) else { return false }
-        for attempt in 0..<3 {
-            if tab.isSelected { return true }
-            if attempt == 0 { tab.tap() } else { tab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
-            let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: tab)
-            if XCTWaiter().wait(for: [selected], timeout: 3) == .completed { return true }
-        }
-        return false
     }
 
     func testBookingAddressEntry() {
