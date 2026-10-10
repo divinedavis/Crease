@@ -1,4 +1,0 @@
-App Store freeze — set by the owner 2026-09-22: TestFlight uploads only, no
-App Store versions, attaches, metadata writes or review submissions.
-scripts/asc.py refuses setup/attach/submit while this file exists.
-Delete it ONLY when the owner explicitly lifts the freeze.
