@@ -178,6 +178,12 @@ class ASC:
             raise RuntimeError(f"{r.status_code} {r.text[:400]}")
         return r
 
+    def delete(self, path: str):
+        r = self.s.delete(f"{API}{path}", timeout=30)
+        if r.status_code >= 400:
+            raise RuntimeError(f"{r.status_code} {r.text[:400]}")
+        return r
+
     def attach_build(self, version_id: str, build_id: str):
         """Point an App Store version at a build.
 
@@ -317,24 +323,22 @@ def cmd_attach(asc: ASC, cfg: dict):
     print("the placeholder icon in App Store Connect should now be the real one")
 
 
-def ensure_phased_release(asc: ASC, version: dict) -> None:
-    """Release updates over Apple's 7-day phased rollout instead of to everyone
-    at once, so a bad build reaches a slice of users and can be paused (App
-    Store Connect > the version > Phased Release). Created INACTIVE; Apple
-    flips it ACTIVE when the version is released. Apple does not offer it for
-    a first release, so a 1.0 is skipped. Idempotent: an existing one is kept."""
-    if version["attributes"]["versionString"] == "1.0":
-        print("  phased release: n/a for 1.0")
-        return
+def ensure_no_phased_release(asc: ASC, version: dict) -> None:
+    """Release to everyone at once — never Apple's 7-day phased rollout, on
+    any of our apps (owner, 2026-10-17). A phased release left on the version
+    (dashboard, or an older run of this script) is deleted; one already
+    rolling out is completed, which releases it to everyone."""
     have = asc.get(f"/appStoreVersions/{version['id']}/appStoreVersionPhasedRelease").get("data")
-    if have:
-        print("  phased release:", have["attributes"]["phasedReleaseState"])
-        return
-    asc.post("/appStoreVersionPhasedReleases", {"data": {
-        "type": "appStoreVersionPhasedReleases",
-        "attributes": {"phasedReleaseState": "INACTIVE"},
-        "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version["id"]}}}}})
-    print("  phased release: on (7-day rollout once approved)")
+    if not have:
+        print("  phased release: off (releases to everyone at once)")
+    elif have["attributes"]["phasedReleaseState"] in ("ACTIVE", "PAUSED"):
+        asc.patch(f"/appStoreVersionPhasedReleases/{have['id']}", {"data": {
+            "type": "appStoreVersionPhasedReleases", "id": have["id"],
+            "attributes": {"phasedReleaseState": "COMPLETE"}}})
+        print("  phased release: completed (now released to everyone)")
+    else:
+        asc.delete(f"/appStoreVersionPhasedReleases/{have['id']}")
+        print("  phased release: removed (releases to everyone at once)")
 
 
 def cmd_submit(asc: ASC, cfg: dict):
@@ -365,7 +369,7 @@ def cmd_submit(asc: ASC, cfg: dict):
     version = editable[0]
 
     # Set before submitting, so the version goes to review with it attached.
-    ensure_phased_release(asc, version)
+    ensure_no_phased_release(asc, version)
 
     for sub in asc.get("/reviewSubmissions", **{"filter[app]": app_id, "limit": 10})["data"]:
         if sub["attributes"]["state"] in ("COMPLETE", "CANCELING"):
