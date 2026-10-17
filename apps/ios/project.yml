@@ -111,7 +111,9 @@ targets:
       testTargets:
         - CreaseTests
         - CreaseUITests
-      gatherCoverageData: true
+      # No gatherCoverageData: ios-gates.sh turns coverage on for the unit/UI
+      # run itself, and coverage instrumentation made PerformanceTests'
+      # launch metric 1.8x the baseline (2026-10-17).
 
   CreaseTests:
     type: bundle.unit-test
