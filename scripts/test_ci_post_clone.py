@@ -55,6 +55,15 @@ class PostCloneTests(unittest.TestCase):
         self.assertIn("SUPABASE_HOST = crease.supabase.co", text)
         self.assertIn("DISPATCH_URL = https:$(SLASH)$(SLASH)api.creasenyc.com", text)
 
+    def test_xcode_cloud_counter_that_disagrees_with_the_tag_fails(self):
+        r = self.run_script(**SECRETS, CI_TAG="tf-60", CI_BUILD_NUMBER="1")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("build 1, not 60", r.stderr)
+
+    def test_xcode_cloud_counter_that_matches_passes(self):
+        r = self.run_script(**SECRETS, CI_TAG="tf-60", CI_BUILD_NUMBER="60")
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_tag_that_disagrees_with_the_build_number_fails(self):
         r = self.run_script(**SECRETS, CI_TAG="tf-61")
         self.assertNotEqual(r.returncode, 0)

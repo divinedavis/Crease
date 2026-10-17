@@ -40,5 +40,13 @@ if [ -n "${CI_TAG:-}" ]; then
   fi
   grep -q "CURRENT_PROJECT_VERSION = $HAVE;" "$IOS/Crease.xcodeproj/project.pbxproj" \
     || { echo "project.pbxproj is stale: regenerate with xcodegen and re-tag" >&2; exit 1; }
+  # Xcode Cloud stamps its own counter (CI_BUILD_NUMBER) into the archive and
+  # ignores CURRENT_PROJECT_VERSION; tf-60 shipped as build "1". Keep the two
+  # in step: App Store Connect > Crease > Xcode Cloud > Settings > Build Number.
+  if [ -n "${CI_BUILD_NUMBER:-}" ] && [ "$CI_BUILD_NUMBER" != "$WANT" ]; then
+    echo "Xcode Cloud would upload this as build $CI_BUILD_NUMBER, not $WANT." >&2
+    echo "Set Xcode Cloud > Settings > Build Number so the next build is $WANT, then re-run." >&2
+    exit 1
+  fi
   echo "building $CI_TAG"
 fi
