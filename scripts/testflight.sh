@@ -163,7 +163,9 @@ if [ "$CLOUD" = "1" ]; then
   BUILD=$(grep -E '^ +CURRENT_PROJECT_VERSION:' project.yml | grep -oE '[0-9]+' | head -1)
   TAG="tf-$BUILD"
   cd "$ROOT"
-  git add apps/ios/project.yml apps/ios/Crease.xcodeproj
+  # perf_baseline.json: ios-perf-gate.py appends this ship's numbers during the
+  # gates; leaving it out left the tree dirty after every --cloud ship.
+  git add apps/ios/project.yml apps/ios/Crease.xcodeproj apps/ios/perf_baseline.json
   if ! git diff --cached --quiet; then
     git commit -q -m "Ship build $BUILD to TestFlight via Xcode Cloud" \
       -m "ios-gates.sh, the launch pre-flight and the purpose-string check passed locally; Xcode Cloud archives and uploads from tag $TAG." \
