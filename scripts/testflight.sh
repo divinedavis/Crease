@@ -3,6 +3,9 @@
 #
 #   ./scripts/testflight.sh          # bump build number, archive, upload
 #   ./scripts/testflight.sh --no-bump
+#   ./scripts/testflight.sh --cloud  # gates + pre-flight here, then push a
+#                                    # tf-<build> tag; Xcode Cloud archives
+#                                    # and uploads (apps/ios/ci_scripts)
 #
 # Signing is fully automatic: xcodebuild is given the ASC API key directly, so
 # it can create the distribution certificate and provisioning profile itself
@@ -21,7 +24,24 @@ ARCHIVE="$WORK/Crease.xcarchive"
 EXPORT="$WORK/export"
 
 BUMP=1
-[ "${1:-}" = "--no-bump" ] && BUMP=0
+CLOUD=0
+for ARG in "$@"; do
+  case "$ARG" in
+    --no-bump) BUMP=0 ;;
+    --cloud) CLOUD=1 ;;
+    *) echo "unknown option: $ARG" >&2; exit 2 ;;
+  esac
+done
+
+if [ "$CLOUD" = "1" ]; then
+  # Xcode Cloud builds what is in git, not what is on disk. Anything
+  # uncommitted would pass the gates here and be missing from the upload.
+  if [ -n "$(git -C "$ROOT" status --porcelain)" ]; then
+    echo "--cloud needs a clean tree: commit or stash first" >&2; exit 1
+  fi
+  [ "$(git -C "$ROOT" branch --show-current)" = "pricing-route-aware" ] \
+    || { echo "--cloud ships only from pricing-route-aware" >&2; exit 1; }
+fi
 
 # Apple's four quality checks before anything is bumped or built for upload:
 # Swift Testing, every XCUITest incl. the accessibility audit, the performance
@@ -135,6 +155,25 @@ if [ -n "$MISSING" ]; then
   exit 1
 fi
 echo "==> pre-flight: purpose strings declared"
+
+if [ "$CLOUD" = "1" ]; then
+  BUILD=$(grep -E '^ +CURRENT_PROJECT_VERSION:' project.yml | grep -oE '[0-9]+' | head -1)
+  TAG="tf-$BUILD"
+  cd "$ROOT"
+  git add apps/ios/project.yml apps/ios/Crease.xcodeproj
+  if ! git diff --cached --quiet; then
+    git commit -q -m "Ship build $BUILD to TestFlight via Xcode Cloud" \
+      -m "ios-gates.sh, the launch pre-flight and the purpose-string check passed locally; Xcode Cloud archives and uploads from tag $TAG." \
+      -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+  fi
+  git tag "$TAG"
+  # One push, so the pre-push hook runs once. main follows the branch because
+  # Dependabot only scans the default branch.
+  git push -q origin pricing-route-aware pricing-route-aware:main "$TAG"
+  echo "==> pushed $TAG; Xcode Cloud takes it from here."
+  echo "    python3 scripts/asc.py builds   # once it has uploaded"
+  exit 0
+fi
 
 xattr -cr "$IOS" 2>/dev/null || true
 

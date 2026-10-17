@@ -82,6 +82,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
+        # Xcode Cloud archives with the project's own settings — it cannot be
+        # handed DEVELOPMENT_TEAM on the command line the way testflight.sh is.
+        DEVELOPMENT_TEAM: CG89RY4W6R
         # simctl refuses to launch builds carrying the debug dylib.
         ENABLE_DEBUG_DYLIB: NO
         CODE_SIGN_ENTITLEMENTS: Crease/Crease.entitlements
@@ -101,6 +104,14 @@ targets:
       # 3-D Secure without us implementing a redirect flow.
       - package: Stripe
         product: StripePaymentSheet
+    # A shared scheme, committed under xcshareddata. Xcode Cloud only sees
+    # schemes that are in the repository; the one Xcode autocreates lives in
+    # xcuserdata, which is gitignored.
+    scheme:
+      testTargets:
+        - CreaseTests
+        - CreaseUITests
+      gatherCoverageData: true
 
   CreaseTests:
     type: bundle.unit-test
