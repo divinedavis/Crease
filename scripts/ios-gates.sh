@@ -18,6 +18,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS="$ROOT/apps/ios"
 DD="${CREASE_DERIVED_DATA:-/tmp/crease-dd}"
+# The automatic DerivedData cleanup can delete this between runs, and the gate
+# logs are written into it before xcodebuild would create it.
+mkdir -p "$DD"
 PY="${PY:-$HOME/.venvs/spendcap/bin/python}"
 
 SIM_ID="${SIM_ID:-$(xcrun simctl list devices available -j | python3 -c "import json,sys
