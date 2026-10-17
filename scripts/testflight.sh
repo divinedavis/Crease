@@ -80,13 +80,16 @@ mkdir -p "$WORK"
 
 SMOKE_SIM="${CREASE_SIM:-iPhone 17 Pro}"
 SMOKE_DD="$WORK/smoke"
-echo "==> pre-flight: building for the simulator"
-xcodebuild -project Crease.xcodeproj -scheme Crease \
-  -destination "platform=iOS Simulator,name=$SMOKE_SIM" \
-  -derivedDataPath "$SMOKE_DD" -quiet build CODE_SIGNING_ALLOWED=NO
-
+# Pick the simulator by UDID. A name-only destination means "that name on the
+# newest runtime", and when the newest runtime has no device of that name
+# (Xcode 27, 2026-10-17) xcodebuild refuses even though one exists on 26.x.
 SIM_ID=$(xcrun simctl list devices available | grep "$SMOKE_SIM (" | grep -oE '[0-9A-F-]{36}' | head -1)
 [ -n "$SIM_ID" ] || { echo "no simulator named '$SMOKE_SIM'" >&2; exit 1; }
+echo "==> pre-flight: building for the simulator"
+xcodebuild -project Crease.xcodeproj -scheme Crease \
+  -destination "platform=iOS Simulator,id=$SIM_ID" \
+  -derivedDataPath "$SMOKE_DD" -quiet build CODE_SIGNING_ALLOWED=NO
+
 xcrun simctl boot "$SIM_ID" 2>/dev/null || true
 xcrun simctl bootstatus "$SIM_ID" -b >/dev/null 2>&1 || true
 
