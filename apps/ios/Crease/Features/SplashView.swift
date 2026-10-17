@@ -87,7 +87,7 @@ struct SplashView: View {
             isReady = ready
             exitIfDue()
         }
-        .onChange(of: ready) { now in
+        .onChange(of: ready) { _, now in
             isReady = now
             exitIfDue()
         }

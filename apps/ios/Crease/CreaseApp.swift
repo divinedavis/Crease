@@ -70,8 +70,8 @@ struct RootView: View {
             // sheet and cover (see SecurityOverlayWindow), not in a ZStack here
             // where a presented modal would render on top of them.
             .onAppear { syncOverlay() }
-            .onChange(of: lock.isLocked) { _ in syncOverlay() }
-            .onChange(of: isSignedIn) { _ in syncOverlay() }
+            .onChange(of: lock.isLocked) { syncOverlay() }
+            .onChange(of: isSignedIn) { syncOverlay() }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                 appActive = false
                 syncOverlay()

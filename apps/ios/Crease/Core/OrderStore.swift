@@ -646,7 +646,9 @@ final class OrderStore: ObservableObject {
         let ch = client.realtimeV2.channel("customer-orders")
         let changes = ch.postgresChange(AnyAction.self, schema: "public", table: "orders")
         let legChanges = ch.postgresChange(AnyAction.self, schema: "public", table: "delivery_legs")
-        await ch.subscribe()
+        // What the deprecated subscribe() did: a failed join is not fatal, the
+        // list still loads and refreshes on pull.
+        try? await ch.subscribeWithError()
         channel = ch
 
         // One task over both streams, so the pair can be cancelled together
@@ -673,10 +675,6 @@ final class OrderStore: ObservableObject {
                 return
             }
             record = action.oldRecord
-        default:
-            needsFullReload = true
-            reloadSoon()
-            return
         }
         if let id = record[idKey]?.stringValue.flatMap(UUID.init(uuidString:)) {
             changedOrderIds.insert(id)
