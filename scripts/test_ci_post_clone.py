@@ -47,6 +47,14 @@ class PostCloneTests(unittest.TestCase):
         del env["SUPABASE_ANON_KEY"]
         self.assertNotEqual(self.run_script(**env).returncode, 0)
 
+    def test_host_and_dispatch_url_default_when_unset(self):
+        r = self.run_script(SUPABASE_ANON_KEY="anon")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(self.secrets) as f:
+            text = f.read()
+        self.assertIn("SUPABASE_HOST = crease.supabase.co", text)
+        self.assertIn("DISPATCH_URL = https:$(SLASH)$(SLASH)api.creasenyc.com", text)
+
     def test_tag_that_disagrees_with_the_build_number_fails(self):
         r = self.run_script(**SECRETS, CI_TAG="tf-61")
         self.assertNotEqual(r.returncode, 0)

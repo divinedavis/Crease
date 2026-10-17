@@ -29,10 +29,10 @@
   the owner says so. `asc.py submit` adds a 7-day phased release for non-1.0.
 - Xcode Cloud (2026-10-17): `scripts/testflight.sh --cloud` runs the gates and
   pre-flight locally, commits the bump, and pushes tag `tf-<build>`; an Xcode
-  Cloud workflow started by `tf-*` tags archives and uploads to TestFlight.
-  `apps/ios/ci_scripts/ci_post_clone.sh` writes `Secrets.xcconfig` from the
-  workflow's secret env vars (SUPABASE_HOST, SUPABASE_ANON_KEY, DISPATCH_URL)
-  and refuses a tag that disagrees with the committed build number. The gates
+  Cloud workflow started by tags with prefix `tf-` archives and uploads to TestFlight.
+  `apps/ios/ci_scripts/ci_post_clone.sh` writes `Secrets.xcconfig`: SUPABASE_ANON_KEY is the
+  only workflow secret; host + dispatch URL default to the public values.
+  It refuses a tag that disagrees with the committed build number. The gates
   stay local: they sign in against production and reseed it. Keep Xcode
   Cloud on the free 25 h/month; never enable paid hours.
 

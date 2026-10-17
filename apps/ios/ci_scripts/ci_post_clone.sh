@@ -2,9 +2,10 @@
 # Xcode Cloud: runs right after the clone, before the build.
 #
 # Secrets.xcconfig is gitignored, so a fresh clone has nothing for the Debug
-# and Release configs to read. It is rebuilt here from the workflow's secret
-# environment variables (Xcode Cloud > Workflow > Environment):
-#   SUPABASE_HOST, SUPABASE_ANON_KEY, DISPATCH_URL
+# and Release configs to read. It is rebuilt here. Only SUPABASE_ANON_KEY is a
+# workflow secret (Xcode Cloud > Workflow > Environment); the host and dispatch
+# URL are public and default to the values in Secrets.xcconfig.example. Xcode
+# refused to save either of them as a secret ("invalid value"), 2026-10-17.
 #
 # Builds start only from tf-<build> tags, which scripts/testflight.sh --cloud
 # pushes after ios-gates.sh passes locally. The gates sign in against
@@ -12,9 +13,9 @@
 set -euo pipefail
 IOS="$CI_PRIMARY_REPOSITORY_PATH/apps/ios"
 
-: "${SUPABASE_HOST:?set SUPABASE_HOST in the Xcode Cloud workflow environment}"
 : "${SUPABASE_ANON_KEY:?set SUPABASE_ANON_KEY in the Xcode Cloud workflow environment}"
-: "${DISPATCH_URL:?set DISPATCH_URL in the Xcode Cloud workflow environment}"
+SUPABASE_HOST="${SUPABASE_HOST:-crease.supabase.co}"
+DISPATCH_URL="${DISPATCH_URL:-https://api.creasenyc.com}"
 
 # A literal // begins a comment in xcconfig; rebuild the scheme from SLASH,
 # the same way Secrets.xcconfig.example does.
