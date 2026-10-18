@@ -37,13 +37,13 @@ const securityHeaders = [
     value: 'accelerometer=(), camera=(), geolocation=(self), gyroscope=(), microphone=(), payment=(), usb=()',
   },
   {
-    // Report-Only, and it stays that way until the reports come back empty.
-    // Next inlines its bootstrap and hydration payload, so an enforced policy
-    // without a per-request nonce takes the portal down on the first page —
-    // which on a shift means intake stops. 'unsafe-inline' is here for the
-    // same reason; the value of the header today is that the allowed origins
-    // are written down in the repo and drift becomes visible.
-    key: 'Content-Security-Policy-Report-Only',
+    // Enforced since 2026-10-18 (ZAP 10038). Next inlines its bootstrap and
+    // hydration payload, so 'unsafe-inline' stays until there is a
+    // per-request nonce. Before flipping, the policy was enforced in Chromium
+    // on /, /order, a neighborhood page, /guides and privacy.html, and the
+    // address lookup and coverage check were run: 0 violations. The site
+    // only calls itself (/api/address, server actions).
+    key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
       "base-uri 'self'",

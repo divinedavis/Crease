@@ -35,13 +35,14 @@ const securityHeaders = [
     value: 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()',
   },
   {
-    // Report-Only, and it stays that way until the reports come back empty.
-    // Next inlines its bootstrap and hydration payload, so an enforced policy
-    // without a per-request nonce takes the portal down on the first page —
-    // which on a shift means intake stops. 'unsafe-inline' is here for the
-    // same reason; the value of the header today is that the allowed origins
-    // are written down in the repo and drift becomes visible.
-    key: 'Content-Security-Policy-Report-Only',
+    // Enforced since 2026-10-18 (ZAP 10038). Next inlines its bootstrap and
+    // hydration payload, so 'unsafe-inline' stays until there is a
+    // per-request nonce. Before flipping, the policy was enforced in Chromium
+    // over a real staff session (queue, an order, settings): the only
+    // violation was the realtime websocket, which is why connect-src lists
+    // the wss:// origin as well. Without it the queue stops refreshing on
+    // its own, which on a shift means a shop pulls the wrong bag.
+    key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
       "base-uri 'self'",
@@ -54,7 +55,8 @@ const securityHeaders = [
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline'",
-      ["connect-src 'self'", supabaseOrigin, 'https://api.creasenyc.com', 'https://api.usecreaseapp.com']
+      ["connect-src 'self'", supabaseOrigin, supabaseOrigin.replace(/^https:/, 'wss:'),
+        'https://api.creasenyc.com', 'https://api.usecreaseapp.com']
         .filter(Boolean)
         .join(' '),
     ].join('; '),
