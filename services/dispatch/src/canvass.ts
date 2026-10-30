@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readCanvassCounts } from './canvassCounts.js';
 
 /**
  * The canvass funnel as a public counter.
@@ -19,8 +20,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Long enough that a scraper cannot turn a page load into database load,
  *  short enough that a shop marked at the counter shows up on the site
- *  before the walk home. */
-const TTL_MS = 60_000;
+ *  before the walk home. Five minutes since 2026-10-30: the list moves a few
+ *  rows a week, and at one minute an open tab was ~1,400 refreshes a day. */
+const TTL_MS = 5 * 60_000;
 
 export type CanvassStats = {
   /** Every dry cleaner and laundromat mapped in Brooklyn. */
@@ -38,37 +40,17 @@ export type CanvassStats = {
 };
 
 async function readStats(db: SupabaseClient): Promise<CanvassStats> {
-  // head:true counts server-side: seven cheap round trips instead of pulling
-  // five hundred rows of a table this route is not allowed to expose. It also
-  // stays exact if the list outgrows PostgREST's row cap, which a
-  // select-and-count-here implementation would silently truncate at.
-  const count = async (apply: (q: any) => any) => {
-    const { count: n, error } = await apply(
-      db.from('prospects').select('id', { count: 'exact', head: true }),
-    );
-    if (error) throw new Error(`prospect count failed: ${error.message}`);
-    return n ?? 0;
-  };
-
-  const [total, dryCleaners, laundromats, contacted, interested, followingUp, declined] =
-    await Promise.all([
-      count((q) => q),
-      count((q) => q.eq('kind', 'dry_cleaner')),
-      count((q) => q.eq('kind', 'laundromat')),
-      count((q) => q.eq('visited', true)),
-      count((q) => q.eq('outcome', 'interested')),
-      count((q) => q.eq('outcome', 'follow_up')),
-      count((q) => q.eq('outcome', 'declined')),
-    ]);
-
+  // One query for all seven numbers (canvassCounts.ts). Counts only: this
+  // route is not allowed to expose a single prospect row.
+  const c = await readCanvassCounts(db);
   return {
-    total,
-    dry_cleaners: dryCleaners,
-    laundromats: laundromats,
-    contacted,
-    interested,
-    following_up: followingUp,
-    declined,
+    total: c.shops,
+    dry_cleaners: c.dry_cleaners,
+    laundromats: c.laundromats,
+    contacted: c.contacted,
+    interested: c.interested,
+    following_up: c.following_up,
+    declined: c.declined,
     as_of: new Date().toISOString(),
   };
 }
@@ -85,7 +67,7 @@ export function registerCanvassRoutes(app: FastifyInstance, db: SupabaseClient) 
     // wildcard costs nothing: there is no cookie or token for a hostile origin
     // to ride, and the body is already public the moment the tile renders it.
     reply.header('Access-Control-Allow-Origin', '*');
-    reply.header('Cache-Control', 'public, max-age=60');
+    reply.header('Cache-Control', 'public, max-age=300');
 
     const fresh = cached && Date.now() - cachedAt < TTL_MS;
     if (!fresh) {

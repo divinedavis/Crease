@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { readCanvassCounts } from './canvassCounts.js';
 
 /**
  * Crease, counted, for the owner dashboard that already exists.
@@ -222,17 +223,9 @@ export async function dashboardStats(
   const repeat = [...perCustomer.values()].filter((n) => n > 1).length;
 
   // The canvass is a standing total, never windowed: "479 shops in Brooklyn"
-  // does not mean anything different this month than last.
-  const [shops, dryCleaners, laundromats, visited, interested, followUp, declined] =
-    await Promise.all([
-      count('prospects'),
-      count('prospects', (q) => q.eq('kind', 'dry_cleaner')),
-      count('prospects', (q) => q.eq('kind', 'laundromat')),
-      count('prospects', (q) => q.eq('visited', true)),
-      count('prospects', (q) => q.eq('outcome', 'interested')),
-      count('prospects', (q) => q.eq('outcome', 'follow_up')),
-      count('prospects', (q) => q.eq('outcome', 'declined')),
-    ]);
+  // does not mean anything different this month than last. One query for all
+  // seven numbers (canvassCounts.ts).
+  const canvass = await readCanvassCounts(db);
 
   const [activePartners, payoutsReady] = await Promise.all([
     count('cleaners', (q) => q.eq('active', true)),
@@ -266,15 +259,7 @@ export async function dashboardStats(
       margin_cents: margin,
     },
     customers: { total: perCustomer.size, repeat },
-    canvass: {
-      shops,
-      dry_cleaners: dryCleaners,
-      laundromats,
-      contacted: visited,
-      interested,
-      following_up: followUp,
-      declined,
-    },
+    canvass,
     partners: { active: activePartners, payouts_enabled: payoutsReady },
   };
 }
