@@ -69,7 +69,7 @@ struct SplashView: View {
                         .opacity(stage[i] >= 2 ? 0 : 1)
                 }
             }
-            .font(.system(size: 72, weight: .black, design: .rounded))
+            .font(.app(size: 72).weight(.heavy))
             .foregroundStyle(Theme.accent)
             .kerning(-3)
             .accessibilityElement(children: .ignore)

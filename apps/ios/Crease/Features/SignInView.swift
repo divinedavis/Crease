@@ -35,22 +35,36 @@ struct SignInView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            VStack(spacing: 14) {
-                Image("AppIconArt")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 88, height: 88)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+            VStack(spacing: 10) {
+                IllustrationTile(art: .basket, size: 96, corner: 28, inset: 0.1)
+                    .padding(.bottom, 2)
 
-                Text("Crease")
-                    .font(.largeTitle.weight(.bold))
+                Text("crease")
+                    .font(.app(size: 46).weight(.heavy))
+                    .kerning(-2.5)
+                    .foregroundStyle(Theme.ink)
+                    .accessibilityLabel("Crease")
                 Text("Laundry & Dry Cleaning")
-                    .font(.title3.weight(.semibold))
+                    .font(.app(.headline))
                 Text("Laundry, picked up and delivered.")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.muted)
             }
+
+            // What it is, in the reference's pin / clock / tag rows. Facts
+            // only: the radius, the turnaround, and the published price.
+            VStack(alignment: .leading, spacing: 0) {
+                GlyphRow(symbol: "mappin.circle.fill", title: "From your door",
+                         subtitle: "A courier collects within 3 miles of Fulton St")
+                GlyphRow(symbol: "clock.fill", title: "Back in about 48 hours",
+                         subtitle: "You pick the delivery window")
+                GlyphRow(symbol: "tag.fill", title: "$2.00 a pound",
+                         subtitle: "10 lb minimum · courier fee from $16.95")
+            }
+            .softCard(padding: 14)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
             Spacer(minLength: 0)
 
@@ -65,7 +79,7 @@ struct SignInView: View {
                 }
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                 .frame(height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                 Button {
                     Task {
@@ -76,9 +90,9 @@ struct SignInView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "g.circle.fill")
-                            .font(.title3)
+                            .font(.app(.title3))
                         Text("Continue with Google")
-                            .font(.body.weight(.semibold))
+                            .font(.app(.body).weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
@@ -86,10 +100,10 @@ struct SignInView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(Color(.label))
                 .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color(.separator), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Theme.line, lineWidth: 1.5)
                 )
                 .accessibilityLabel("Continue with Google")
 
@@ -99,9 +113,9 @@ struct SignInView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "envelope.fill")
-                            .font(.title3)
+                            .font(.app(.title3))
                         Text("Continue with email")
-                            .font(.body.weight(.semibold))
+                            .font(.app(.body).weight(.semibold))
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
@@ -109,16 +123,16 @@ struct SignInView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(Color(.label))
                 .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color(.separator), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Theme.line, lineWidth: 1.5)
                 )
                 .accessibilityLabel("Continue with email")
 
                 if let error = session.errorMessage {
                     Text(error)
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.center)
@@ -127,7 +141,7 @@ struct SignInView: View {
                 }
 
                 Text("Nothing to confirm in your inbox — you're in as soon as you sign up.")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)   // .tertiary failed the contrast audit
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.center)

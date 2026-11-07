@@ -60,45 +60,89 @@ struct ScheduleReturnView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(Theme.accent)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 16) {
+                        IllustrationTile(art: .folded, size: 88, corner: 26, inset: 0.1)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Your order is ready")
-                                .font(.headline)
+                                .font(.app(.title3).weight(.bold))
                             Text("\(order.cleaner?.name ?? "The shop") finished \(readyAgo).")
-                                .font(.subheadline)
+                                .font(.app(.subheadline))
                                 .foregroundStyle(Theme.muted)
                         }
                     }
-                    .padding(.vertical, 4)
-                }
+                    .accessibilityElement(children: .combine)
 
-                Section {
-                    DatePicker("Day", selection: $day, in: earliestDay..., displayedComponents: .date)
-                    Picker("Window", selection: $windowIndex) {
-                        ForEach(openWindows(on: day), id: \.self) { i in
-                            Text(windows[i].label).tag(i)
+                    Eyebrow("When should we bring it back?")
+                        .padding(.top, 6)
+
+                    // A week of days as chips, the chosen one black.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(dayChoices, id: \.self) { choice in
+                                let on = Calendar.current.isDate(choice, inSameDayAs: day)
+                                Button { withAnimation(Motion.snappy) { day = choice } } label: {
+                                    VStack(spacing: 2) {
+                                        Text(Calendar.current.isDateInToday(choice) ? "Today"
+                                             : choice.formatted(.dateTime.weekday(.abbreviated)))
+                                            .font(.app(.caption))
+                                            .opacity(0.75)
+                                        Text(choice.formatted(.dateTime.day()))
+                                            .font(.app(.title2).weight(.bold).monospacedDigit())
+                                    }
+                                    .foregroundStyle(on ? Theme.onInk : Theme.ink)
+                                    .frame(width: 66, height: 72)
+                                    .background(on ? Theme.ink : Theme.surface,
+                                                in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                }
+                                .buttonStyle(PressableStyle())
+                                .accessibilityLabel(choice.formatted(date: .complete, time: .omitted))
+                                .accessibilityAddTraits(on ? [.isSelected] : [])
+                            }
                         }
                     }
-                    .pickerStyle(.segmented)
-                } header: {
-                    Text("When should we bring it back?")
-                } footer: {
-                    Text("A driver collects from \(order.cleaner?.name ?? "the shop") and delivers within this window. You'll get a notification when they're on the way.")
-                }
+                    .scrollClipDisabled()
 
-                if let error {
-                    Section {
+                    VStack(spacing: 10) {
+                        ForEach(openWindows(on: day), id: \.self) { i in
+                            let on = i == windowIndex
+                            Button { withAnimation(Motion.snappy) { windowIndex = i } } label: {
+                                HStack(spacing: 14) {
+                                    IllustrationTile(art: windowArt[i], size: 52, corner: 16, inset: 0.12)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(windows[i].label).font(.app(.headline))
+                                        Text(windowHours(i))
+                                            .font(.app(.subheadline))
+                                            .foregroundStyle(Theme.muted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                                        .font(.app(.title2))
+                                        .foregroundStyle(on ? Theme.ink : Theme.line)
+                                }
+                                .outlineCard(padding: 12, selected: on)
+                            }
+                            .buttonStyle(PressableStyle())
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(on ? [.isSelected] : [])
+                        }
+                    }
+
+                    Text("A driver collects from \(order.cleaner?.name ?? "the shop") and delivers within this window. You'll get a notification when they're on the way.")
+                        .font(.app(.footnote))
+                        .foregroundStyle(Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let error {
                         Text(error)
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .foregroundStyle(Theme.danger)
                     }
                 }
+                .padding(20)
             }
+            .background(Theme.canvas)
             .onAppear {
                 // Open on something bookable: the earliest day that has a
                 // window left, and the earliest window left on it.
@@ -127,6 +171,21 @@ struct ScheduleReturnView: View {
                 }
             }
         }
+    }
+
+    private let windowArt: [Illustration] = [.sunrise, .sun, .moon]
+
+    /// Seven days from the first one with a window left.
+    private var dayChoices: [Date] {
+        (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: earliestDay) }
+    }
+
+    private func windowHours(_ i: Int) -> String {
+        func h(_ hour: Int) -> String {
+            let d = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
+            return d.formatted(.dateTime.hour())
+        }
+        return "\(h(windows[i].start)) – \(h(windows[i].end))"
     }
 
     private static let relative: RelativeDateTimeFormatter = {

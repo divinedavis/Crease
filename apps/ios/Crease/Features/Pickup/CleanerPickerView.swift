@@ -46,6 +46,8 @@ struct CleanerPickerView: View {
                         row(cleaner)
                     }
                     .buttonStyle(.plain)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
                 }
             }
             .listStyle(.plain)
@@ -53,7 +55,7 @@ struct CleanerPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                    Button { dismiss() } label: { Image(systemName: "xmark").font(.app(.body).weight(.semibold)) }
                         .accessibilityLabel("Cancel")
                 }
             }
@@ -63,39 +65,46 @@ struct CleanerPickerView: View {
     private func row(_ cleaner: Cleaner) -> some View {
         let isSelected = cleaner.id == selected?.id
         return HStack(spacing: 14) {
-            Image(systemName: "building.2.fill")
-                .font(.body)
-                .foregroundStyle(isSelected ? Theme.accent : .secondary)
-                .frame(width: 38, height: 38)
-                .background(isSelected ? Theme.accentSoft : Color(.tertiarySystemFill), in: Circle())
+            IllustrationTile(art: .shop, size: 60, corner: 18, inset: 0.1)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(cleaner.name).font(.body.weight(.semibold))
+                Text(cleaner.name).font(.app(.body).weight(.semibold))
                 Text([cleaner.line1, cleaner.city].compactMap { $0 }.joined(separator: ", "))
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     if let miles = cleaner.milesFrom(pickup) {
-                        Label(String(format: "%.1f mi", miles), systemImage: "location")
+                        Text(String(format: "%.1f mi", miles)).chipStyle()
                     }
-                    Label("\(cleaner.turnaroundHours)h turnaround", systemImage: "clock")
+                    Text("\(cleaner.turnaroundHours)h turnaround").chipStyle()
                 }
-                .font(.caption)
-                .foregroundStyle(Theme.muted)
+                .padding(.top, 2)
             }
 
             Spacer()
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Theme.accent)
+                    .font(.app(.title2))
+                    .foregroundStyle(Theme.ink)
             }
         }
-        .padding(.vertical, 6)
+        .outlineCard(padding: 12, selected: isSelected)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
+private extension Text {
+    /// The small grey capsule for a shop's distance and turnaround.
+    func chipStyle() -> some View {
+        self
+            .font(.app(.caption).weight(.semibold))
+            .foregroundStyle(Theme.ink)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Theme.surface, in: Capsule())
     }
 }

@@ -63,27 +63,23 @@ struct EmailAuthSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("Cancel")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(ink.opacity(0.65))
-                                .frame(minWidth: 44, minHeight: 44, alignment: .leading)   // Apple's 44 pt hit target
-                                .contentShape(Rectangle())
-                        }
+                        CircleIconButton(symbol: "xmark", label: "Cancel") { dismiss() }
                         Spacer()
                     }
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 18)
+
+                    // The door with a bag on the step: what joining gets you.
+                    IllustrationTile(art: .welcome, size: 120, corner: 34, inset: 0.08)
+                        .padding(.bottom, 18)
 
                     Text(mode == .signIn ? "Welcome back." : "Let's get started.")
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(ink.opacity(0.55))
                         .padding(.bottom, 8)
                         .contentTransition(.opacity)
 
                     Text(mode == .signIn ? "Sign in to\nyour orders." : "Join\nCrease.")
-                        .font(.system(size: titleSize, weight: .bold))   // scales with Dynamic Type
+                        .font(.app(size: titleSize).weight(.bold))   // scales with Dynamic Type
                         .accessibilityLabel(mode == .signIn ? "Sign in to your orders." : "Join Crease.")
                         .foregroundStyle(ink)
                         .lineSpacing(-4)
@@ -92,12 +88,12 @@ struct EmailAuthSheet: View {
                         .contentTransition(.opacity)
 
                     Text("Laundry and dry cleaning, picked up from your door and brought back.")
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(ink.opacity(0.55))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.bottom, 28)
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: 12) {
                         if mode == .signUp {
                             UnderlinedField(
                                 "Full name",
@@ -163,12 +159,12 @@ struct EmailAuthSheet: View {
                     if mode == .signUp, !confirmPassword.isEmpty, password != confirmPassword {
                         Label("Passwords don't match.", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(Theme.danger)
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .padding(.bottom, 12)
                     } else if let error = session.errorMessage {
                         Text(error)
                             .foregroundStyle(Theme.danger)
-                            .font(.footnote)
+                            .font(.app(.footnote))
                             .fixedSize(horizontal: false, vertical: true)
                             .textSelection(.enabled)   // so a support conversation can quote it
                             .padding(.bottom, 12)
@@ -182,13 +178,13 @@ struct EmailAuthSheet: View {
                                 ProgressView().tint(Theme.onInk)
                             } else {
                                 Text(mode == .signIn ? "Sign In" : "Create Account")
-                                    .font(.headline)
+                                    .font(.app(.headline))
                             }
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 54)
+                        .frame(height: 58)
                         .foregroundStyle(Theme.onInk)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.accentFill))
+                        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.accentFill))
                     }
                     .disabled(!canSubmit || isSubmitting)
                     .opacity(canSubmit ? 1 : 0.4)
@@ -206,9 +202,8 @@ struct EmailAuthSheet: View {
                             Text(mode == .signIn
                                  ? "Don't have an account? Sign up"
                                  : "Already have an account? Sign in")
-                                .font(.footnote)
-                                .foregroundStyle(ink.opacity(0.6))
-                                .underline()
+                                .font(.app(.footnote))
+                                .foregroundStyle(Theme.muted)
                                 .contentTransition(.opacity)
                                 .frame(minHeight: 44)   // Apple's 44 pt hit target
                                 .contentShape(Rectangle())
@@ -249,7 +244,7 @@ struct EmailAuthSheet: View {
     }
 }
 
-// MARK: - Underlined fields
+// MARK: - Fields (soft grey boxes since 2026-11-06; the names stayed)
 
 /// A field whose label sits above it and stays visible while typing.
 ///
@@ -281,21 +276,22 @@ private struct UnderlinedField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.footnote.weight(.medium))
+                .font(.app(.footnote).weight(.medium))
                 .foregroundStyle(focused == field ? ink : ink.opacity(0.55))
                 .animation(.easeInOut(duration: 0.15), value: focused)
             TextField("", text: $text)
                 .focused($focused, equals: field)
-                .font(.body)
+                .font(.app(.body))
                 .foregroundStyle(ink)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 56)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(focused == field ? ink : .clear, lineWidth: 1.5))
+                .animation(.easeInOut(duration: 0.15), value: focused)
                 // The caption above is a separate Text, so without this the
                 // field itself is nameless to VoiceOver — and to XCUITest.
                 .accessibilityLabel(label)
-            Rectangle()
-                .fill(focused == field ? ink.opacity(0.6) : ink.opacity(0.2))
-                .frame(height: 1)
-                .animation(.easeInOut(duration: 0.15), value: focused)
         }
     }
 }
@@ -324,19 +320,20 @@ private struct UnderlinedSecureField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.footnote.weight(.medium))
+                .font(.app(.footnote).weight(.medium))
                 .foregroundStyle(focused == field ? ink : ink.opacity(0.55))
                 .animation(.easeInOut(duration: 0.15), value: focused)
             SecureField("", text: $text)
                 .focused($focused, equals: field)
-                .font(.body)
+                .font(.app(.body))
                 .foregroundStyle(ink)
-                .padding(.vertical, 10)
-                .accessibilityLabel(label)
-            Rectangle()
-                .fill(focused == field ? ink.opacity(0.6) : ink.opacity(0.2))
-                .frame(height: 1)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 56)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(focused == field ? ink : .clear, lineWidth: 1.5))
                 .animation(.easeInOut(duration: 0.15), value: focused)
+                .accessibilityLabel(label)
         }
     }
 }

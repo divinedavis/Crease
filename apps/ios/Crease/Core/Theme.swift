@@ -22,10 +22,20 @@ enum Theme {
     static let accentFill = ink
     /// The page: white in light mode, black in dark.
     static let canvas = Color(.systemBackground)
-    /// Cards, search pills and tiles sitting on the canvas.
-    static let surface = Color(.secondarySystemBackground)
+    /// Cards, search pills and tiles sitting on the canvas. A neutral grey
+    /// (#F4F4F5), not the system's blue-tinted one: the soft-card look
+    /// (2026-11-06) puts illustrations on it and they read warm on neutral.
+    static let surface = adaptive(light: (0.957, 0.957, 0.961), dark: (0.11, 0.11, 0.118))
     /// Raised a step above `surface` (rows inside a card, chips).
     static let surfaceRaised = Color(.tertiarySystemBackground)
+    /// One shade darker than `surface`: inactive stepper dots, tracks.
+    static let surfaceStrong = adaptive(light: (0.925, 0.925, 0.933), dark: (0.17, 0.17, 0.18))
+    /// White in light mode: the "+" badges and tiles placed on a grey card.
+    static let raised = adaptive(light: (1, 1, 1), dark: (0.17, 0.17, 0.18))
+    /// Hairlines and unselected outlines.
+    static let line = adaptive(light: (0.906, 0.906, 0.918), dark: (0.22, 0.22, 0.235))
+    /// The solid grey of the row glyphs (pin, clock, note).
+    static let glyph = adaptive(light: (0.333, 0.333, 0.361), dark: (0.68, 0.68, 0.70))
     /// The one coloured surface: the promo card. White text on it is 12:1.
     static let promo = Color(red: 0.04, green: 0.13, blue: 0.30)
     /// "Best value" tags, used with white text (5.6:1).
@@ -45,13 +55,13 @@ enum Theme {
         })
     }
 
-    static let cardRadius: CGFloat = 12
+    static let cardRadius: CGFloat = 24
 }
 
 extension View {
     func creaseCard() -> some View {
         self
-            .padding(16)
+            .padding(18)
             .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
@@ -74,7 +84,7 @@ struct StatusPill: View {
 
     var body: some View {
         Text(status.title)
-            .font(.caption.weight(.semibold))
+            .font(.app(.caption).weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .foregroundStyle(tone.fg)
@@ -120,10 +130,10 @@ struct JourneyTrack: View {
                     HStack(spacing: 3) {
                         if i < current {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.app(size: 8).weight(.bold))
                         }
                         Text(steps[i])
-                            .font(.caption2.weight(.semibold))
+                            .font(.app(.caption2).weight(.semibold))
                             .fixedSize(horizontal: false, vertical: true)   // wraps at large text sizes
                     }
                     .foregroundStyle(i <= current ? Theme.accent : Color(.label).opacity(0.7))
@@ -143,5 +153,84 @@ struct JourneyTrack: View {
         let progress = "Progress: \(status.title)"
         guard !done.isEmpty else { return progress }
         return "\(progress). Completed: \(done.joined(separator: ", "))"
+    }
+}
+
+// MARK: - Type (Plus Jakarta Sans, owner's pick 2026-11-06)
+
+/// The app's one typeface. Five static weights ship in Resources/Fonts
+/// (Regular, Medium, SemiBold, Bold, ExtraBold — SIL OFL, licence beside them)
+/// and are registered through UIAppFonts. `.weight()` on these fonts resolves
+/// to the matching face within the family.
+enum AppFont {
+    static let regular = "PlusJakartaSans-Regular"
+    static let family = "Plus Jakarta Sans"
+
+    /// Apple's default point sizes, so every text style keeps the size it had
+    /// under SF Pro and still scales with Dynamic Type.
+    static func size(_ style: Font.TextStyle) -> CGFloat {
+        switch style {
+        case .largeTitle: 34
+        case .title: 28
+        case .title2: 22
+        case .title3: 20
+        case .headline, .body: 17
+        case .callout: 16
+        case .subheadline: 15
+        case .footnote: 13
+        case .caption: 12
+        case .caption2: 11
+        default: 17
+        }
+    }
+
+    /// UIKit's copy, for the navigation and tab bars SwiftUI draws through UIKit.
+    static func ui(_ size: CGFloat, weight: UIFont.Weight, relativeTo style: UIFont.TextStyle) -> UIFont {
+        let name: String = switch weight {
+        case .medium: "PlusJakartaSans-Medium"
+        case .semibold: "PlusJakartaSans-SemiBold"
+        case .bold: "PlusJakartaSans-Bold"
+        case .heavy, .black: "PlusJakartaSans-ExtraBold"
+        default: regular
+        }
+        let font = UIFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: weight)
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: font)
+    }
+
+    /// Bars are UIKit underneath SwiftUI: their titles and tab labels only
+    /// change through appearance proxies.
+    static func applyToBars() {
+        let button = UIBarButtonItemAppearance()
+        button.normal.titleTextAttributes = [.font: ui(17, weight: .regular, relativeTo: .body)]
+        let nav = UINavigationBarAppearance()
+        nav.configureWithDefaultBackground()
+        nav.buttonAppearance = button
+        nav.titleTextAttributes = [.font: ui(17, weight: .semibold, relativeTo: .headline)]
+        nav.largeTitleTextAttributes = [.font: ui(34, weight: .bold, relativeTo: .largeTitle)]
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+        let edge = UINavigationBarAppearance()
+        edge.configureWithTransparentBackground()
+        edge.titleTextAttributes = nav.titleTextAttributes
+        edge.largeTitleTextAttributes = nav.largeTitleTextAttributes
+        edge.buttonAppearance = button
+        UINavigationBar.appearance().scrollEdgeAppearance = edge
+        UITabBarItem.appearance().setTitleTextAttributes(
+            [.font: ui(10, weight: .semibold, relativeTo: .caption2)], for: .normal)
+    }
+}
+
+extension Font {
+    /// A text style in the app's typeface, scaling with Dynamic Type.
+    /// `.headline` keeps its semibold, as the system's does.
+    static func app(_ style: Font.TextStyle) -> Font {
+        let font = Font.custom(AppFont.regular, size: AppFont.size(style), relativeTo: style)
+        return style == .headline ? font.weight(.semibold) : font
+    }
+
+    /// A fixed size in the app's typeface, for the places that used
+    /// `.system(size:)` and deliberately do not scale (icons, wordmarks).
+    static func app(size: CGFloat) -> Font {
+        .custom(AppFont.regular, fixedSize: size)
     }
 }

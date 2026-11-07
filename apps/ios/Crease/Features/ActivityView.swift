@@ -49,11 +49,11 @@ struct ActivityView: View {
                         ForEach(Array(lists.past.dropFirst().enumerated()), id: \.element.id) { i, order in
                             HistoryRow(order: order, rebook: UsualOrder.rebook(order).map { usual in { rebook(usual) } })
                                 .staggeredAppear(i + 2)
-                            Divider().padding(.leading, 66)
+                            Divider().overlay(Theme.line).padding(.leading, 66)
                         }
                     }
                 }
-                .padding(16)
+                .padding(20)
             }
             .background(Theme.canvas)
             .navigationTitle("Activity")
@@ -63,9 +63,7 @@ struct ActivityView: View {
     }
 
     private func header(_ title: String) -> some View {
-        Text(title)
-            .font(.title3.weight(.bold))
-            .accessibilityAddTraits(.isHeader)
+        Eyebrow(title)
     }
 
     /// Placeholder rows while the first load is in flight, so the tab has a
@@ -82,20 +80,17 @@ struct ActivityView: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("You have no upcoming pickups")
-                        .font(.headline)
+                        .font(.app(.headline))
                         .foregroundStyle(Theme.ink)
                     Label("Book a pickup", systemImage: "arrow.right")
                         .labelStyle(TrailingIconLabelStyle())
-                        .font(.subheadline.weight(.medium))
+                        .font(.app(.subheadline).weight(.medium))
                         .foregroundStyle(Theme.muted)
                 }
                 Spacer()
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 34))
-                    .foregroundStyle(Theme.ink)
-                    .accessibilityHidden(true)
+                IllustrationTile(art: .calendar, size: 72, fill: Theme.raised, inset: 0.1)
             }
-            .creaseCard()
+            .softCard()
         }
         .buttonStyle(PressableStyle())
         .accessibilityElement(children: .combine)
@@ -111,23 +106,23 @@ private struct LatestOrderCard: View {
             if let address = order.address {
                 RouteSnapshot(pickup: address.asResolved.coordinate, shop: order.cleaner?.coordinate, shopName: order.cleaner?.name)
                     .frame(height: 130)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             Text(order.cleaner?.name ?? "Order \(order.shortCode)")
-                .font(.headline)
+                .font(.app(.headline))
                 .foregroundStyle(Theme.ink)
             HStack {
                 Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
                 Spacer()
                 StatusPill(status: order.status)
             }
-            .font(.footnote)
+            .font(.app(.footnote))
             .foregroundStyle(Theme.muted)
             Text(order.priceText ?? "—")
-                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .font(.app(.subheadline).weight(.semibold).monospacedDigit())
                 .foregroundStyle(Theme.ink)
         }
-        .creaseCard()
+        .softCard(padding: 14)
     }
 }
 
@@ -140,20 +135,16 @@ private struct HistoryRow: View {
         HStack(spacing: 14) {
             NavigationLink(value: order) {
                 HStack(spacing: 14) {
-                    Image(systemName: "bag.fill")
-                        .font(.title3)
-                        .foregroundStyle(Theme.ink)
-                        .frame(width: 52, height: 52)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    IllustrationTile(art: order.serviceIllustration, size: 52, corner: 16, inset: 0.1)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(order.cleaner?.name ?? "Order \(order.shortCode)")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.app(.subheadline).weight(.semibold))
                             .foregroundStyle(Theme.ink)
                         Text(order.createdAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.muted)
                         Text(order.priceText ?? order.status.title)
-                            .font(.caption.monospacedDigit())
+                            .font(.app(.caption).monospacedDigit())
                             .foregroundStyle(Theme.muted)
                     }
                     Spacer(minLength: 0)
@@ -166,7 +157,7 @@ private struct HistoryRow: View {
             if let rebook {
                 Button(action: rebook) {
                     Label("Rebook", systemImage: "arrow.clockwise")
-                        .font(.footnote.weight(.semibold))
+                        .font(.app(.footnote).weight(.semibold))
                         .foregroundStyle(Theme.ink)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)

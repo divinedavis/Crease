@@ -190,54 +190,58 @@ struct SmartOrderTools: View {
                     .accessibilityLabel("Describe your order")
                 DictateButton(text: $description)
                 Button("Fill in") { Task { await fillFromText() } }
-                    .buttonStyle(.bordered)
+                    .font(.app(.subheadline).weight(.semibold))
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.ink)
+                    .foregroundStyle(Theme.onInk)
+                    .buttonBorderShape(.capsule)
                     .disabled(description.trimmingCharacters(in: .whitespaces).isEmpty || working)
             }
 
-            if let laundry = weighedLine {
-                Button {
-                    estimatingWeight = true
-                } label: {
-                    Label("Estimate weight from a photo", systemImage: "scalemass")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .font(.subheadline)
-                .sheet(isPresented: $estimatingWeight) {
-                    WeightEstimateView(line: laundry) { estimate, method, photo in
-                        kind = .washFold
-                        quantities[laundry.id] = max(estimate.pounds, ServicePricing.startingUnits(laundry))
-                        extras.weightEstimate = (estimate.pounds, method)
-                        if let photo { extras.addHandoff(photo) }
-                        result = "Set to \(Int(estimate.pounds)) lb. \(laundry.label) is weighed at the counter, and that's what you pay."
-                        estimatingWeight = false
+            // The tools as the reference's product cards: picture, round
+            // "+", name, one line. Labels stay the sentences VoiceOver and the
+            // UI tests already know.
+            HStack(alignment: .top, spacing: 10) {
+                if let laundry = weighedLine {
+                    Button {
+                        estimatingWeight = true
+                    } label: {
+                        ToolCard(art: .scale, title: "Estimate weight", detail: "From a photo")
                     }
-                    .presentationDetents([.large])
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel("Estimate weight from a photo")
+                    .sheet(isPresented: $estimatingWeight) {
+                        WeightEstimateView(line: laundry) { estimate, method, photo in
+                            kind = .washFold
+                            quantities[laundry.id] = max(estimate.pounds, ServicePricing.startingUnits(laundry))
+                            extras.weightEstimate = (estimate.pounds, method)
+                            if let photo { extras.addHandoff(photo) }
+                            result = "Set to \(Int(estimate.pounds)) lb. \(laundry.label) is weighed at the counter, and that's what you pay."
+                            estimatingWeight = false
+                        }
+                        .presentationDetents([.large])
+                    }
                 }
-            }
-
-            HStack(spacing: 10) {
                 ImageSourceButton(onImage: { image in Task { await scanClothes(image) } }) {
-                    Label("Scan clothes", systemImage: "camera.viewfinder")
-                        .frame(maxWidth: .infinity)
+                    ToolCard(art: .camera, title: "Scan clothes", detail: "Suggests lines")
                 }
-                .buttonStyle(.bordered)
+                .accessibilityLabel("Scan clothes")
                 ImageSourceButton(onImage: { image in Task { await readCareLabel(image) } }) {
-                    Label("Care label", systemImage: "tag")
-                        .frame(maxWidth: .infinity)
+                    ToolCard(art: .careTag, title: "Care label", detail: "Reads the tag")
                 }
-                .buttonStyle(.bordered)
+                .accessibilityLabel("Care label")
             }
-            .font(.subheadline)
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
 
             if working {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Looking…").font(.caption).foregroundStyle(Theme.muted)
+                    Text("Looking…").font(.app(.caption)).foregroundStyle(Theme.muted)
                 }
             } else if let result {
                 Text(result)
-                    .font(.caption)
+                    .font(.app(.caption))
                     .foregroundStyle(Theme.muted)
                     .accessibilityIdentifier("smart-result")
             }
@@ -310,6 +314,40 @@ struct SmartOrderTools: View {
 
 /// Photos for the shop, and for a Return only order the claim ticket, on the
 /// checkout screen.
+/// One Quick add tool, drawn like the reference's product card.
+struct ToolCard: View {
+    let art: Illustration
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ZStack(alignment: .topTrailing) {
+                art.image
+                    .resizable()
+                    .scaledToFit()
+                    .padding(12)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 76)
+                    .background(Theme.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                PlusBadge(size: 26).padding(5)
+            }
+            .padding(.bottom, 4)
+            Text(title)
+                .font(.app(.footnote).weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(detail)
+                .font(.app(.caption2))
+                .foregroundStyle(Theme.muted)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
 struct ShopExtrasCard: View {
     @ObservedObject var extras: OrderExtras
     let returnOnly: Bool
@@ -323,12 +361,15 @@ struct ShopExtrasCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if returnOnly { ticketRow }
-            Text("Photos for the shop")
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: 12) {
+                IllustrationTile(art: .camera, size: 48, corner: 14, fill: Theme.raised, inset: 0.1)
+                Text("Photos for the shop")
+                    .font(.app(.headline))
+            }
             Text(returnOnly
                  ? "Optional. A photo of a stain with a note helps the counter."
                  : "Optional. A handoff photo records what went in the bag and when. Add stains with a note so the counter knows what to treat.")
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -343,25 +384,25 @@ struct ShopExtrasCard: View {
             HStack(spacing: 10) {
                 if !returnOnly {
                     ImageSourceButton(onImage: { extras.addHandoff($0) }) {
-                        Label("Handoff photo", systemImage: "camera")
-                            .frame(maxWidth: .infinity)
+                        Label("Handoff photo", systemImage: "camera.fill")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(Theme.raised, in: Capsule())
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.plain)
                     .disabled(!extras.canAddPhoto)
                 }
                 ImageSourceButton(onImage: { stainDraft = OrderPhoto(image: $0, kind: .stain) }) {
-                    Label("Stain", systemImage: "drop")
-                        .frame(maxWidth: .infinity)
+                    Label("Stain", systemImage: "drop.fill")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Theme.raised, in: Capsule())
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
                 .disabled(!extras.canAddPhoto)
             }
-            .font(.subheadline)
+            .font(.app(.subheadline).weight(.semibold))
+            .foregroundStyle(Theme.ink)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .softCard(padding: 16)
         .sheet(item: $stainDraft) { draft in
             StainNoteView(photo: draft) { saved in
                 if extras.canAddPhoto { extras.photos.append(saved) }
@@ -374,7 +415,7 @@ struct ShopExtrasCard: View {
     private var ticketRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Shop ticket")
-                .font(.subheadline.weight(.semibold))
+                .font(.app(.subheadline).weight(.semibold))
             HStack(spacing: 8) {
                 TextField("Ticket number", text: $extras.ticket)
                     .textInputAutocapitalization(.characters)
@@ -388,7 +429,7 @@ struct ShopExtrasCard: View {
                 .buttonStyle(.bordered)
             }
             if let ticketMessage {
-                Text(ticketMessage).font(.caption).foregroundStyle(Theme.muted)
+                Text(ticketMessage).font(.app(.caption)).foregroundStyle(Theme.muted)
             }
         }
         .padding(.bottom, 4)
@@ -416,7 +457,7 @@ struct ShopExtrasCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(alignment: .bottomLeading) {
                     Text(photo.kind == .stain ? "Stain" : "Handoff")
-                        .font(.caption2.weight(.semibold))
+                        .font(.app(.caption2).weight(.semibold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(.black.opacity(0.6), in: Capsule())
@@ -478,7 +519,7 @@ struct StainNoteView: View {
                         Label(tidying ? "Tidying…" : "Tidy note for the shop", systemImage: "wand.and.stars")
                     }
                     .disabled(note.isEmpty || tidying)
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                 }
                 Spacer(minLength: 0)
             }
@@ -545,7 +586,7 @@ struct WeightEstimateView: View {
                         }
                     }
                     if let detected {
-                        Text(detected).font(.caption).foregroundStyle(Theme.muted)
+                        Text(detected).font(.app(.caption)).foregroundStyle(Theme.muted)
                     }
                     if PileScanner.isSupported {
                         Button {
@@ -585,10 +626,10 @@ struct WeightEstimateView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("About \(Int(estimate.pounds)) lb")
-                            .font(.title2.weight(.semibold))
+                            .font(.app(.title2).weight(.semibold))
                             .accessibilityIdentifier("weight-estimate")
                         Text("Likely \(Int(estimate.low))–\(Int(estimate.high)) lb. \(line.label) is weighed at the counter, and that weight is what you pay.")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.muted)
                     }
                     Button("Use \(Int(estimate.pounds)) lb") { onUse(estimate, method, photo) }
@@ -645,7 +686,7 @@ struct PileScanView: View {
                 Text(scanner.floorFound
                      ? "Frame the whole pile in the middle, from a step back."
                      : "Point at the floor next to the pile.")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.subheadline).weight(.semibold))
                     .multilineTextAlignment(.center)
                     .padding(12)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

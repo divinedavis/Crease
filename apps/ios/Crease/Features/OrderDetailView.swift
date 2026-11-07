@@ -29,7 +29,7 @@ struct OrderDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 14) {
+            VStack(spacing: 16) {
                 statusCard
                 if let payError { payProblemCard(payError) }
                 if live.status == .draft { unpaidCard }
@@ -43,7 +43,7 @@ struct OrderDetailView: View {
                 if let leg = live.liveLeg { courierCard(leg) }
                 cancelSection
             }
-            .padding(16)
+            .padding(20)
         }
         .background(Theme.canvas)
         .navigationTitle("Crease")
@@ -53,37 +53,45 @@ struct OrderDetailView: View {
         }
     }
 
+    /// The hero: where the bag is, as a picture and a big line, then the
+    /// whole journey under it.
     private var statusCard: some View {
         VStack(alignment: .leading, spacing: 14) {
+            IllustrationTile(art: live.illustration, size: 104, corner: 30, inset: 0.1)
             Text(live.statusTitle)
-                .font(.title3.weight(.semibold))
+                .font(.app(.largeTitle).weight(.bold))
+                .kerning(-0.6)
+                .fixedSize(horizontal: false, vertical: true)
             if !live.statusDetail.isEmpty {
                 Text(live.statusDetail)
-                    .font(.subheadline)
+                    .font(.app(.body))
                     .foregroundStyle(Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             JourneyTrack(order: live)
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .creaseCard()
+        .padding(.bottom, 6)
     }
 
-    /// A booking whose card never went through.
-    ///
-    /// It is neither in progress nor history, and it accumulates: leaving it
-    /// on the list as an unexplained "Draft" is how someone ends up with seven
-    /// of them and no idea what they are. There are exactly two useful things
-    /// to do with one, so offer both — this pays it, and the cancel section
-    /// below already covers a draft.
+    /// An action card's heading: the picture of the thing, then the line.
+    private func cardHeading(_ art: Illustration, _ title: String, _ tint: Color) -> some View {
+        HStack(spacing: 12) {
+            IllustrationTile(art: art, size: 48, corner: 14, fill: Theme.raised, inset: 0.1)
+            Text(title)
+                .font(.app(.headline))
+                .foregroundStyle(tint)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private var unpaidCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Payment not completed", systemImage: "creditcard")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.warn)
+            cardHeading(.laundrybag, "Payment not completed", Theme.warn)
 
             Text("Nothing has been charged and no driver has been booked. Pay the \(live.deliveryFeeCents.asMoney) courier fee and we'll send one.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .fixedSize(horizontal: false, vertical: true)
 
             Button {
@@ -97,7 +105,7 @@ struct OrderDetailView: View {
             .disabled(paying)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18)
         .background(Theme.warnSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
@@ -110,7 +118,7 @@ struct OrderDetailView: View {
     /// moment there is most to say.
     private func payProblemCard(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
-            .font(.subheadline)
+            .font(.app(.subheadline))
             .foregroundStyle(Theme.warn)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,20 +132,18 @@ struct OrderDetailView: View {
     /// it says where the clothes are instead of asking when to bring them.
     private var collectionCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Ready to collect", systemImage: "bag.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
+            cardHeading(.shop, "Ready to collect", Theme.accent)
             Text("\(live.cleaner?.name ?? "The shop") has finished. You booked pickup only, so collect it from their counter whenever suits — there's no delivery on this order.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .fixedSize(horizontal: false, vertical: true)
             if let shop = live.cleaner, let street = shop.line1 {
                 Text([street, shop.city, shop.state].joined(separator: ", "))
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18)
         .background(Theme.accentSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
@@ -147,20 +153,18 @@ struct OrderDetailView: View {
     /// card. Nothing moves on this order until they make that trip.
     private var dropOffCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Drop your bag off", systemImage: "figure.walk")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
+            cardHeading(.laundrybag, "Drop your bag off", Theme.accent)
             Text("You booked the delivery home only, so take your bag to \(live.cleaner?.name ?? "the shop") whenever suits. They'll count it in and we'll bring it back when it's ready.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .fixedSize(horizontal: false, vertical: true)
             if let shop = live.cleaner, let street = shop.line1 {
                 Text([street, shop.city, shop.state].joined(separator: ", "))
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18)
         .background(Theme.accentSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
@@ -169,11 +173,9 @@ struct OrderDetailView: View {
     /// telling them something.
     private var readyCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Your clothes are ready", systemImage: "checkmark.circle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
+            cardHeading(.folded, "Your clothes are ready", Theme.accent)
             Text("\(live.cleaner?.name ?? "The shop") has finished. Choose when you'd like them delivered.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .fixedSize(horizontal: false, vertical: true)
             Button {
                 schedulingReturn = true
@@ -184,21 +186,19 @@ struct OrderDetailView: View {
             .controlSize(.large)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18)
         .background(Theme.accentSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 
     private var approvalCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Approve the updated total", systemImage: "exclamationmark.circle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.warn)
+            cardHeading(.receipt, "Approve the updated total", Theme.warn)
 
             Text(live.estimateSubtotalCents > 0
                  ? "\(live.cleaner?.name ?? "The cleaner") counted more items than your estimate covered. Nothing has been charged beyond your original hold."
                  : "\(live.cleaner?.name ?? "The cleaner") counted your items, and the total came to more than the amount held on your card. Nothing has been charged beyond that hold.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 7) {
@@ -227,11 +227,11 @@ struct OrderDetailView: View {
             .disabled(approving)
 
             Text("Questions? Call \(live.cleaner?.name ?? "the shop") before approving.")
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18)
         .background(Theme.warnSoft)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
@@ -247,28 +247,28 @@ struct OrderDetailView: View {
     private func itemsCard(_ items: [OrderItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("What they counted")
-                .font(.footnote.weight(.semibold))
+                .font(.app(.footnote).weight(.semibold))
                 .foregroundStyle(Theme.muted)
 
             ForEach(items) { item in
                 HStack {
-                    Text(item.label).font(.subheadline)
+                    Text(item.label).font(.app(.subheadline))
                     Text("×\(item.quantity)")
-                        .font(.subheadline)
+                        .font(.app(.subheadline))
                         .foregroundStyle(Theme.muted)
                     Spacer()
                     Text(item.totalCents.asMoney)
-                        .font(.subheadline.monospacedDigit())
+                        .font(.app(.subheadline).monospacedDigit())
                         .accessibilityLabel(Self.spoken(item.totalCents))
                 }
             }
 
             Divider()
             HStack {
-                Text("Total").font(.subheadline.weight(.semibold))
+                Text("Total").font(.app(.subheadline).weight(.semibold))
                 Spacer()
                 Text(live.displayCents.asMoney)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .font(.app(.subheadline).weight(.semibold).monospacedDigit())
                     .accessibilityLabel(Self.spoken(live.displayCents))
             }
         }
@@ -331,7 +331,7 @@ struct OrderDetailView: View {
                     translatingShopNote = true
                 } label: {
                     Label("Translate", systemImage: "translate")
-                        .font(.caption.weight(.semibold))
+                        .font(.app(.caption).weight(.semibold))
                 }
                 .translatable(isPresented: $translatingShopNote, text: notes)
             }
@@ -357,10 +357,10 @@ struct OrderDetailView: View {
                             .foregroundStyle(row.failed ? Theme.warn : Theme.accent)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(row.title)
-                                .font(.subheadline.weight(.medium))
+                                .font(.app(.subheadline).weight(.medium))
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(row.detail)
-                                .font(.caption)
+                                .font(.app(.caption))
                                 .foregroundStyle(Theme.muted)
                         }
                     }
@@ -433,12 +433,12 @@ struct OrderDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label(leg.leg == "pickup" ? "Collecting from you" : "Bringing it back",
                   systemImage: "car.fill")
-                .font(.subheadline.weight(.semibold))
+                .font(.app(.subheadline).weight(.semibold))
                 .foregroundStyle(Theme.accent)
 
             if let name = leg.courierName {
                 Text(name + (leg.courierVehicle.map { " · \($0)" } ?? ""))
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
             }
 
             // Surfaced only when the carrier actually issued one; showing a
@@ -446,10 +446,10 @@ struct OrderDetailView: View {
             if let pin = leg.dropoffPincode {
                 HStack(spacing: 8) {
                     Text("Handoff code")
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(Theme.muted)
                     Text(pin)
-                        .font(.title3.weight(.bold).monospacedDigit())
+                        .font(.app(.title3).weight(.bold).monospacedDigit())
                         .tracking(3)
                 }
                 .padding(.top, 2)
@@ -458,7 +458,7 @@ struct OrderDetailView: View {
             if let url = leg.trackingURL {
                 Link(destination: url) {
                     Label("Track the driver", systemImage: "map")
-                        .font(.subheadline.weight(.medium))
+                        .font(.app(.subheadline).weight(.medium))
                 }
                 .padding(.top, 2)
             }
@@ -474,7 +474,7 @@ struct OrderDetailView: View {
                let url = PhoneNumber.callURL(leg.courierPhone) {
                 Link(destination: url) {
                     Label("Call the driver", systemImage: "phone.fill")
-                        .font(.subheadline.weight(.medium))
+                        .font(.app(.subheadline).weight(.medium))
                 }
                 .accessibilityLabel("Call the driver at \(number)")
                 .padding(.top, 2)
@@ -495,7 +495,7 @@ struct OrderDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if let cancelError {
                     Text(cancelError)
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -516,7 +516,7 @@ struct OrderDetailView: View {
                 // whether someone taps at all.
                 if live.status.cancellationMayCost || live.courierEngaged || live.bagCollected {
                     Text(cancellationMoneyNote)
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(Theme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -541,7 +541,7 @@ struct OrderDetailView: View {
                     Text(cannotCancelReason)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .font(.footnote)
+                .font(.app(.footnote))
                 .foregroundStyle(Theme.muted)
                 // No number here. This card tells the customer to call, and the
                 // cleaner card directly above it is already showing the number
@@ -563,7 +563,7 @@ struct OrderDetailView: View {
         if let number = cleaner.formattedPhone, let url = cleaner.callURL {
             Link(destination: url) {
                 Label(number, systemImage: "phone.fill")
-                    .font(.subheadline.weight(.medium))
+                    .font(.app(.subheadline).weight(.medium))
             }
             .accessibilityLabel("Call \(cleaner.name) at \(number)")
         }
@@ -674,19 +674,19 @@ struct OrderDetailView: View {
 
     private func labelled(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(Theme.muted)
-            Text(value).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+            Text(label).font(.app(.caption)).foregroundStyle(Theme.muted)
+            Text(value).font(.app(.subheadline)).fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func row(_ label: String, _ value: String, muted: Bool = false, bold: Bool = false) -> some View {
         HStack {
             Text(label)
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .foregroundStyle(muted ? Theme.muted : Color.primary)
             Spacer()
             Text(value)
-                .font(bold ? .subheadline.weight(.bold).monospacedDigit()
+                .font(bold ? .app(.subheadline).weight(.bold).monospacedDigit()
                            : .subheadline.monospacedDigit())
                 .foregroundStyle(muted ? Theme.muted : Color.primary)
         }

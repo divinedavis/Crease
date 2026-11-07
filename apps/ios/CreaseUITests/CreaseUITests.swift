@@ -131,6 +131,9 @@ final class CreaseUITests: XCTestCase {
                       "Google is the one-tap alternative, so it must be present")
         XCTAssertTrue(app.buttons["Continue with email"].exists,
                       "email is the fallback for a customer neither provider fits")
+        let fact = NSPredicate(format: "label BEGINSWITH 'From your door'")
+        XCTAssertTrue(app.staticTexts.matching(fact).firstMatch.exists || app.otherElements.matching(fact).firstMatch.exists,
+                      "the sign-in card says what Crease does before asking for anything")
 
         // The common case is still one decision — which button. Fields belong
         // in the sheet, not on this screen.
@@ -417,6 +420,9 @@ final class CreaseUITests: XCTestCase {
         XCTAssertTrue(app.textFields["Street address"].exists,
                       "the keyboard target must be present and focused")
         attach(app, "address-entry")
+        // The soft-card redesign (2026-11-06) numbers the booking: ① Address,
+        // ② Order, ③ Checkout. The current step's name is what VoiceOver reads.
+        XCTAssertTrue(app.staticTexts["Address"].exists, "the booking should open on step 1, Address")
 
         app.buttons["Cancel"].tap()
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 10),
@@ -551,7 +557,9 @@ final class CreaseUITests: XCTestCase {
         // the entire application on every retry doing it, which turned a
         // 25-second test into an eight-minute one.
         let quoted = NSPredicate(format: "label BEGINSWITH 'Estimated cleaning'")
-        let estimate = [app.staticTexts.matching(quoted), app.otherElements.matching(quoted)]
+        // Since the soft-card redesign (2026-11-06) the total is the black bar
+        // that also closes the sheet, so it reports as a button.
+        let estimate = [app.buttons.matching(quoted), app.staticTexts.matching(quoted), app.otherElements.matching(quoted)]
             .map(\.firstMatch)
             .first { $0.waitForExistence(timeout: 5) }
         guard let estimate else { return XCTFail("the sheet must total the bag") }
@@ -701,6 +709,7 @@ final class CreaseUITests: XCTestCase {
         home.tap()
 
         XCTAssertTrue(app.staticTexts["Round trip"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Order"].exists, "the booking screen is step 2, Order")
 
         // Guards a claim the app used to make and cannot support: no estimate
         // here may describe the whole cycle, because the cleaning duration is
@@ -1387,7 +1396,7 @@ final class CreaseUITests: XCTestCase {
         // even when the shop prices only one.
         washRow.tap()
         XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
-        let dry = app.segmentedControls.buttons["Dry cleaning"]
+        let dry = app.buttons["Dry cleaning"]
         XCTAssertTrue(dry.waitForExistence(timeout: 5), "the sheet should offer Dry cleaning to switch to")
         for attempt in 0..<3 where !dry.isSelected {
             if attempt == 0 { dry.tap() } else { dry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }

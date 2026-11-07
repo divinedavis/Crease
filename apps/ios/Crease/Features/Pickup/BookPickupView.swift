@@ -423,22 +423,25 @@ struct BookPickupView: View {
             // stay put until the sheet answers.
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 40, height: 40)
-                    .background(.regularMaterial, in: Circle())
+                    .font(.app(.body).weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.raised, in: Circle())
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
             }
             .disabled(submitting)
             .accessibilityLabel("Back")
 
             HStack(spacing: 6) {
                 Text(pickup.line1).lineLimit(1)
-                Image(systemName: "arrow.right").font(.caption2)
+                Image(systemName: "arrow.right").font(.app(.caption2))
                 Text(cleaner?.name ?? "Nearest cleaner").lineLimit(1)
             }
-            .font(.subheadline.weight(.medium))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: Capsule())
+            .font(.app(.subheadline).weight(.semibold))
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .background(Theme.raised, in: Capsule())
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
 
             Spacer(minLength: 0)
         }
@@ -448,14 +451,14 @@ struct BookPickupView: View {
     private var optionsSheet: some View {
         VStack(spacing: 0) {
             Capsule()
-                .fill(Color(.tertiaryLabel))
-                .frame(width: 36, height: 5)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+                .fill(Theme.line)
+                .frame(width: 40, height: 5)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
 
             if let error {
                 Text(error)
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.danger)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
@@ -472,8 +475,8 @@ struct BookPickupView: View {
             }
         }
         .background(Theme.canvas)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 18, topTrailingRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 12, y: -2)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous))
+        .shadow(color: .black.opacity(0.10), radius: 16, y: -4)
         .ignoresSafeArea(edges: .bottom)
     }
 
@@ -481,7 +484,7 @@ struct BookPickupView: View {
         HStack(spacing: 10) {
             ProgressView()
             Text("Completing your booking…")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity)
@@ -491,69 +494,62 @@ struct BookPickupView: View {
 
     @ViewBuilder private var bookingControls: some View {
         Group {
-            cleanerRow
-                .padding(.horizontal, 16)
-                .padding(.bottom, 10)
+            NumberedStepper(current: 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
 
-            VStack(spacing: 8) {
+            cleanerRow
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+
+            // The three tiers side by side, the way the reference lays out
+            // its choices: picture, name, price. The blurb for the chosen one
+            // is the fee line under them.
+            HStack(spacing: 10) {
                 ForEach(Array(ServiceOption.all.enumerated()), id: \.element.id) { i, option in
                     optionRow(option)
                         .staggeredAppear(i + 2)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
 
             if selected.carriesCleaning {
                 serviceRow
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
             }
 
             Text(feeExplainer)
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 28)
                 .padding(.top, 12)
 
-            Button {
-                // Nothing picked is not a checkout. A bag with no prices on it
-                // reaches the counter as a question — the shop cannot quote it,
-                // the hold cannot cover it, and the customer meets the real
-                // number after their clothes have gone. So the button does the
-                // only useful thing instead of refusing: it opens the list.
-                if selected.carriesCleaning && !kindOffered {
+            let blocked = selected.carriesCleaning && !kindOffered
+            let empty = selected.carriesCleaning && declaredLines.isEmpty
+            TotalBar(
+                amount: blocked || empty ? nil : totalCents.asMoney,
+                note: "Total · est. · held, not charged",
+                action: blocked ? "\(serviceKind.label) isn't offered here"
+                    : empty ? "Choose what you're sending" : "Continue",
+                enabled: !(cleaner == nil || (selected.carriesCleaning && menu.isEmpty))
+            ) {
+                if blocked {
                     kindUnavailable = true
-                } else if selected.carriesCleaning && declaredLines.isEmpty {
+                } else if empty {
                     choosingItems = true
                 } else {
                     reviewing = true
                 }
-            } label: {
-                // The whole bill, not the courier fee. This button used to
-                // charge a card for $29.95 while the customer was also, in the
-                // same transaction, paying for the cleaning — a number that
-                // appeared nowhere until their statement.
-                Text(selected.carriesCleaning && !kindOffered
-                     ? "\(serviceKind.label) isn't offered here"
-                     : selected.carriesCleaning && declaredLines.isEmpty
-                     ? "Choose what you're sending"
-                     : "Continue · \(totalCents.asMoney)")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(InkButtonStyle())
-            .controlSize(.large)
-            .disabled(cleaner == nil || (selected.carriesCleaning && menu.isEmpty))
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 4)
             .padding(.top, 12)
-            .padding(.bottom, 18)
+            .padding(.bottom, 10)
         }
     }
 
-    /// The fee buys couriers, and which couriers depends on the tier. Under
-    /// Pickup only the old single sentence promised a delivery time that tier
-    /// does not pay for, which is the same lie the Orders screen used to tell
-    /// once the clothes were ready.
     private var feeExplainer: String {
         let shop = cleaner?.name ?? "the shop"
         switch selected.id {
@@ -574,19 +570,14 @@ struct BookPickupView: View {
     /// the approval flow. The customer found out what their clothes cost after
     /// they had already left the house.
     private var serviceRow: some View {
-        // Always the sheet: it shows every service, including ones this shop
-        // has not priced, so the customer can switch either way from there.
         Button { choosingItems = true } label: {
-            HStack(spacing: 12) {
-                Image(systemName: serviceKind.symbol)
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 34, height: 34)
-                    .background(Theme.accentSoft, in: Circle())
-                VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 14) {
+                IllustrationTile(art: serviceKind.illustration, size: 60, corner: 18, inset: 0.1)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(serviceKind.label)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.app(.headline))
                     Text(declaredSummary)
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(Theme.muted)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -594,25 +585,21 @@ struct BookPickupView: View {
                 Spacer(minLength: 8)
                 if estimateCents > 0 {
                     Text(estimateCents.asMoney)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.app(.subheadline).weight(.semibold).monospacedDigit())
                 }
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(.footnote).weight(.semibold))
                     .foregroundStyle(Theme.muted)
             }
-            .padding(12)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .outlineCard(padding: 10)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
         .disabled(menu.isEmpty)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(serviceKind.label). \(declaredSummary). \(estimateCents > 0 ? "Estimated \(estimateCents.asMoney)." : "")")
         .accessibilityHint("Choose the service and what is in the bag")
     }
 
-    /// One line describing the bag: garments counted, or pounds estimated.
-    /// Never a price on its own — the price lives beside it.
     private var declaredSummary: String {
         guard kindOffered else {
             return "\(cleaner?.name ?? "This shop") doesn't offer \(serviceKind.label.lowercased()) yet"
@@ -642,33 +629,31 @@ struct BookPickupView: View {
 
     private var cleanerRow: some View {
         Button { choosingCleaner = true } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "building.2.fill")
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 34, height: 34)
-                    .background(Theme.accentSoft, in: Circle())
+            HStack(spacing: 14) {
+                Image(systemName: "storefront.fill")
+                    .font(.app(size: 20).weight(.semibold))
+                    .foregroundStyle(Theme.glyph)
+                    .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cleaner?.name ?? "Choose a cleaner")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.app(.body).weight(.semibold))
                     if let cleaner, let miles = cleaner.milesFrom(pickup.coordinate) {
                         Text(String(format: "%.1f mi away · %dh turnaround", miles, cleaner.turnaroundHours))
-                            .font(.caption).foregroundStyle(Theme.muted)
+                            .font(.app(.subheadline)).foregroundStyle(Theme.muted)
                     } else {
                         Text("Tap to pick a partner shop")
-                            .font(.caption).foregroundStyle(Theme.muted)
+                            .font(.app(.subheadline)).foregroundStyle(Theme.muted)
                     }
                 }
                 Spacer()
                 Text("Change")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.muted)
+                    .font(.app(.footnote).weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Theme.surface, in: Capsule())
             }
-            .padding(12)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -678,56 +663,58 @@ struct BookPickupView: View {
     private func optionRow(_ option: ServiceOption) -> some View {
         let isSelected = option.id == selected.id
         return Button {
-            // A springy selection makes the tap feel answered even before the
-            // price at the bottom updates.
             withAnimation(Motion.snappy) { selected = option }
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: option.symbol)
-                    .font(.system(size: 26, weight: .semibold))
-                    .frame(width: 48, height: 44)
-                    .foregroundStyle(Theme.ink)
+            VStack(alignment: .leading, spacing: 4) {
+                option.illustration.image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 40)
                     .scaleEffect(isSelected ? 1.08 : 1)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(option.name).font(.body.weight(.bold))
-                        if option.isRecommended {
-                            Text("Best value")
-                                .font(.caption2.weight(.bold))
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Theme.tag, in: Capsule())
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    if let eta = option.pickupEtaMinutes {
-                        Text("Driver in ~\(eta) min")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.muted)
-                    }
-                    Text(option.blurb).font(.caption).foregroundStyle(Theme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
+                    .accessibilityHidden(true)
+                Text(option.name)
+                    .font(.app(.subheadline).weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Text(option.priceCents.asMoney)
-                    .font(.body.weight(.bold).monospacedDigit())
+                    .font(.app(.caption).weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Theme.muted)
+                if let eta = option.pickupEtaMinutes {
+                    Text("Driver in ~\(eta) min")
+                        .font(.app(.caption2))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    Text("No pickup")
+                        .font(.app(.caption2))
+                        .foregroundStyle(Theme.muted)
+                }
+                if option.isRecommended {
+                    Text("Best value")
+                        .font(.app(.caption2).weight(.bold))
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Theme.ink, in: Capsule())
+                        .foregroundStyle(Theme.onInk)
+                        .padding(.top, 2)
+                }
             }
             .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? Theme.accentSoft : .clear)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isSelected ? Theme.canvas : Theme.surface)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? Theme.ink : .clear, lineWidth: 2.5)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(isSelected ? Theme.ink : .clear, lineWidth: 2.5)
             )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityLabel("\(option.name), \(option.priceCents.asMoney)\(option.isRecommended ? ", Best value" : ""). \(option.pickupEtaMinutes.map { "Driver in about \($0) minutes. " } ?? "")\(option.blurb)")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
     }
 
     private func book() async {
@@ -946,7 +933,7 @@ struct RouteEndpoint: View {
         VStack(spacing: 4) {
             if let caption {
                 Text(caption)
-                    .font(.caption.weight(.bold))
+                    .font(.app(.caption).weight(.bold))
                     .foregroundStyle(Theme.onInk)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)

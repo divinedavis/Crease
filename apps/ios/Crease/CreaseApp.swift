@@ -9,12 +9,20 @@ struct CreaseApp: App {
     @StateObject private var session = Session()
     @StateObject private var lock = AppLock()
 
+    init() {
+        // Navigation titles and tab labels are UIKit underneath; they take the
+        // app's typeface only through appearance proxies, set before any bar.
+        AppFont.applyToBars()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(session)
                 .environmentObject(lock)
                 .tint(Theme.accent)
+                // Every Text, Button and field without its own font.
+                .font(.app(.body))
         }
         // Foreground/background is watched inside RootView, from UIKit's own
         // notifications rather than `scenePhase` — see the comment there.

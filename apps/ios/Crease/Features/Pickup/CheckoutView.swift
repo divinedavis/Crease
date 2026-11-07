@@ -110,7 +110,7 @@ struct CheckoutView: View {
                     paymentRow
                     holdNote
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
@@ -190,34 +190,24 @@ struct CheckoutView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Button { dismiss() } label: {
-                Image(systemName: "arrow.left")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 40, height: 40)
-                    .background(Color(.secondarySystemBackground), in: Circle())
-            }
-            .disabled(working)
-            .accessibilityLabel("Back")
-
-            Text("Checkout")
-                .font(.largeTitle.weight(.bold))
-
+            CircleIconButton(symbol: "arrow.left", label: "Back") { dismiss() }
+                .disabled(working)
+            NumberedStepper(current: 3)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.top, 4)
         .padding(.bottom, 6)
     }
 
     private func errorBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.circle.fill")
-            .font(.footnote)
+            .font(.app(.footnote))
             .foregroundStyle(Theme.danger)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
             .background(Theme.danger.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     // MARK: - Map
@@ -236,7 +226,7 @@ struct CheckoutView: View {
         .overlay(alignment: .topTrailing) {
             Button { editingPin = true } label: {
                 Label("Edit Pin", systemImage: "mappin.and.ellipse")
-                    .font(.caption.weight(.semibold))
+                    .font(.app(.caption).weight(.semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -255,32 +245,26 @@ struct CheckoutView: View {
     private var detailsCard: some View {
         VStack(spacing: 0) {
             detailRow(
-                symbol: "house",
+                symbol: "mappin.circle.fill",
                 title: addressLabel,
                 detail: pickup.oneLine,
                 detailTint: Theme.muted
             ) { editingPin = true }
 
-            Divider().padding(.leading, 56)
-
             detailRow(
-                symbol: "person.crop.circle.badge.questionmark",
+                symbol: "doc.text.fill",
                 title: dropoffNotes.isEmpty ? "Meet at my door" : dropoffNotes,
                 detail: dropoffNotes.isEmpty ? "Add pickup instructions" : "Change pickup instructions",
                 detailTint: Theme.accent
             ) { editingNotes = true }
 
-            Divider().padding(.leading, 56)
-
             detailRow(
-                symbol: "phone",
+                symbol: "phone.fill",
                 title: store.profile?.formattedPhone ?? "Add a phone number",
                 detail: store.profile?.phone == nil ? "So the courier can reach you at the door" : nil,
                 detailTint: Theme.muted
             ) { editingPhone = true }
         }
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
     }
 
     private func detailRow(
@@ -293,18 +277,18 @@ struct CheckoutView: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: symbol)
-                    .font(.title3)
-                    .foregroundStyle(Theme.muted)
+                    .font(.app(size: 22).weight(.semibold))
+                    .foregroundStyle(Theme.glyph)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.body.weight(.medium))
+                        .font(.app(.body).weight(.semibold))
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                     if let detail, !detail.isEmpty {
                         Text(detail)
-                            .font(.footnote)
+                            .font(.app(.subheadline))
                             .foregroundStyle(detailTint)
                             .multilineTextAlignment(.leading)
                             .lineLimit(2)
@@ -312,11 +296,10 @@ struct CheckoutView: View {
                 }
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(.footnote).weight(.semibold))
                     .foregroundStyle(Theme.muted)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -353,14 +336,15 @@ struct CheckoutView: View {
     @ViewBuilder private var timeSection: some View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: "clock")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.muted)
+                Image(systemName: "clock.fill")
+                    .font(.app(size: 22).weight(.semibold))
+                    .foregroundStyle(Theme.glyph)
+                    .frame(width: 28)
                 Text(timeTitle)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.app(.body).weight(.semibold))
                 Spacer(minLength: 8)
                 Text(chosenTimeText)
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.muted)
             }
 
@@ -394,12 +378,10 @@ struct CheckoutView: View {
                 // is the shop's answer to give, and the customer picks a slot
                 // from the order once they do.
                 Text("You'll choose a delivery window once \(cleaner?.name ?? "the shop") says your order is ready.")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+                    .softCard(padding: 14)
             }
         }
     }
@@ -418,23 +400,23 @@ struct CheckoutView: View {
     ) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.subheadline.weight(.semibold))
+                Text(title).font(.app(.subheadline).weight(.semibold))
                 Text(detail)
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isOn ? Theme.canvas : Theme.surface)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isOn ? Theme.accent : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(isOn ? Theme.ink : .clear, lineWidth: 2.5)
             )
             .contentShape(Rectangle())
         }
@@ -448,9 +430,7 @@ struct CheckoutView: View {
 
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Order Summary")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(Theme.muted)
+            Eyebrow("Order Summary")
 
             Button {
                 // The shop is changed from its own row below; this opens the
@@ -461,18 +441,18 @@ struct CheckoutView: View {
                     shopTile
                     VStack(alignment: .leading, spacing: 3) {
                         Text(cleaner?.name ?? "Choose a cleaner")
-                            .font(.body.weight(.bold))
+                            .font(.app(.body).weight(.bold))
                             .lineLimit(1)
                         if carriesCleaning, !lines.isEmpty {
                             ForEach(lines, id: \.item.id) { line in
                                 Text(lineLabel(line))
-                                    .font(.subheadline)
+                                    .font(.app(.subheadline))
                                     .foregroundStyle(Theme.muted)
                                     .lineLimit(1)
                             }
                         } else {
                             Text(emptyBagLine)
-                                .font(.subheadline)
+                                .font(.app(.subheadline))
                                 .foregroundStyle(Theme.muted)
                                 .lineLimit(2)
                                 .multilineTextAlignment(.leading)
@@ -480,12 +460,10 @@ struct CheckoutView: View {
                     }
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
+                        .font(.app(.footnote).weight(.semibold))
                         .foregroundStyle(Theme.muted)
                 }
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+                .softCard(padding: 14)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -495,7 +473,7 @@ struct CheckoutView: View {
 
             Button { choosingShop = true } label: {
                 Text("Change shop")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(.footnote).weight(.semibold))
                     .foregroundStyle(Theme.accent)
             }
             .buttonStyle(.plain)
@@ -506,13 +484,13 @@ struct CheckoutView: View {
     /// The shop's initials in a tile, where a marketplace with logos would put
     /// one. Deterministic from the name so a shop looks the same on every
     /// screen it appears on.
+    /// The bag as a picture: what's being cleaned, or the folded stack
+    /// coming home on a return-only trip.
     private var shopTile: some View {
-        Text(initials)
-            .font(.caption.weight(.heavy))
-            .foregroundStyle(Theme.onInk)
-            .frame(width: 38, height: 38)
-            .background(Theme.accentFill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            .accessibilityHidden(true)
+        IllustrationTile(
+            art: carriesCleaning ? serviceKind.illustration : .folded,
+            size: 56, corner: 16, fill: Theme.raised, inset: 0.1
+        )
     }
 
     private var initials: String {
@@ -550,9 +528,9 @@ struct CheckoutView: View {
                 totalRow("Taxes & Other Fees", (serviceFeeCents + taxCents).asMoney)
             }
             HStack {
-                Text("TOTAL").font(.body.weight(.semibold))
+                Text("TOTAL").font(.app(.body).weight(.semibold))
                 Spacer()
-                Text(totalCents.asMoney).font(.title3.weight(.bold).monospacedDigit())
+                Text(totalCents.asMoney).font(.app(.title3).weight(.bold).monospacedDigit())
             }
             .padding(.top, 2)
             .accessibilityElement(children: .ignore)
@@ -562,10 +540,10 @@ struct CheckoutView: View {
 
     private func totalRow(_ label: String, _ value: String, valueTint: Color = .primary) -> some View {
         HStack {
-            Text(label).font(.subheadline).foregroundStyle(Theme.muted)
+            Text(label).font(.app(.subheadline)).foregroundStyle(Theme.muted)
             Spacer()
             Text(value)
-                .font(.subheadline.monospacedDigit())
+                .font(.app(.subheadline).monospacedDigit())
                 .foregroundStyle(valueTint)
         }
         .accessibilityElement(children: .ignore)
@@ -619,28 +597,28 @@ struct CheckoutView: View {
                 Group {
                     if walletSupported {
                         HStack(spacing: 1) {
-                            Image(systemName: "applelogo").font(.system(size: 11, weight: .medium))
-                            Text("Pay").font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "applelogo").font(.app(size: 11).weight(.medium))
+                            Text("Pay").font(.app(size: 12).weight(.semibold))
                         }
                     } else {
-                        Image(systemName: "creditcard.fill").font(.system(size: 13))
+                        Image(systemName: "creditcard.fill").font(.app(size: 13))
                     }
                 }
                 .foregroundStyle(.primary)
-                .frame(width: 46, height: 30)
+                .frame(width: 50, height: 34)
                 .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color(.tertiarySystemFill))
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Theme.surface)
                 )
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(paymentRowTitle)
-                        .font(.body.weight(.medium))
+                        .font(.app(.body).weight(.medium))
                     // Only in the middle state, where the title alone would
                     // promise a sheet this device cannot open yet.
                     if walletSupported && !walletReady {
                         Text("No card in Wallet yet — set it up, or pay by card")
-                            .font(.caption)
+                            .font(.app(.caption))
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -648,7 +626,7 @@ struct CheckoutView: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
+                    .font(.app(.footnote).weight(.semibold))
                     .foregroundStyle(Theme.muted)
             }
             .contentShape(Rectangle())
@@ -665,18 +643,15 @@ struct CheckoutView: View {
     private var holdNote: some View {
         VStack(alignment: .leading, spacing: 5) {
             Label("\(holdCents.asMoney) is held, not charged", systemImage: "lock.shield")
-                .font(.caption.weight(.semibold))
+                .font(.app(.caption).weight(.semibold))
             Text(holdExplainer)
-                .font(.caption2)
+                .font(.app(.caption2))
                 .foregroundStyle(Theme.muted)
             Text("Cancel before a driver is assigned and you pay nothing. After that, the trip we've already paid for is kept.")
-                .font(.caption2)
+                .font(.app(.caption2))
                 .foregroundStyle(Theme.muted)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Theme.accentSoft)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .softCard(padding: 14)
         .accessibilityElement(children: .combine)
     }
 
@@ -689,42 +664,21 @@ struct CheckoutView: View {
     // MARK: - The charge
 
     private var placeOrderBar: some View {
-        Button {
-            // Nothing picked is not a checkout. A bag with no prices on it
-            // reaches the counter as a question — the shop cannot quote it, the
-            // hold cannot cover it, and the customer meets the real number
-            // after their clothes have gone. So the button does the only useful
-            // thing instead of refusing: it opens the list.
-            if carriesCleaning && lines.isEmpty {
-                choosingItems = true
-            } else {
-                onPay()
-            }
-        } label: {
-            Group {
-                if working {
-                    ProgressView().tint(Theme.onInk)
-                } else {
-                    Text(buttonLabel).font(.body.weight(.bold))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 17)
-            .background(Theme.accentFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .foregroundStyle(Theme.onInk)
+        let empty = carriesCleaning && lines.isEmpty
+        return TotalBar(
+            amount: empty ? nil : totalCents.asMoney,
+            note: "Total · \(paymentRowTitle)",
+            action: empty ? "Choose what you're sending" : "Place order",
+            busy: working,
+            enabled: cleaner != nil,
+            accessibilityText: buttonLabel
+        ) {
+            if empty { choosingItems = true } else { onPay() }
         }
-        .buttonStyle(.plain)
-        .disabled(working || cleaner == nil)
-        .opacity(cleaner == nil ? 0.5 : 1)
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-        .background(.regularMaterial)
+        .padding(.top, 8)
+        .background(Theme.canvas.opacity(0.94))
     }
 
-    /// The total rides on the button as well as sitting above it. It is the
-    /// last thing read before a card is charged, and a bare "Place Order" is
-    /// the one place a checkout can hide its own price.
     private var buttonLabel: String {
         if carriesCleaning && lines.isEmpty { return "Choose what you're sending" }
         return "Place Order · \(totalCents.asMoney)"
@@ -780,7 +734,7 @@ struct DropoffNotesView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Tell the courier where to find you. Anything here is shown to the driver on both legs.")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
 
                 HStack(alignment: .top, spacing: 8) {
@@ -835,7 +789,7 @@ private struct FlowingChips: View {
                     ForEach(options[row..<min(row + 2, options.count)], id: \.self) { option in
                         Button { onPick(option) } label: {
                             Text(option)
-                                .font(.footnote.weight(.medium))
+                                .font(.app(.footnote).weight(.medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .background(Color(.tertiarySystemFill), in: Capsule())
@@ -880,13 +834,13 @@ struct ContactPhoneView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Couriers call this number if they can't find you at the door. It is shared with the driver on an active order and with nobody else.")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
 
                 TextField("(555) 555-0123", text: $draft)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
-                    .font(.title3)
+                    .font(.app(.title3))
                     .focused($focused)
                     .padding(14)
                     .background(Color(.secondarySystemBackground))
@@ -894,7 +848,7 @@ struct ContactPhoneView: View {
 
                 if failed {
                     Text("Couldn't save that number. Please try again.")
-                        .font(.footnote)
+                        .font(.app(.footnote))
                         .foregroundStyle(Theme.danger)
                 }
 
@@ -956,7 +910,7 @@ struct SchedulePickupView: View {
                 .padding(.horizontal, 4)
 
                 Text("We'll send a courier to arrive within twenty minutes of this time.")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1000,7 +954,7 @@ struct PaymentMethodsView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
                 Text(explainer)
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
 
                 // The middle state gets Apple's own setup button rather than a
                 // sentence about Wallet. It is the control Apple documents for
@@ -1015,7 +969,7 @@ struct PaymentMethodsView: View {
                 }
 
                 Label("Crease never sees or stores your card. It goes straight to Stripe.", systemImage: "lock.shield")
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
 
                 Spacer(minLength: 0)

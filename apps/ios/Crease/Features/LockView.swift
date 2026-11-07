@@ -9,19 +9,18 @@ struct LockView: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             VStack(spacing: 18) {
-                Image(systemName: lock.biometry == .touchID ? "touchid" : "faceid")
-                    .font(.system(size: 56, weight: .regular))
-                    .foregroundStyle(Theme.accent)
+                IllustrationTile(art: .padlock, size: 120, corner: 34, inset: 0.12)
+                    .padding(.bottom, 6)
                 Text("Crease is locked")
-                    .font(.title2.weight(.semibold))
+                    .font(.app(.title2).weight(.semibold))
                 Text("Unlock with \(lock.biometry.label) to see your orders.")
-                    .font(.subheadline)
+                    .font(.app(.subheadline))
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                 Button {
                     Task { await lock.unlock() }
                 } label: {
-                    Label("Unlock", systemImage: "lock.open")
+                    Label("Unlock", systemImage: lock.biometry == .touchID ? "touchid" : "faceid")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(InkButtonStyle())
@@ -42,7 +41,7 @@ struct PrivacyCover: View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             Image(systemName: "lock.shield")
-                .font(.system(size: 44))
+                .font(.app(size: 44))
                 .foregroundStyle(Theme.accent)
         }
         // Named so a UI test can assert it is *gone* after a resume. Its

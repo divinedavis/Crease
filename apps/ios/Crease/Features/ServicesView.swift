@@ -13,7 +13,7 @@ struct ServicesView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     section("Get it cleaned") {
                         ForEach(Array(ServiceKind.allCases.enumerated()), id: \.element.id) { i, kind in
-                            tile(id: kind.rawValue, title: kind.label, detail: kind.prompt, symbol: kind.symbol, badge: nil, index: i) {
+                            tile(id: kind.rawValue, title: kind.label, detail: kind.prompt, art: kind.illustration, badge: nil, index: i) {
                                 start(BookingIntent(kind: kind))
                             }
                         }
@@ -24,7 +24,7 @@ struct ServicesView: View {
                                 id: option.id,
                                 title: option.name,
                                 detail: "From \(option.priceCents.asMoney)",
-                                symbol: option.symbol,
+                                art: option.illustration,
                                 badge: option.isRecommended ? "Best value" : nil,
                                 index: i + 3
                             ) {
@@ -33,7 +33,7 @@ struct ServicesView: View {
                         }
                     }
                 }
-                .padding(16)
+                .padding(20)
             }
             .background(Theme.canvas)
             .navigationTitle("Services")
@@ -42,45 +42,51 @@ struct ServicesView: View {
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.title3.weight(.bold))
-                .accessibilityAddTraits(.isHeader)
+            Eyebrow(title)
             LazyVGrid(columns: columns, spacing: 12, content: content)
         }
     }
 
+    /// The reference's product card: a white card, the illustration on a
+    /// grey tile with a round "+" in its corner, the name and one line under it.
     private func tile(
-        id: String, title: String, detail: String, symbol: String, badge: String?, index: Int,
+        id: String, title: String, detail: String, art: Illustration, badge: String?, index: Int,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    if let badge {
-                        Text(badge)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Theme.tag, in: Capsule())
-                    }
-                    Spacer()
-                    Image(systemName: symbol)
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(Theme.ink)
+            VStack(alignment: .leading, spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    art.image
+                        .resizable()
+                        .scaledToFit()
+                        .padding(16)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 118)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay(alignment: .topLeading) {
+                            if let badge {
+                                Text(badge)
+                                    .font(.app(.caption2).weight(.bold))
+                                    .foregroundStyle(Theme.onInk)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Theme.ink, in: Capsule())
+                                    .padding(8)
+                            }
+                        }
+                    PlusBadge(size: 34).padding(8)
                 }
-                Spacer(minLength: 0)
+                .padding(.bottom, 6)
                 Text(title)
-                    .font(.subheadline.weight(.bold))
+                    .font(.app(.headline))
                     .foregroundStyle(Theme.ink)
                 Text(detail)
-                    .font(.caption)
+                    .font(.app(.caption))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+            .outlineCard(padding: 10)
         }
         .buttonStyle(PressableStyle())
         .accessibilityElement(children: .combine)

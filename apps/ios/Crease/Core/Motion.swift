@@ -12,19 +12,19 @@ enum Motion {
     static let settle = Animation.spring(response: 0.5, dampingFraction: 0.9)
 }
 
-/// The primary action: full width, ink fill, square-ish corners.
+/// The primary action: full width, ink fill, soft 20pt corners (2026-11-06).
 struct InkButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     var prominent = true
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.body.weight(.semibold))
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .font(.app(.body).weight(.semibold))
+            .frame(maxWidth: .infinity, minHeight: 58)
             .padding(.horizontal, 16)
             .foregroundStyle(prominent ? Theme.onInk : Theme.ink)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(prominent ? Theme.ink : Theme.surface)
             )
             .opacity(isEnabled ? 1 : 0.35)

@@ -51,6 +51,14 @@ targets:
         UIRequiredDeviceCapabilities:
           - arm64
         ITSAppUsesNonExemptEncryption: false
+        # Plus Jakarta Sans (owner's pick, 2026-11-06), SIL OFL — licence in
+        # Crease/Resources/Fonts/OFL.txt. Resources are copied flat.
+        UIAppFonts:
+          - PlusJakartaSans-Regular.ttf
+          - PlusJakartaSans-Medium.ttf
+          - PlusJakartaSans-SemiBold.ttf
+          - PlusJakartaSans-Bold.ttf
+          - PlusJakartaSans-ExtraBold.ttf
         # Required. Calling requestWhenInUseAuthorization without this string
         # does not fail gracefully — it terminates the app.
         NSLocationWhenInUseUsageDescription: Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.

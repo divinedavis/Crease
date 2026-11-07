@@ -118,7 +118,7 @@ struct PinConfirmView: View {
     private var pin: some View {
         VStack(spacing: 0) {
             Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 38))
+                .font(.app(size: 38))
                 .foregroundStyle(Theme.onInk, Theme.ink)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
                 // Lifts while the map moves, so the pin reads as hovering over
@@ -152,18 +152,22 @@ struct PinConfirmView: View {
         HStack {
             Button { dismiss() } label: {
                 Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 40, height: 40)
-                    .background(.regularMaterial, in: Circle())
+                    .font(.app(.body).weight(.semibold))
+                    .foregroundStyle(Theme.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.raised, in: Circle())
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
             }
             .accessibilityLabel("Back")
             Spacer()
             if location.coordinate != nil {
                 Button { recentre() } label: {
                     Image(systemName: "location.fill")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 40, height: 40)
-                        .background(.regularMaterial, in: Circle())
+                        .font(.app(.body).weight(.semibold))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: 44, height: 44)
+                        .background(Theme.raised, in: Circle())
+                        .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
                 }
                 .accessibilityLabel("Move pin to my location")
             }
@@ -202,16 +206,17 @@ struct PinConfirmView: View {
     private var sheet: some View {
         VStack(alignment: .leading, spacing: 14) {
             Capsule()
-                .fill(Color(.tertiaryLabel))
-                .frame(width: 36, height: 5)
+                .fill(Theme.line)
+                .frame(width: 40, height: 5)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
 
+            NumberedStepper(current: 1)
+
             Text("Set your pickup point")
-                .font(.title3.weight(.bold))
-                .frame(maxWidth: .infinity)
+                .font(.app(.title2).weight(.bold))
             Text("Move the map so the pin sits where the driver should meet you.")
-                .font(.subheadline)
+                .font(.app(.subheadline))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -219,12 +224,18 @@ struct PinConfirmView: View {
             // street under it is still looked up quietly, because Uber Direct
             // needs an address string with every booking and geocodes the
             // drop-off address itself (see underPin).
-            TextField("Buzzer, floor, or where to meet you", text: $notes, axis: .vertical)
-                .lineLimit(1...3)
-                .padding(12)
-                .background(Color(.tertiarySystemFill))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .accessibilityLabel("Access notes for the driver")
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "doc.text.fill")
+                    .font(.app(size: 20).weight(.semibold))
+                    .foregroundStyle(Theme.glyph)
+                    .frame(width: 24)
+                    .padding(.top, 2)
+                    .accessibilityHidden(true)
+                TextField("Buzzer, floor, or where to meet you", text: $notes, axis: .vertical)
+                    .lineLimit(1...3)
+                    .accessibilityLabel("Access notes for the driver")
+            }
+            .softCard(padding: 16)
 
             Button {
                 var picked = underPin
@@ -242,8 +253,8 @@ struct PinConfirmView: View {
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
         .background(Theme.canvas)
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 18, topTrailingRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 12, y: -2)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous))
+        .shadow(color: .black.opacity(0.10), radius: 16, y: -4)
         .ignoresSafeArea(edges: .bottom)
     }
 }

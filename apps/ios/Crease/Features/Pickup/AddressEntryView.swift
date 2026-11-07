@@ -41,6 +41,11 @@ struct AddressEntryView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                NumberedStepper(current: 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 field
 
                 List {
@@ -91,14 +96,18 @@ struct AddressEntryView: View {
                     // people assume — naming only the two nearest
                     // neighbourhoods sold the area short.
                     if search.query.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label("Where we collect", systemImage: "mappin.and.ellipse")
-                                .font(.footnote.weight(.semibold))
-                            Text(ServiceArea.blurb)
-                                .font(.caption)
-                                .foregroundStyle(Theme.muted)
-                                .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 14) {
+                            IllustrationTile(art: .map, size: 64, fill: Theme.raised, inset: 0.1)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Where we collect")
+                                    .font(.app(.subheadline).weight(.semibold))
+                                Text(ServiceArea.blurb)
+                                    .font(.app(.caption))
+                                    .foregroundStyle(Theme.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
+                        .softCard(padding: 14)
                         .padding(.vertical, 8)
                         .listRowSeparator(.hidden)
                         .accessibilityElement(children: .combine)
@@ -112,8 +121,10 @@ struct AddressEntryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .accessibilityLabel("Cancel")
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark").font(.app(.body).weight(.semibold))
+                    }
+                    .accessibilityLabel("Cancel")
                 }
             }
             .overlay { if resolving { ProgressView().controlSize(.large) } }
@@ -157,14 +168,16 @@ struct AddressEntryView: View {
                 .accessibilityLabel("Clear")
             }
         }
-        .padding(14)
+        .padding(.horizontal, 18)
+        .frame(minHeight: 60)
         .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Theme.ink.opacity(focused ? 1 : 0), lineWidth: 2)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Theme.ink.opacity(focused ? 1 : 0), lineWidth: 2)
         )
-        .padding(.horizontal, 16)
+        .font(.app(.body).weight(.semibold))
+        .padding(.horizontal, 20)
         .padding(.bottom, 12)
         .animation(.easeOut(duration: 0.18), value: focused)
     }
@@ -172,14 +185,13 @@ struct AddressEntryView: View {
     private func savedRow(_ address: Address, pinned: Bool) -> some View {
         HStack(spacing: 14) {
             Image(systemName: address.symbol)
-                .font(.body)
-                .foregroundStyle(Theme.ink)
-                .frame(width: 36, height: 36)
-                .background(Theme.surface, in: Circle())
+                .font(.app(size: 22).weight(.semibold))
+                .foregroundStyle(Theme.glyph)
+                .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(address.label ?? "Saved").font(.body.weight(.semibold))
+                Text(address.label ?? "Saved").font(.app(.body).weight(.semibold))
                 Text(address.oneLine)
-                    .font(.footnote)
+                    .font(.app(.footnote))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
             }
@@ -189,22 +201,21 @@ struct AddressEntryView: View {
                     .foregroundStyle(Theme.muted)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
     private func suggestionRow(_ result: MKLocalSearchCompletion) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: "mappin")
-                .font(.body)
-                .foregroundStyle(Theme.ink)
-                .frame(width: 36, height: 36)
-                .background(Theme.surface, in: Circle())
+            Image(systemName: "mappin.circle.fill")
+                .font(.app(size: 22).weight(.semibold))
+                .foregroundStyle(Theme.glyph)
+                .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(result.title).font(.body)
+                Text(result.title).font(.app(.body).weight(.semibold))
                 if !result.subtitle.isEmpty {
-                    Text(result.subtitle).font(.footnote).foregroundStyle(Theme.muted)
+                    Text(result.subtitle).font(.app(.footnote)).foregroundStyle(Theme.muted)
                 }
             }
             Spacer()
