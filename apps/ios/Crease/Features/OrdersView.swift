@@ -50,7 +50,7 @@ struct OrdersView: View {
                 // bar keeps its "Crease" title for VoiceOver and the tests.
                 ToolbarItem(placement: .principal) {
                     Text("crease")
-                        .font(.app(size: 26).weight(.heavy))
+                        .font(.app(size: 26, relativeTo: .title2).weight(.heavy))
                         .kerning(-1.2)
                         .foregroundStyle(Theme.ink)
                         .accessibilityAddTraits(.isHeader)
@@ -84,15 +84,15 @@ struct OrdersView: View {
         return Button { start(BookingIntent()) } label: {
             HStack(spacing: 16) {
                 IllustrationTile(art: .courier, size: 92, fill: Theme.raised, inset: 0.08)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("~\(minutes) min")
-                        .font(.app(size: 30).weight(.bold))
-                        .kerning(-0.8)
-                        .foregroundStyle(Theme.ink)
-                    Text("A driver to your door")
-                        .font(.app(.subheadline))
-                        .foregroundStyle(Theme.muted)
-                }
+                // One Text, so the number is never read without what it is:
+                // the driver's arrival, not the whole cleaning cycle.
+                (Text("~\(minutes) min")
+                    .font(.app(size: 30, relativeTo: .title).weight(.bold))
+                    .foregroundStyle(Theme.ink)
+                 + Text("\nA driver to your door")
+                    .font(.app(.subheadline))
+                    .foregroundStyle(Theme.muted))
+                    .lineSpacing(2)
                 Spacer(minLength: 0)
             }
             .softCard(padding: 16)
@@ -130,9 +130,7 @@ struct OrdersView: View {
                 // Not the bare service name: the booking sheet has its own
                 // "Press only" button, and Home stays in the hierarchy
                 // behind it.
-                .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Book \(kind.label)")
-                .accessibilityAddTraits(.isButton)
                 .staggeredAppear(i)
             }
         }

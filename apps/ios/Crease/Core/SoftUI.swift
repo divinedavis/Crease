@@ -131,6 +131,8 @@ extension GlyphRow where Trailing == EmptyView {
 struct NumberedStepper: View {
     let current: Int
     var labels: [String] = ["Address", "Order", "Checkout"]
+    /// The dots grow with the numbers in them.
+    @ScaledMetric(relativeTo: .subheadline) private var dot: CGFloat = 32
 
     var body: some View {
         HStack(spacing: 10) {
@@ -148,11 +150,11 @@ struct NumberedStepper: View {
                             .foregroundStyle(Theme.onInk)
                     } else {
                         Text("\(step)")
-                            .font(.app(size: 15).weight(.semibold).monospacedDigit())
+                            .font(.app(size: 15, relativeTo: .subheadline).weight(.semibold).monospacedDigit())
                             .foregroundStyle(step == current ? Theme.onInk : Theme.muted)
                     }
                 }
-                .frame(width: 32, height: 32)
+                .frame(width: dot, height: dot)
                 .accessibilityHidden(true)
                 if step == current {
                     // The one part VoiceOver reads: the step's name, as a

@@ -233,4 +233,11 @@ extension Font {
     static func app(size: CGFloat) -> Font {
         .custom(AppFont.regular, fixedSize: size)
     }
+
+    /// A chosen size that still scales with Dynamic Type, relative to a text
+    /// style: wordmarks, the stepper's numbers, hero figures. Apple's audit
+    /// fails text that cannot grow.
+    static func app(size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        .custom(AppFont.regular, size: size, relativeTo: style)
+    }
 }

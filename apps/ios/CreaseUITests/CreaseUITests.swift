@@ -1377,8 +1377,12 @@ final class CreaseUITests: XCTestCase {
 
         let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Dry cleaning'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 15), "the booking should still say Dry cleaning")
-        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Wash & fold'")).firstMatch.exists,
-                       "the booking switched the service the customer picked")
+        // Not the Services tab's tiles: iOS 26 keeps that tab loaded behind the
+        // booking, and since the 2026-11-06 redesign their pictures are hidden
+        // from VoiceOver, so a tile's label now starts with its service name.
+        let switched = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Wash & fold' AND NOT (identifier BEGINSWITH 'service-tile')")).firstMatch
+        XCTAssertFalse(switched.exists,
+                       "the booking switched the service the customer picked: \(switched.exists ? switched.label : "")")
         attach(app, "dry-cleaning-kept")
 
         let unavailable = app.buttons["Dry cleaning isn't offered here"]

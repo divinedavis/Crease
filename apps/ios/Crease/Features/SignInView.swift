@@ -32,6 +32,10 @@ struct SignInView: View {
         // every consumer app has trained people to expect. Nothing above the
         // fold to read and nothing to type: on a phone the whole screen is one
         // decision, which provider.
+        // Scrolls only when it has to: at the largest text sizes the fact card
+        // would otherwise push the buttons off the bottom of the screen.
+        GeometryReader { proxy in
+        ScrollView {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
@@ -40,7 +44,7 @@ struct SignInView: View {
                     .padding(.bottom, 2)
 
                 Text("crease")
-                    .font(.app(size: 46).weight(.heavy))
+                    .font(.app(size: 46, relativeTo: .largeTitle).weight(.heavy))
                     .kerning(-2.5)
                     .foregroundStyle(Theme.ink)
                     .accessibilityLabel("Crease")
@@ -150,7 +154,10 @@ struct SignInView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 28)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        }
         .background(Color(.systemBackground))
         .overlay { if busy { ProgressView().controlSize(.large) } }
         .sheet(isPresented: $showEmailAuth) {

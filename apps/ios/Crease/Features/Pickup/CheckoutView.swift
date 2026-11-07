@@ -598,7 +598,7 @@ struct CheckoutView: View {
                     if walletSupported {
                         HStack(spacing: 1) {
                             Image(systemName: "applelogo").font(.app(size: 11).weight(.medium))
-                            Text("Pay").font(.app(size: 12).weight(.semibold))
+                            Text("Pay").font(.app(size: 12, relativeTo: .caption).weight(.semibold))
                         }
                     } else {
                         Image(systemName: "creditcard.fill").font(.app(size: 13))
