@@ -142,26 +142,20 @@ struct NumberedStepper: View {
                     Capsule().fill(Theme.line).frame(width: 20, height: 2)
                         .accessibilityHidden(true)
                 }
-                // Decorative: the numbers are hidden from accessibility one by
-                // one (a hidden container still let Apple's audit sample "1"
-                // against the dot's square corners). VoiceOver hears the
-                // step's name and "Step n of 3" instead.
-                Circle()
-                    .fill(step <= current ? Theme.ink : Theme.surfaceStrong)
+                // Drawn as SF Symbols ("1.circle.fill"), not Text in a circle:
+                // the digits are decoration, and as text Apple's contrast audit
+                // sampled them against the dot's square corners and failed
+                // the dark-mode run. VoiceOver hears the step's name and
+                // "Step n of 3" instead.
+                Image(systemName: step < current ? "checkmark.circle.fill" : "\(step).circle.fill")
+                    .resizable()
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(
+                        step == current || step < current ? Theme.onInk : Theme.muted,
+                        step <= current ? Theme.ink : Theme.surfaceStrong
+                    )
+                    .fontWeight(.semibold)
                     .frame(width: dot, height: dot)
-                    .overlay {
-                        if step < current {
-                            Image(systemName: "checkmark")
-                                .font(.app(size: 13).weight(.bold))
-                                .foregroundStyle(Theme.onInk)
-                                .accessibilityHidden(true)
-                        } else {
-                            Text("\(step)")
-                                .font(.app(size: 15, relativeTo: .subheadline).weight(.semibold).monospacedDigit())
-                                .foregroundStyle(step == current ? Theme.onInk : Theme.muted)
-                                .accessibilityHidden(true)
-                        }
-                    }
                     .accessibilityHidden(true)
                 if step == current {
                     // The one part VoiceOver reads: the step's name, as a
