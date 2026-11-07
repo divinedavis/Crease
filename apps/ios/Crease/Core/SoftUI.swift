@@ -142,20 +142,27 @@ struct NumberedStepper: View {
                     Capsule().fill(Theme.line).frame(width: 20, height: 2)
                         .accessibilityHidden(true)
                 }
-                ZStack {
-                    Circle().fill(step <= current ? Theme.ink : Theme.surfaceStrong)
-                    if step < current {
-                        Image(systemName: "checkmark")
-                            .font(.app(size: 13).weight(.bold))
-                            .foregroundStyle(Theme.onInk)
-                    } else {
-                        Text("\(step)")
-                            .font(.app(size: 15, relativeTo: .subheadline).weight(.semibold).monospacedDigit())
-                            .foregroundStyle(step == current ? Theme.onInk : Theme.muted)
+                // Decorative: the numbers are hidden from accessibility one by
+                // one (a hidden container still let Apple's audit sample "1"
+                // against the dot's square corners). VoiceOver hears the
+                // step's name and "Step n of 3" instead.
+                Circle()
+                    .fill(step <= current ? Theme.ink : Theme.surfaceStrong)
+                    .frame(width: dot, height: dot)
+                    .overlay {
+                        if step < current {
+                            Image(systemName: "checkmark")
+                                .font(.app(size: 13).weight(.bold))
+                                .foregroundStyle(Theme.onInk)
+                                .accessibilityHidden(true)
+                        } else {
+                            Text("\(step)")
+                                .font(.app(size: 15, relativeTo: .subheadline).weight(.semibold).monospacedDigit())
+                                .foregroundStyle(step == current ? Theme.onInk : Theme.muted)
+                                .accessibilityHidden(true)
+                        }
                     }
-                }
-                .frame(width: dot, height: dot)
-                .accessibilityHidden(true)
+                    .accessibilityHidden(true)
                 if step == current {
                     // The one part VoiceOver reads: the step's name, as a
                     // header, with where it sits in the flow as its value.
