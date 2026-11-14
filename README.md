@@ -1,4 +1,32 @@
-# Crease
+<h1 align="center"> Crease </h1> <br>
+<p align="center">
+  <a href="https://creasenyc.com/">
+    <img alt="Crease" title="Crease" src="marketing/gbp/crease-logo-720.png" width="160">
+  </a>
+</p>
+
+<p align="center">
+  Dry cleaning picked up and delivered in Brooklyn. Built with SwiftUI, Next.js and Fastify.
+</p>
+
+<p align="center">
+  <a href="https://creasenyc.com/"><b>creasenyc.com</b></a>
+</p>
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Feedback](#feedback)
+- [Build Process](#build-process)
+- [The Two Constraints That Shape Everything](#the-two-constraints-that-shape-everything)
+- [What the Numbers Say](#what-the-numbers-say)
+- [Architecture](#architecture)
+- [Security Posture](#security-posture)
+- [Bugs Worth Knowing About](#bugs-worth-knowing-about)
+- [Licence](#licence)
+
+## Introduction
 
 Dry cleaning picked up and delivered, routed through third-party courier
 networks. iOS app for customers, web portal for partner cleaners, and a
@@ -8,9 +36,64 @@ Built as a working system rather than a demo: it is deployed, the payment paths
 are verified against Stripe's live API, and the courier costs quoted below came
 back from Uber's production endpoint.
 
----
+**The iPhone app is in beta on TestFlight. Partner cleaners use a web portal.**
 
-## The two constraints that shape everything
+<p align="center">
+  <img src="marketing/asc-screenshots-pinterest/01-brand.png" alt="Crease" width="350">
+</p>
+
+## Features
+
+A few of the things you can do with Crease:
+
+* Schedule a pickup from your door
+* Choose the service you need and see an estimate before you book
+* Approve the final price once the cleaner has counted your garments
+* Track both courier trips: to the cleaner, and back to you
+* Pay with Apple Pay or a card; the hold is only captured for what was cleaned
+* For partner cleaners: take in orders, price them and dispatch couriers from a web portal
+
+<p align="center">
+  <img src="marketing/asc-screenshots-pinterest/02-02-schedule-pickup.png" alt="Schedule a pickup" width="190">
+  <img src="marketing/asc-screenshots-pinterest/03-03-choose-service.png" alt="Choose a service" width="190">
+  <img src="marketing/asc-screenshots-pinterest/04-04-order-total.png" alt="Order total" width="190">
+  <img src="marketing/asc-screenshots-pinterest/05-05-track-order.png" alt="Track your order" width="190">
+</p>
+
+## Feedback
+
+Feel free to [file an issue](https://github.com/divinedavis/Crease/issues/new). Feature requests are always welcome.
+
+## Build Process
+
+```bash
+npm install
+cp .env.example services/dispatch/.env      # fill in Supabase + a secret
+npm run build --workspaces
+node services/dispatch/dist/index.js
+```
+
+With no carrier or Stripe credentials, the simulator and mock payment provider
+take over and the entire two-leg flow runs end to end.
+
+```bash
+export CREASE_TEST_PASSWORD=…    # not committed; seeds and tests read it
+node scripts/seed.mjs            # one cleaner, one customer, one order
+node scripts/e2e.mjs             # full two-leg cycle, asserted at every hop
+node scripts/e2e-money.mjs       # under / over the hold, and cancellation
+node scripts/e2e-payouts.mjs     # onboarding, sweep, double-pay protection
+node scripts/rls-check.mjs       # tenant isolation
+./scripts/ios-test.sh            # iOS UI + unit tests
+```
+
+Against real providers:
+
+```bash
+node scripts/stripe-check.mjs    # needs STRIPE_SECRET_KEY (sk_test_)
+node scripts/uber-check.mjs      # quotes only; --create dispatches a real courier
+```
+
+## The Two Constraints That Shape Everything
 
 Most of the interesting design here follows from two facts about dry cleaning
 that do not apply to food delivery.
@@ -35,7 +118,7 @@ underestimated their own laundry. So an over-count raises a typed
 `awaiting_approval`, and only once the customer agrees is the hold captured and
 the remainder charged separately.
 
-## What the numbers say
+## What the Numbers Say
 
 Courier quotes are fetched live, so the economics are measured rather than
 assumed ([`scripts/pricing-model.mjs`](scripts/pricing-model.mjs)):
@@ -86,7 +169,7 @@ and state machine are exercised for real without any carrier credentials.
 public Ride Request API was withdrawn from third parties years ago; "hire an
 Uber driver to run an errand" is not a thing that can be built.
 
-## Security posture
+## Security Posture
 
 - The portal runs on the Supabase anon key and never the service role, so
   **RLS** — not query hygiene — is what keeps one shop out of another's orders.
@@ -101,36 +184,7 @@ Uber driver to run an errand" is not a thing that can be built.
   webhook endpoint is public, because carriers will not call a private host.
 - No card data touches the database — only opaque provider handles.
 
-## Running it
-
-```bash
-npm install
-cp .env.example services/dispatch/.env      # fill in Supabase + a secret
-npm run build --workspaces
-node services/dispatch/dist/index.js
-```
-
-With no carrier or Stripe credentials, the simulator and mock payment provider
-take over and the entire two-leg flow runs end to end.
-
-```bash
-export CREASE_TEST_PASSWORD=…    # not committed; seeds and tests read it
-node scripts/seed.mjs            # one cleaner, one customer, one order
-node scripts/e2e.mjs             # full two-leg cycle, asserted at every hop
-node scripts/e2e-money.mjs       # under / over the hold, and cancellation
-node scripts/e2e-payouts.mjs     # onboarding, sweep, double-pay protection
-node scripts/rls-check.mjs       # tenant isolation
-./scripts/ios-test.sh            # iOS UI + unit tests
-```
-
-Against real providers:
-
-```bash
-node scripts/stripe-check.mjs    # needs STRIPE_SECRET_KEY (sk_test_)
-node scripts/uber-check.mjs      # quotes only; --create dispatches a real courier
-```
-
-## Bugs worth knowing about
+## Bugs Worth Knowing About
 
 Kept here because each was invisible until something ran for real, and each is
 the kind that produces a wrong answer rather than an error.
