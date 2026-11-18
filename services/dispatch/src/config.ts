@@ -80,8 +80,8 @@ export const config = {
   /**
    * A ceiling on what real couriers can be bought in a rolling day.
    *
-   * Uber Direct is live on this box, first in the chain, and costs roughly
-   * $13 a leg. Nothing bounded that. A retry loop, a reconciler that stops
+   * DoorDash Drive, once its credentials are on this box, is first in the
+   * chain and costs roughly $10-13 a leg. Nothing bounded that. A retry loop, a reconciler that stops
    * agreeing with itself, or one curious person with the booking flow open is
    * enough to spend a month's budget before anyone reads a log line — and the
    * spend is real money leaving a real card, not an API quota that simply
@@ -107,11 +107,11 @@ export const config = {
   },
 
   providers: {
-    UBER_CLIENT_ID: process.env.UBER_CLIENT_ID,
-    UBER_CLIENT_SECRET: process.env.UBER_CLIENT_SECRET,
-    UBER_CUSTOMER_ID: process.env.UBER_CUSTOMER_ID,
-    UBER_WEBHOOK_SECRET: process.env.UBER_WEBHOOK_SECRET,
-    UBER_API_BASE: process.env.UBER_API_BASE,
+    DOORDASH_DEVELOPER_ID: process.env.DOORDASH_DEVELOPER_ID,
+    DOORDASH_KEY_ID: process.env.DOORDASH_KEY_ID,
+    DOORDASH_SIGNING_SECRET: process.env.DOORDASH_SIGNING_SECRET,
+    DOORDASH_WEBHOOK_AUTH: process.env.DOORDASH_WEBHOOK_AUTH,
+    DOORDASH_API_BASE: process.env.DOORDASH_API_BASE,
     ENABLE_MOCK_COURIER: process.env.ENABLE_MOCK_COURIER,
     // The mock courier runs in this process, so its callbacks should loop
     // straight back to this process. Deriving it from PUBLIC_URL sent them

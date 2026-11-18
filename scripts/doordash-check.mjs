@@ -1,31 +1,35 @@
 #!/usr/bin/env node
 /**
- * Verify the Uber Direct adapter against the real API.
+ * Verify the DoorDash Drive adapter against the real API.
  *
- * Quotes only by default. This account has billing configured, so a created
- * delivery can dispatch an actual courier to an actual address and bill for
- * it — that is not something to do as a side effect of running a check script.
+ * Quotes only by default. With PRODUCTION keys a created delivery dispatches
+ * an actual Dasher to an actual address and bills for it — not something to
+ * do as a side effect of running a check script. With SANDBOX keys nothing
+ * real moves; drive the delivery from the portal's Delivery Simulator.
  *
- *   node scripts/uber-check.mjs              # quote only, free, safe
- *   node scripts/uber-check.mjs --create     # ALSO creates a test delivery
+ *   node scripts/doordash-check.mjs              # quote only, free, safe
+ *   node scripts/doordash-check.mjs --create     # ALSO creates + cancels a delivery
  *
- * --create sends Uber's robo-courier test specification, which simulates the
- * courier rather than dispatching a person. Verify in the dashboard that no
- * real delivery appeared before trusting it on a billable account.
+ * Needs DOORDASH_DEVELOPER_ID, DOORDASH_KEY_ID, DOORDASH_SIGNING_SECRET.
  */
-import { UberDirectProvider } from '../packages/delivery/dist/index.js';
+import { DoorDashDriveProvider } from '../packages/delivery/dist/index.js';
 
-const clientId = process.env.UBER_CLIENT_ID;
-const clientSecret = process.env.UBER_CLIENT_SECRET;
-const customerId = process.env.UBER_CUSTOMER_ID;
+const developerId = process.env.DOORDASH_DEVELOPER_ID;
+const keyId = process.env.DOORDASH_KEY_ID;
+const signingSecret = process.env.DOORDASH_SIGNING_SECRET;
 
-if (!clientId || !clientSecret || !customerId) {
-  console.error('need UBER_CLIENT_ID, UBER_CLIENT_SECRET, UBER_CUSTOMER_ID');
+if (!developerId || !keyId || !signingSecret) {
+  console.error('need DOORDASH_DEVELOPER_ID, DOORDASH_KEY_ID, DOORDASH_SIGNING_SECRET');
   process.exit(1);
 }
 
 const CREATE = process.argv.includes('--create');
-const provider = new UberDirectProvider({ clientId, clientSecret, customerId });
+const provider = new DoorDashDriveProvider({
+  developerId,
+  keyId,
+  signingSecret,
+  apiBase: process.env.DOORDASH_API_BASE,
+});
 
 let failures = 0;
 const check = (label, actual, expected) => {
@@ -75,9 +79,8 @@ try {
   quote = await provider.quote({ pickup, dropoff, manifest });
 } catch (err) {
   console.log(`  FAIL  quote threw: ${err.message.slice(0, 300)}`);
-  console.log(`\n  This is where field-name drift shows up. The adapter was`);
-  console.log(`  written against the published v1 shapes; if Uber has renamed`);
-  console.log(`  something, the message above names it.\n`);
+  console.log(`\n  A 401 is the keys (or the clock); a 400 names the field in`);
+  console.log(`  parentheses. Both are in the message above.\n`);
   process.exit(1);
 }
 
@@ -97,12 +100,12 @@ if (!CREATE) {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-console.log('\nCREATE  (robo-courier test specification)');
+console.log('\nCREATE  (sandbox keys simulate; production keys dispatch a real Dasher)');
 const state = await provider.createDelivery({
   pickup,
   dropoff,
   manifest,
-  externalId: `crease_check_${Date.now()}`,
+  externalId: `crease-check-${Date.now()}`,
   quoteId: quote.quoteId,
   orderReference: 'CHECK01',
 });

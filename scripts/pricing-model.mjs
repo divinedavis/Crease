@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 /**
- * Unit economics against live Uber Direct quotes.
+ * Unit economics against live DoorDash Drive quotes.
  *
  * Every courier number here is fetched from the real API, not assumed. The
  * whole point is that the cost side of this business is not a guess — it is a
- * price Uber will quote you today — and the pricing decision follows from it.
+ * price DoorDash will quote you today — and the pricing decision follows from it.
  *
  *   node scripts/pricing-model.mjs
  */
-import { UberDirectProvider } from '../packages/delivery/dist/index.js';
+import { DoorDashDriveProvider } from '../packages/delivery/dist/index.js';
 
-const provider = new UberDirectProvider({
-  clientId: process.env.UBER_CLIENT_ID,
-  clientSecret: process.env.UBER_CLIENT_SECRET,
-  customerId: process.env.UBER_CUSTOMER_ID,
+const provider = new DoorDashDriveProvider({
+  developerId: process.env.DOORDASH_DEVELOPER_ID,
+  keyId: process.env.DOORDASH_KEY_ID,
+  signingSecret: process.env.DOORDASH_SIGNING_SECRET,
+  apiBase: process.env.DOORDASH_API_BASE,
 });
 
 const money = (c) => `$${(c / 100).toFixed(2)}`;
@@ -115,14 +116,14 @@ console.log('    commission moves margin slowly and costs you partners quickly.'
 // The structural lever.
 console.log('\n\nE.  THE ONLY BIG LEVER — fewer courier legs per order');
 console.log(`    Today every order pays for two legs: ${money(courier)}.`);
-console.log('    Uber Direct is one-pickup-to-one-dropoff, so several customers');
+console.log('    DoorDash Drive is one-pickup-to-one-dropoff, so several customers');
 console.log('    CANNOT share a leg — each address is its own delivery. Batching');
 console.log('    needs a route-based carrier or your own driver, not this API.');
 console.log('');
 console.log('    ' + pad('scenario', 34) + rpad('courier/order', 14) + rpad('margin @ $9.99 fee', 20));
 const scenarios = [
-  ['two Uber legs (today)', courier],
-  ['one Uber leg, customer drops off', Math.round(courier / 2)],
+  ['two courier legs (today)', courier],
+  ['one courier leg, customer drops off', Math.round(courier / 2)],
   ['own driver, 6 stops/hour @ $25/hr', Math.round(2500 / 6) * 2],
   ['own driver, 10 stops/hour @ $25/hr', Math.round(2500 / 10) * 2],
 ];

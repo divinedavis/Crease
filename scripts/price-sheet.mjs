@@ -7,12 +7,13 @@
  *
  *   node scripts/price-sheet.mjs
  */
-import { UberDirectProvider } from '../packages/delivery/dist/index.js';
+import { DoorDashDriveProvider } from '../packages/delivery/dist/index.js';
 
-const provider = new UberDirectProvider({
-  clientId: process.env.UBER_CLIENT_ID,
-  clientSecret: process.env.UBER_CLIENT_SECRET,
-  customerId: process.env.UBER_CUSTOMER_ID,
+const provider = new DoorDashDriveProvider({
+  developerId: process.env.DOORDASH_DEVELOPER_ID,
+  keyId: process.env.DOORDASH_KEY_ID,
+  signingSecret: process.env.DOORDASH_SIGNING_SECRET,
+  apiBase: process.env.DOORDASH_API_BASE,
 });
 
 const money = (c) => `$${(c / 100).toFixed(2)}`;
@@ -60,8 +61,8 @@ function requiredTotal(wholesaleCents, courierCents) {
 }
 
 const MODELS = [
-  ['A. Two Uber legs (full service today)', TWO_LEGS],
-  ['B. One Uber leg (customer does the other)', ONE_LEG],
+  ['A. Two courier legs (full service today)', TWO_LEGS],
+  ['B. One courier leg (customer does the other)', ONE_LEG],
   ['C. Own driver, 6 stops/hr, both legs', Math.round(2500 / 6) * 2],
 ];
 

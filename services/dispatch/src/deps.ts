@@ -4,7 +4,7 @@ export {
   buildChain,
   ProviderChain,
   MockProvider,
-  UberDirectProvider,
+  DoorDashDriveProvider,
   DeliveryProviderError,
   TERMINAL_STATUSES,
 } from '@crease/delivery';

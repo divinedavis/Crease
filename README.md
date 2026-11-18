@@ -90,7 +90,7 @@ Against real providers:
 
 ```bash
 node scripts/stripe-check.mjs    # needs STRIPE_SECRET_KEY (sk_test_)
-node scripts/uber-check.mjs      # quotes only; --create dispatches a real courier
+node scripts/doordash-check.mjs  # quotes only; --create dispatches a real Dasher on prod keys
 ```
 
 ## The Two Constraints That Shape Everything
@@ -142,7 +142,7 @@ learn from an API call than from a hundred orders.
 apps/ios          SwiftUI customer app — book, track both legs, approve repricing
 apps/portal       Next.js portal for partner cleaners — intake, pricing, dispatch
 services/dispatch Fastify — order state machine, courier webhooks, money
-packages/delivery Carrier abstraction: Uber Direct + a simulator
+packages/delivery Carrier abstraction: DoorDash Drive + a simulator
 packages/payments Stripe + Connect, and a mock enforcing the same rules
 supabase          Schema and RLS policies
 growth/prospects  Founder-only: the street canvass tool and the expansion roadmap
@@ -165,9 +165,10 @@ delivery through the real status sequence on a timer and posts *signed*
 webhooks back at the service's own endpoint — so the signature check, dedupe
 and state machine are exercised for real without any carrier credentials.
 
-**Uber Direct dispatches Uber Eats couriers, not the rideshare fleet.** Uber's
-public Ride Request API was withdrawn from third parties years ago; "hire an
-Uber driver to run an errand" is not a thing that can be built.
+**Couriers come from DoorDash Drive.** Drive sends Dashers between two
+addresses for businesses that are not on the DoorDash marketplace. It replaced
+Uber Direct in November 2026, after Uber disabled the account during an
+eligibility review and never reinstated it.
 
 ## Security Posture
 
@@ -176,8 +177,10 @@ Uber driver to run an errand" is not a thing that can be built.
   [`scripts/rls-check.mjs`](scripts/rls-check.mjs) signs in with the anon key
   like a real browser and asserts a rival shop's order is invisible to list,
   invisible to fetch-by-id, and immune to update.
-- Carrier webhooks are HMAC-verified over the **raw bytes**, before any
-  `JSON.parse` — re-serializing changes key order and breaks the signature.
+- Carrier webhooks are authenticated before any `JSON.parse`: the simulator's
+  are HMAC-verified over the **raw bytes**, and DoorDash's (which are unsigned)
+  must carry the configured Authorization header and are then re-read from the
+  DoorDash API, so a payload never decides a leg's state on its own word.
   Every payload lands verbatim in `delivery_events` before it is applied, valid
   or not, so a mis-parse can be replayed instead of lost.
 - The internal dispatch API is loopback-only at the nginx layer; only the

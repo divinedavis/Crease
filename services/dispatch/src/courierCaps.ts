@@ -1,7 +1,7 @@
 /**
  * A ceiling on what real couriers this service can buy in a rolling day.
  *
- * Uber Direct's credentials on the production box are live, it is first in the
+ * Once DoorDash Drive's credentials are on the production box, it is first in the
  * chain, and a leg costs around thirteen dollars. Nothing bounded that. The
  * per-order underwater check catches an order that loses money; it cannot see
  * the four hundredth order a stuck retry loop has dispatched this afternoon,

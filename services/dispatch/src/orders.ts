@@ -62,7 +62,7 @@ const ORDER_STATUS_BY_LEG: Record<LegType, Partial<Record<LegStatus, string>>> =
     returned: 'failed',
     failed: 'failed',
     // A carrier cancelling is a failure to deliver, not somebody calling the
-    // order off — Uber sends this for an unassigned courier with no
+    // order off — carriers send this for an unassigned courier with no
     // replacement, an undeliverable address, or a merchant-side abort. It used
     // to map to 'cancelled', which is the one order status neither cancel route
     // accepts: the customer was told "this order can no longer be cancelled"
@@ -127,7 +127,7 @@ export class OrderService {
    *
    * Returns null rather than throwing when the carrier cannot answer. A quote
    * is an optimisation on the price, not a precondition of booking: a customer
-   * must still be able to book during an Uber outage, at the published price.
+   * must still be able to book during a carrier outage, at the published price.
    */
   async quoteRouteCostCents(orderId: string): Promise<number | null> {
     let order: any;
@@ -339,7 +339,7 @@ export class OrderService {
     //
     // Counted over the legs that actually reached a carrier, not over the row
     // numbers, because those two are not the same thing. A claim released
-    // because the quote never came back (Uber 5xx, a timeout, our own write
+    // because the quote never came back (carrier 5xx, a timeout, our own write
     // losing) engaged nobody and cost the customer nothing — and counting it
     // meant three bad minutes at the carrier retired an order for good: the
     // third blip hit the cap, the order went to 'failed', and the retry button
@@ -406,7 +406,7 @@ export class OrderService {
     // The row goes in first and the quote happens second, because the partial
     // unique index on (order_id, leg) is the only real mutex here — the
     // live-leg check above is a read, and every concurrent caller passes it.
-    // Quoting first meant N simultaneous requests all asked Uber for a price
+    // Quoting first meant N simultaneous requests all asked the carrier for a price
     // and all paid for the privilege, while N-1 of their inserts then lost to
     // the index and threw the quote away. The return route is
     // customer-triggerable, so "N" is whatever a phone with a stuck retry
@@ -414,7 +414,7 @@ export class OrderService {
     //
     // The claim doubles as the idempotency key it always was: the row's id is
     // the provider's external_id, so a create that times out replays the same
-    // key and Uber hands back the original delivery instead of dispatching a
+    // key and the carrier hands back the original delivery instead of dispatching a
     // second courier. The provider is unknown until the quote comes back, so
     // it lands in the update below; 'pending' is a placeholder no chain entry
     // matches, which is exactly right for a leg no carrier has yet.
@@ -484,7 +484,7 @@ export class OrderService {
       pickupDeadlineAt: dispatchWindow.end,
     };
 
-    // App Review and demo accounts never reach a real road. Uber Direct's
+    // App Review and demo accounts never reach a real road. The carrier's
     // credentials here are live, so a reviewer following the review notes and
     // booking a pickup would otherwise send an actual driver to an actual
     // Brooklyn address to collect a bag that does not exist — and, two days

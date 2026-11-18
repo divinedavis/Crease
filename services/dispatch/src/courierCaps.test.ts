@@ -7,7 +7,7 @@ const LIMITS = { maxLegsPerDay: 3, maxCentsPerDay: 5_000 };
 /** n legs that each reached a real carrier at the given price. */
 function dispatched(n: number, feeCents = 1_299): DispatchedLeg[] {
   return Array.from({ length: n }, (_, i) => ({
-    provider: 'uber_direct',
+    provider: 'doordash',
     provider_delivery_id: `del_${i}`,
     fee_cents: feeCents,
   }));
@@ -105,7 +105,7 @@ test('legs that never reached a carrier do not spend the budget', () => {
 test('a create whose response was lost still counts', () => {
   // The carrier may well have put a courier on the road; a row that names a
   // provider but carries no delivery id is the trace that leaves.
-  assert.equal(reachedCarrier({ provider: 'uber_direct' }), true);
+  assert.equal(reachedCarrier({ provider: 'doordash' }), true);
   assert.equal(reachedCarrier({ provider_delivery_id: 'del_1' }), true);
   assert.equal(reachedCarrier({ provider: 'pending' }), false);
   assert.equal(reachedCarrier({ provider: 'none' }), false);

@@ -17,8 +17,8 @@ import { DeliveryProviderError } from './types.js';
  * Deliberately not a stub that resolves instantly: it walks a delivery through
  * the real status sequence on a timer and POSTs signed webhooks back at our
  * own endpoint. That means the dispatcher's webhook path, signature check,
- * dedupe, and state machine are all exercised for real before Uber Direct
- * credentials ever exist — and the swap to Uber changes one env var.
+ * dedupe, and state machine are all exercised for real before DoorDash Drive
+ * credentials ever exist — and the swap to a real carrier changes env vars only.
  */
 
 const SEQUENCE: { status: LegStatus; afterMs: number }[] = [

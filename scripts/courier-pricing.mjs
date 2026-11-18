@@ -12,12 +12,13 @@
  *
  *   node scripts/courier-pricing.mjs
  */
-import { UberDirectProvider } from '../packages/delivery/dist/index.js';
+import { DoorDashDriveProvider } from '../packages/delivery/dist/index.js';
 
-const provider = new UberDirectProvider({
-  clientId: process.env.UBER_CLIENT_ID,
-  clientSecret: process.env.UBER_CLIENT_SECRET,
-  customerId: process.env.UBER_CUSTOMER_ID,
+const provider = new DoorDashDriveProvider({
+  developerId: process.env.DOORDASH_DEVELOPER_ID,
+  keyId: process.env.DOORDASH_KEY_ID,
+  signingSecret: process.env.DOORDASH_SIGNING_SECRET,
+  apiBase: process.env.DOORDASH_API_BASE,
 });
 
 const money = (c) => `$${(c / 100).toFixed(2)}`;
@@ -54,7 +55,7 @@ console.log(`\nLIVE COURIER COST    one leg ${money(LEG)}    round trip ${money(
 console.log('WHAT YOU MUST CHARGE (delivery only — no cleaning revenue)');
 console.log('  ' + pad('service', 30) + rp('courier', 10) + rp('break-even', 13) + rp('+$5', 10) + rp('+$8', 10) + rp('+$12', 10));
 const SERVICES = [
-  ['Round trip, both legs Uber', ROUND],
+  ['Round trip, both legs DoorDash', ROUND],
   ['One leg only', LEG],
   ['Own driver, 6 stops/hr', Math.round(2500 / 6) * 2],
   ['Own driver, 10 stops/hr', Math.round(2500 / 10) * 2],
@@ -65,7 +66,7 @@ for (const [label, courier] of SERVICES) {
 }
 
 console.log('\n\nAT PRICES CUSTOMERS MIGHT ACTUALLY ACCEPT');
-console.log('  ' + pad('you charge', 14) + pad('round trip (Uber)', 22) + pad('one leg (Uber)', 20) + 'own driver 6/hr');
+console.log('  ' + pad('you charge', 14) + pad('round trip (DD)', 22) + pad('one leg (DD)', 20) + 'own driver 6/hr');
 for (const fee of [1495, 1995, 2495, 2995, 3495]) {
   const cells = [ROUND, LEG, Math.round(2500 / 6) * 2].map((c) => {
     const m = marginAt(fee, c);
@@ -90,6 +91,6 @@ console.log('\n\nTHE FIXED-COST FLOOR');
 console.log(`  Every round trip costs ${money(ROUND)} in couriers no matter what.`);
 console.log('  Distance barely matters under ~3 miles, so a denser service area');
 console.log('  does not reduce cost per order — only using fewer legs, or your');
-console.log('  own driver, does. Uber Direct cannot batch: one pickup, one');
+console.log('  own driver, does. DoorDash Drive cannot batch: one pickup, one');
 console.log('  dropoff per delivery, so two customers can never share a trip.');
 console.log('');

@@ -91,7 +91,7 @@ test('prices read like prices', () => {
 
 test('cancellation keeps what the engaged couriers actually cost', () => {
   const retained = cancellationRetainCents({
-    legs: [{ provider: 'uber', provider_delivery_id: 'del_1', fee_cents: 1299 }],
+    legs: [{ provider: 'doordash', provider_delivery_id: 'del_1', fee_cents: 1299 }],
     capturedCents: 2995,
   });
   assert.equal(retained, 1299 + cardFeeCents(2995));
@@ -101,8 +101,8 @@ test('cancellation keeps what the engaged couriers actually cost', () => {
 test('both legs engaged retains both fees', () => {
   const retained = cancellationRetainCents({
     legs: [
-      { provider: 'uber', provider_delivery_id: 'del_1', fee_cents: 1299 },
-      { provider: 'uber', provider_delivery_id: 'del_2', fee_cents: 1299 },
+      { provider: 'doordash', provider_delivery_id: 'del_1', fee_cents: 1299 },
+      { provider: 'doordash', provider_delivery_id: 'del_2', fee_cents: 1299 },
     ],
     capturedCents: 2995,
   });
@@ -124,7 +124,7 @@ test('a leg that never reached a carrier is not billed to the customer', () => {
 test('an engaged leg with no recorded fee still costs the flat rate, not nothing', () => {
   // A create whose response was lost may have put a courier on the road.
   const retained = cancellationRetainCents({
-    legs: [{ provider: 'uber', provider_delivery_id: 'del_1', fee_cents: null }],
+    legs: [{ provider: 'doordash', provider_delivery_id: 'del_1', fee_cents: null }],
     capturedCents: 2995,
   });
   assert.equal(retained, FLAT_RATE_LEG_COST_CENTS + cardFeeCents(2995));
@@ -133,7 +133,7 @@ test('an engaged leg with no recorded fee still costs the flat rate, not nothing
 test('a provider-named leg with no delivery id still counts as engaged', () => {
   assert.ok(
     cancellationRetainCents({
-      legs: [{ provider: 'uber', fee_cents: 1299 }],
+      legs: [{ provider: 'doordash', fee_cents: 1299 }],
       capturedCents: 2995,
     }) > 0,
   );
@@ -141,7 +141,7 @@ test('a provider-named leg with no delivery id still counts as engaged', () => {
 
 test('retention never dips under the floor', () => {
   const retained = cancellationRetainCents({
-    legs: [{ provider: 'uber', provider_delivery_id: 'del_1', fee_cents: 100 }],
+    legs: [{ provider: 'doordash', provider_delivery_id: 'del_1', fee_cents: 100 }],
     capturedCents: 0,
   });
   assert.equal(retained, MIN_CANCELLATION_FEE_CENTS);

@@ -123,7 +123,7 @@ export async function confirmAndDispatch(
 
   // dispatchLeg refuses to duplicate a leg it can see, but it is reached here
   // by two callers that can arrive seconds apart, and a duplicate courier is
-  // real money the moment Uber is live. Check for any pickup at all first: a
+  // real money the moment a carrier is live. Check for any pickup at all first: a
   // retry of one that failed belongs to the portal's retry button, which a
   // person is looking at, not to an app replaying a dropped response.
   const { data: existingLeg } = await db
@@ -160,7 +160,7 @@ export async function confirmAndDispatch(
     // throw: the order has to exist for the customer to see and cancel. It must
     // not read as a booking either — dispatchLeg has by now written a terminal
     // failed leg and put the order in 'failed', and no coverage is the routine
-    // answer once Uber Direct is live (outside the zone, outside hours,
+    // answer once DoorDash is live (outside the zone, outside hours,
     // oversize). Paid-and-nobody-is-coming gets its own outcome so no caller
     // can report it as a success.
     log.error({ err, orderId }, 'pickup dispatch failed after payment');
