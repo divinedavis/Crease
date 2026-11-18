@@ -12,6 +12,7 @@ import {
 } from './deps.js';
 import { config } from './config.js';
 import { courierCapDecision, reachedCarrier } from './courierCaps.js';
+import { bagManifest } from './manifest.js';
 import { cardFeeCents, deliveryFeeCents, fundsSecuredCents } from './pricing.js';
 import { DEFAULT_TURNAROUND_HOURS, longestTurnaroundHours, readyAtFrom } from './ready.js';
 import { parseWindow } from './windows.js';
@@ -161,9 +162,8 @@ export class OrderService {
         pickup,
         dropoff,
         manifest: {
-          description: `Dry cleaning — order ${order.short_code}`,
+          ...bagManifest(order),
           declaredValueCents: config.declaredValueDefaultCents,
-          itemCount: 1,
           requiresCar: true,
         },
       });
@@ -399,7 +399,6 @@ export class OrderService {
     }
 
     const { pickup, dropoff } = this.waypoints(order, leg);
-    const itemCount = order.order_items?.reduce((n: number, i: any) => n + i.quantity, 0) ?? 1;
 
     // Claim the leg before spending a penny on it.
     //
@@ -470,14 +469,13 @@ export class OrderService {
       pickup,
       dropoff,
       manifest: {
-        description: `Dry cleaning — order ${order.short_code}`,
+        ...bagManifest(order),
         // Carriers cap liability far below this; the declared value drives
         // their quote and their (small) coverage, not our actual exposure.
         declaredValueCents: Math.min(
           Math.max(order.subtotal_cents ?? order.estimate_subtotal_cents, config.declaredValueDefaultCents),
           config.declaredValueMaxCents,
         ),
-        itemCount: Math.max(itemCount, 1),
         requiresCar: true,
       },
       pickupReadyAt: dispatchWindow.start,
@@ -1056,7 +1054,7 @@ export class OrderService {
          cleaner:cleaners(*),
          address:addresses(*),
          customer:profiles!orders_customer_profile_fkey(full_name, phone, is_review_account),
-         order_items(quantity)`,
+         order_items(quantity, service_item:service_items(unit))`,
       )
       .eq('id', orderId)
       .single();

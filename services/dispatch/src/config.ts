@@ -112,6 +112,10 @@ export const config = {
     DOORDASH_SIGNING_SECRET: process.env.DOORDASH_SIGNING_SECRET,
     DOORDASH_WEBHOOK_AUTH: process.env.DOORDASH_WEBHOOK_AUTH,
     DOORDASH_API_BASE: process.env.DOORDASH_API_BASE,
+    NASH_API_KEY: process.env.NASH_API_KEY,
+    NASH_ORG_ID: process.env.NASH_ORG_ID,
+    NASH_WEBHOOK_SECRET: process.env.NASH_WEBHOOK_SECRET,
+    NASH_API_BASE: process.env.NASH_API_BASE,
     ENABLE_MOCK_COURIER: process.env.ENABLE_MOCK_COURIER,
     // The mock courier runs in this process, so its callbacks should loop
     // straight back to this process. Deriving it from PUBLIC_URL sent them

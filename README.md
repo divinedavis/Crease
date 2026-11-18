@@ -91,6 +91,7 @@ Against real providers:
 ```bash
 node scripts/stripe-check.mjs    # needs STRIPE_SECRET_KEY (sk_test_)
 node scripts/doordash-check.mjs  # quotes only; --create dispatches a real Dasher on prod keys
+node scripts/nash-check.mjs      # sandbox by default; --create books and cancels a delivery
 ```
 
 ## The Two Constraints That Shape Everything
@@ -142,7 +143,7 @@ learn from an API call than from a hundred orders.
 apps/ios          SwiftUI customer app — book, track both legs, approve repricing
 apps/portal       Next.js portal for partner cleaners — intake, pricing, dispatch
 services/dispatch Fastify — order state machine, courier webhooks, money
-packages/delivery Carrier abstraction: DoorDash Drive + a simulator
+packages/delivery Carrier abstraction: DoorDash Drive, Nash + a simulator
 packages/payments Stripe + Connect, and a mock enforcing the same rules
 supabase          Schema and RLS policies
 growth/prospects  Founder-only: the street canvass tool and the expansion roadmap
@@ -168,7 +169,11 @@ and state machine are exercised for real without any carrier credentials.
 **Couriers come from DoorDash Drive.** Drive sends Dashers between two
 addresses for businesses that are not on the DoorDash marketplace. It replaced
 Uber Direct in November 2026, after Uber disabled the account during an
-eligibility review and never reinstated it.
+eligibility review and never reinstated it. **Nash** sits beside it: one
+account in front of many courier networks, which quotes every courier that
+covers a route and books the cheapest one that can carry the load. Every
+request carries the bag's weight and a car-or-bigger vehicle minimum, because
+a 20 lb wash-and-fold bag is not a bike delivery.
 
 ## Security Posture
 
@@ -178,7 +183,7 @@ eligibility review and never reinstated it.
   like a real browser and asserts a rival shop's order is invisible to list,
   invisible to fetch-by-id, and immune to update.
 - Carrier webhooks are authenticated before any `JSON.parse`: the simulator's
-  are HMAC-verified over the **raw bytes**, and DoorDash's (which are unsigned)
+  and Nash's (Svix) are HMAC-verified over the **raw bytes**, and DoorDash's (which are unsigned)
   must carry the configured Authorization header and are then re-read from the
   DoorDash API, so a payload never decides a leg's state on its own word.
   Every payload lands verbatim in `delivery_events` before it is applied, valid
