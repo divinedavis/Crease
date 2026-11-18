@@ -111,6 +111,8 @@ app.get('/healthz', async (req) => {
   return {
     ok: true,
     providers: chain.active().map((p) => p.name),
+    // Which of those may take a NEW leg (COURIER_PROVIDERS narrows it).
+    quoting: chain.quotable().map((p) => p.name),
     payments: paymentProvider.name,
     connect: connectProvider.name,
     // Reported because a broken push config is otherwise invisible: sends become

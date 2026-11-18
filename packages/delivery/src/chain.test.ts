@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { ProviderChain } from './index.js';
+import { buildChain, ProviderChain } from './index.js';
 import type { DeliveryProvider, Quote, QuoteRequest } from './types.js';
 
 /** A provider that only answers quotes; nothing here dispatches anything. */
@@ -51,4 +51,30 @@ test('simulatedOnly with no simulator configured returns nothing', async () => {
   // dispatching for real is not.
   const chain = new ProviderChain([stub('uber_direct', 1_299, false)]);
   assert.equal(await chain.bestQuote(REQ, { simulatedOnly: true }), undefined);
+});
+
+test('COURIER_PROVIDERS keeps a carrier out of new legs but still resolvable', async () => {
+  // "DoorDash instead of Uber" must not orphan Uber's in-flight legs: their
+  // webhooks and cancels still need to find the provider by name.
+  const chain = new ProviderChain(
+    [stub('uber_direct', 900, false), stub('doordash', 1_400, false), stub('mock', 600, true)],
+    ['doordash'],
+  );
+  const best = await chain.bestQuote(REQ);
+  assert.equal(best?.provider.name, 'doordash');
+  assert.equal(chain.get('uber')?.name, 'uber_direct');
+  assert.deepEqual(
+    chain.quotable().map((p) => p.name),
+    ['doordash', 'mock'],
+  );
+});
+
+test('a real carrier that is cheaper wins between Uber and DoorDash', async () => {
+  const chain = new ProviderChain([stub('uber_direct', 1_299, false), stub('doordash', 975, false)]);
+  assert.equal((await chain.bestQuote(REQ))?.provider.name, 'doordash');
+});
+
+test('buildChain refuses a COURIER_PROVIDERS typo instead of starting with no carrier', () => {
+  assert.throws(() => buildChain({ COURIER_PROVIDERS: 'door_dash' }), /unknown carrier\(s\): door_dash/);
+  assert.doesNotThrow(() => buildChain({ COURIER_PROVIDERS: 'doordash, uber_direct' }));
 });

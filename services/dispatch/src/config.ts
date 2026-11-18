@@ -112,6 +112,13 @@ export const config = {
     UBER_CUSTOMER_ID: process.env.UBER_CUSTOMER_ID,
     UBER_WEBHOOK_SECRET: process.env.UBER_WEBHOOK_SECRET,
     UBER_API_BASE: process.env.UBER_API_BASE,
+    DOORDASH_DEVELOPER_ID: process.env.DOORDASH_DEVELOPER_ID,
+    DOORDASH_KEY_ID: process.env.DOORDASH_KEY_ID,
+    DOORDASH_SIGNING_SECRET: process.env.DOORDASH_SIGNING_SECRET,
+    DOORDASH_WEBHOOK_SECRET: process.env.DOORDASH_WEBHOOK_SECRET,
+    DOORDASH_API_BASE: process.env.DOORDASH_API_BASE,
+    // Unset: every configured carrier quotes. "doordash": DoorDash only.
+    COURIER_PROVIDERS: process.env.COURIER_PROVIDERS,
     ENABLE_MOCK_COURIER: process.env.ENABLE_MOCK_COURIER,
     // The mock courier runs in this process, so its callbacks should loop
     // straight back to this process. Deriving it from PUBLIC_URL sent them
