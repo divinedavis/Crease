@@ -2,10 +2,12 @@ export * from './types.js';
 export { MockProvider } from './mock.js';
 export { DoorDashDriveProvider, e164 } from './doordashDrive.js';
 export { NashProvider } from './nash.js';
+export { ShipdayProvider } from './shipday.js';
 
 import { MockProvider } from './mock.js';
 import { DoorDashDriveProvider } from './doordashDrive.js';
 import { NashProvider } from './nash.js';
+import { ShipdayProvider } from './shipday.js';
 import type { DeliveryProvider, Quote, QuoteRequest } from './types.js';
 
 /**
@@ -85,6 +87,9 @@ export interface BuildChainEnv {
   NASH_ORG_ID?: string;
   NASH_WEBHOOK_SECRET?: string;
   NASH_API_BASE?: string;
+  SHIPDAY_API_KEY?: string;
+  SHIPDAY_WEBHOOK_TOKEN?: string;
+  SHIPDAY_API_BASE?: string;
   MOCK_WEBHOOK_URL?: string;
   MOCK_WEBHOOK_SECRET?: string;
   MOCK_SPEED_FACTOR?: string;
@@ -93,7 +98,7 @@ export interface BuildChainEnv {
 }
 
 /**
- * DoorDash Drive and Nash when their credentials exist, plus the mock when
+ * DoorDash Drive, Nash and Shipday when their credentials exist, plus the mock when
  * explicitly enabled. Today
  * the mock is the only active provider in every environment, which is how the
  * whole two-leg flow runs end to end before DoorDash credentials land — but it is
@@ -115,6 +120,13 @@ export function buildChain(env: BuildChainEnv): ProviderChain {
       orgId: env.NASH_ORG_ID,
       webhookSecret: env.NASH_WEBHOOK_SECRET,
       apiBase: env.NASH_API_BASE,
+    }),
+    // Books DoorDash and Uber couriers on Shipday's own accounts, so it
+    // needs no carrier approval of ours.
+    new ShipdayProvider({
+      apiKey: env.SHIPDAY_API_KEY,
+      webhookToken: env.SHIPDAY_WEBHOOK_TOKEN,
+      apiBase: env.SHIPDAY_API_BASE,
     }),
   ];
 

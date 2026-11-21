@@ -6,6 +6,7 @@ export {
   MockProvider,
   DoorDashDriveProvider,
   NashProvider,
+  ShipdayProvider,
   DeliveryProviderError,
   TERMINAL_STATUSES,
 } from '@crease/delivery';

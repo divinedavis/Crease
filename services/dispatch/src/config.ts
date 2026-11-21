@@ -116,6 +116,9 @@ export const config = {
     NASH_ORG_ID: process.env.NASH_ORG_ID,
     NASH_WEBHOOK_SECRET: process.env.NASH_WEBHOOK_SECRET,
     NASH_API_BASE: process.env.NASH_API_BASE,
+    SHIPDAY_API_KEY: process.env.SHIPDAY_API_KEY,
+    SHIPDAY_WEBHOOK_TOKEN: process.env.SHIPDAY_WEBHOOK_TOKEN,
+    SHIPDAY_API_BASE: process.env.SHIPDAY_API_BASE,
     ENABLE_MOCK_COURIER: process.env.ENABLE_MOCK_COURIER,
     // The mock courier runs in this process, so its callbacks should loop
     // straight back to this process. Deriving it from PUBLIC_URL sent them
