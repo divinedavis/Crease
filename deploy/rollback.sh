@@ -30,7 +30,9 @@ changed="$(ssh "$HOST" "set -euo pipefail
     cmp -s \"\$f\" /etc/systemd/system/\$(basename \"\$f\") || { cp -a \"\$f\" /etc/systemd/system/; echo \"unit \$(basename \"\$f\")\"; }
   done")"
 if [ -n "$changed" ]; then
-  echo "$changed" | head -20 | sed 's/^/    /'
+  # sed reads every line; `head` stops early, and under pipefail the SIGPIPE
+  # that sends to echo aborted the rollback before services restarted (11/21).
+  printf '%s\n' "$changed" | sed -n '1,20s/^/    /p'
   echo "    ($(echo "$changed" | wc -l | tr -d ' ') changes) restarting services"
   ssh "$HOST" 'systemctl daemon-reload && systemctl restart crease-dispatch crease-portal crease-web'
 else

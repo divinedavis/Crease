@@ -9,7 +9,7 @@
  *
  *   node scripts/e2e-cancel.mjs
  */
-import { adminClient } from './lib/client.mjs';
+import { adminClient, reviewAddress } from './lib/client.mjs';
 
 const { env, db } = await adminClient();
 const BASE = process.env.CREASE_BASE ?? env.PUBLIC_URL ?? 'http://localhost:8080';
@@ -30,7 +30,8 @@ async function post(path) {
   return { status: res.status, json: await res.json().catch(() => ({})) };
 }
 
-const { data: address } = await db.from('addresses').select('id, user_id').limit(1).single();
+// The review account only: its orders never reach a real courier.
+const address = await reviewAddress(db);
 const { data: cleaner } = await db.from('cleaners').select('id').eq('slug', 'bedford-cleaners').single();
 
 async function makeOrder() {

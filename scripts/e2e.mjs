@@ -8,7 +8,7 @@
  *
  *   node scripts/seed.mjs && node scripts/e2e.mjs
  */
-import { adminClient } from './lib/client.mjs';
+import { adminClient, reviewAddress } from './lib/client.mjs';
 
 const { env, db } = await adminClient();
 
@@ -165,9 +165,10 @@ console.log('\nGUARD  unfunded order');
 const { data: unfunded } = await db
   .from('orders')
   .insert({
-    customer_id: order.customer_id ?? (await db.from('addresses').select('user_id').limit(1).single()).data.user_id,
+    // The review account only: its orders never reach a real courier.
+    customer_id: (await reviewAddress(db)).user_id,
     cleaner_id: order.cleaner_id,
-    address_id: (await db.from('addresses').select('id').limit(1).single()).data.id,
+    address_id: (await reviewAddress(db)).id,
     status: 'scheduled',
     estimate_subtotal_cents: 2400,
   })

@@ -9,7 +9,7 @@
  *
  *   node scripts/e2e-payouts.mjs
  */
-import { adminClient } from './lib/client.mjs';
+import { adminClient, reviewAddress } from './lib/client.mjs';
 
 const { env, db } = await adminClient();
 const BASE = process.env.CREASE_BASE ?? env.PUBLIC_URL ?? 'http://localhost:8080';
@@ -37,7 +37,8 @@ const { data: cleaner } = await db
   .select('*')
   .eq('slug', 'bedford-cleaners')
   .single();
-const { data: address } = await db.from('addresses').select('id, user_id').limit(1).single();
+// The review account only: its orders never reach a real courier.
+const address = await reviewAddress(db);
 const { data: services } = await db.from('service_items').select('*').eq('cleaner_id', cleaner.id);
 const shirt = services.find((s) => s.code === 'shirt');
 

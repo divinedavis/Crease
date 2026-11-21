@@ -121,3 +121,30 @@ export async function adminClient() {
   assertNotProduction(env);
   return { env, db: await makeClient(env.SUPABASE_SERVICE_ROLE_KEY, env.SUPABASE_URL) };
 }
+
+/**
+ * An address that belongs to the App Review demo account, for journeys that
+ * build their own orders against production.
+ *
+ * Only a review account's orders are held to the simulated courier
+ * (orders.ts: simulatedOnly). Journeys used to take "the first address in the
+ * table", which can be a real customer's: on 2026-11-21, the day Shipday's key
+ * went on the box, e2e-cancel's dispatch went to Shipday and left two real
+ * orders in its dashboard (no courier, because booking failed). Never fall
+ * back to any other address.
+ */
+export async function reviewAddress(db) {
+  const { data: profiles, error } = await db.from('profiles').select('id').eq('is_review_account', true);
+  if (error) throw error;
+  const ids = (profiles ?? []).map((p) => p.id);
+  if (ids.length === 0) throw new Error('no review account: run scripts/seed.mjs first');
+  const { data: address, error: addrError } = await db
+    .from('addresses')
+    .select('id, user_id')
+    .in('user_id', ids)
+    .limit(1)
+    .maybeSingle();
+  if (addrError) throw addrError;
+  if (!address) throw new Error('the review account has no address: run scripts/seed.mjs first');
+  return address;
+}

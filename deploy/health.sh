@@ -37,7 +37,7 @@ if printf '%s' "$web" | grep -q '<title>Crease: Laundry'; then ok "creasenyc.com
 else bad "creasenyc.com / is missing the Crease title"; fi
 
 # One of the page's own JS chunks must load, or the page is a dead shell.
-chunk="$(printf '%s' "$web" | grep -oE '/_next/static/[^"]+\.js' | head -1)"
+chunk="$(printf '%s' "$web" | grep -oE '/_next/static/[^"]+\.js' | sed -n '1p')"
 if [ -n "$chunk" ] && [ "$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://creasenyc.com$chunk")" = 200 ]; then
   ok "creasenyc.com static chunk loads"
 else bad "creasenyc.com static chunk ${chunk:-<none found>} does not load"; fi
