@@ -14,6 +14,7 @@ import { PushService } from './push.js';
 import { readyWindow } from './ready.js';
 import { dashboardStats } from './stats.js';
 import { buildPaymentProvider, buildConnectProvider, verifyStripeSignature } from '@crease/payments';
+import { webhookProbe } from './webhookProbe.js';
 
 const app = Fastify({
   logger: { level: config.logLevel },
@@ -790,6 +791,13 @@ app.post('/webhooks/stripe', async (req, reply) => {
  * not — an invalid signature is a security signal, and a mis-parsed event can
  * be replayed from the raw row instead of being lost.
  */
+// Browsers and courier dashboards check the address with a GET; answer it
+// instead of a 404 that reads as broken.
+app.get<{ Params: { provider: string } }>('/webhooks/:provider', async (req, reply) => {
+  const { code, body } = webhookProbe(chain.get(req.params.provider));
+  return reply.code(code).send(body);
+});
+
 app.post<{ Params: { provider: string } }>('/webhooks/:provider', async (req, reply) => {
   const provider = chain.get(req.params.provider);
   if (!provider) return reply.code(404).send({ error: 'unknown provider' });
