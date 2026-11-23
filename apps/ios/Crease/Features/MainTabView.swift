@@ -96,6 +96,10 @@ struct MainTabView: View {
                 .presentationBackground(.clear)
             case let .pin(resolved, intent):
                 PinConfirmView(address: resolved) { confirmed, notes in
+                    // Remembered under the street that was searched for and
+                    // the one under the pin, which can differ by a door.
+                    PinMemory.remember(resolved, at: confirmed.coordinate)
+                    PinMemory.remember(confirmed, at: confirmed.coordinate)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         flow = .book(confirmed, notes, intent)
                     }

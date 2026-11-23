@@ -230,7 +230,12 @@ struct AddressEntryView: View {
         resolving = true
         defer { resolving = false }
         guard let resolved = await search.resolve(completion) else { return }
-        onPicked(resolved)
+        // Used before? Open the pin where the customer put it last time.
+        let saved = store.addresses.map { a in
+            (line1: a.line1, postalCode: a.postalCode,
+             coordinate: a.lat.flatMap { lat in a.lng.map { CLLocationCoordinate2D(latitude: lat, longitude: $0) } })
+        }
+        onPicked(PinMemory.applied(to: resolved, saved: saved))
         dismiss()
     }
 }

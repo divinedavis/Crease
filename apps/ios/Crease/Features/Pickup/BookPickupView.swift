@@ -550,13 +550,14 @@ struct BookPickupView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
 
-            // The three tiers side by side, the way the reference lays out
-            // its choices: picture, name, price. The blurb for the chosen one
-            // is the fee line under them.
-            HStack(spacing: 10) {
-                ForEach(Array(ServiceOption.all.enumerated()), id: \.element.id) { i, option in
+            // The three tiers as plain chips, name and price only (owner,
+            // 2026-11-22: "should be simpler"). The chosen one's driver time
+            // and what it covers are the line under them. No per-chip
+            // entrance animation: it ran on its own clock while the sheet
+            // slid up, so the chips drew over the step header for a moment.
+            HStack(spacing: 8) {
+                ForEach(ServiceOption.all) { option in
                     optionRow(option)
-                        .staggeredAppear(i + 2)
                 }
             }
             .padding(.horizontal, 20)
@@ -599,6 +600,13 @@ struct BookPickupView: View {
 
     private var feeExplainer: String {
         let shop = cleaner?.name ?? "the shop"
+        // The chips no longer carry the driver time, so the chosen tier's
+        // leads the sentence that explains it.
+        let eta = selected.pickupEtaMinutes.map { "Driver in about \($0) min. " } ?? ""
+        return eta + feeCovers(shop)
+    }
+
+    private func feeCovers(_ shop: String) -> String {
         switch selected.id {
         case "pickup_only":
             return "One payment covers the courier to \(shop) and their cleaning. You collect it from their counter when it's done."
@@ -712,49 +720,21 @@ struct BookPickupView: View {
         return Button {
             withAnimation(Motion.snappy) { selected = option }
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                option.illustration.image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
-                    .scaleEffect(isSelected ? 1.08 : 1)
-                    .accessibilityHidden(true)
+            VStack(spacing: 2) {
                 Text(option.name)
-                    .font(.app(.subheadline).weight(.bold))
+                    .font(.app(.subheadline).weight(.semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
                 Text(option.priceCents.asMoney)
-                    .font(.app(.caption).weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Theme.muted)
-                if let eta = option.pickupEtaMinutes {
-                    Text("Driver in ~\(eta) min")
-                        .font(.app(.caption2))
-                        .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                } else {
-                    Text("No pickup")
-                        .font(.app(.caption2))
-                        .foregroundStyle(Theme.muted)
-                }
-                if option.isRecommended {
-                    Text("Best value")
-                        .font(.app(.caption2).weight(.bold))
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Theme.ink, in: Capsule())
-                        .foregroundStyle(Theme.onInk)
-                        .padding(.top, 2)
-                }
+                    .font(.app(.caption).monospacedDigit())
+                    .opacity(0.75)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+            .foregroundStyle(isSelected ? Theme.onInk : Theme.ink)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 58)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(isSelected ? Theme.canvas : Theme.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(isSelected ? Theme.ink : .clear, lineWidth: 2.5)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? Theme.ink : Theme.surface)
             )
             .contentShape(Rectangle())
         }

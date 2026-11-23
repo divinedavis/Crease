@@ -82,7 +82,24 @@ struct PinConfirmView: View {
                         centre = context.camera.centerCoordinate
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { isDragging = false }
                     }
-                    .ignoresSafeArea()
+                    // Drawn on the map itself, tip on the map's centre, so the
+                    // point under the pin IS the camera's centre coordinate —
+                    // the one the courier is sent to. It used to be laid out
+                    // separately in the space above the sheet and nudged up a
+                    // guessed 60 pt while the map filled the whole screen, so
+                    // the pin floated about a quarter of a screen above the
+                    // real point (owner, 2026-11-22: "the pin should do a
+                    // better job of being at the actual address").
+                    .overlay {
+                        pin
+                            .frame(height: 0, alignment: .bottom)
+                            .allowsHitTesting(false)
+                    }
+                    // Down to the sheet, plus enough to sit behind its rounded
+                    // corners, so the centre stays in view on a small phone
+                    // instead of under the sheet.
+                    .ignoresSafeArea(edges: .top)
+                    .padding(.bottom, -36)
             }
             // Geocode only once the map settles, keyed on the point so a new
             // drag cancels the lookup for the old one. Apple throttles
@@ -98,10 +115,6 @@ struct PinConfirmView: View {
                 }
                 await lookUpAddress(at: centre)
             }
-
-            pin
-                .frame(maxHeight: .infinity)
-                .allowsHitTesting(false)
 
             header
         }
@@ -143,9 +156,6 @@ struct PinConfirmView: View {
             guard !reduceMotion else { return }
             withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) { pulse = true }
         }
-        // The pin marks the point at the centre of the map, and the map centre
-        // is above the sheet, not the screen.
-        .offset(y: -60)
     }
 
     private var header: some View {
