@@ -292,7 +292,11 @@ final class CreaseUITests: XCTestCase {
             app.buttons["Cancel"].tap()
             throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
         }
-        app.textFields["Street address"].typeText("251 Dek")
+        // Tap first: on a cold simulator the field's focus can land a beat
+        // after the screen appears, and typeText refuses an unfocused field.
+        let field = app.textFields["Street address"]
+        field.tap()
+        field.typeText("251 Dek")
         sleep(3)   // MapKit's suggestions arrive asynchronously
         XCTAssertLessThanOrEqual(app.buttons.matching(identifier: "address-suggestion").count, 2,
                                  "three rows in all, and the pinned home address is one of them")
