@@ -182,7 +182,7 @@ struct SmartOrderTools: View {
     var body: some View {
         Section {
             HStack(spacing: 8) {
-                TextField("e.g. 2 suits and a coat, tomorrow 9am", text: $description, axis: .vertical)
+                TextField("Describe your order", text: $description, axis: .vertical)
                     .lineLimit(1...3)
                     .focused($typing)
                     .submitLabel(.done)
@@ -198,15 +198,15 @@ struct SmartOrderTools: View {
                     .disabled(description.trimmingCharacters(in: .whitespaces).isEmpty || working)
             }
 
-            // The tools as the reference's product cards: picture, round
-            // "+", name, one line. Labels stay the sentences VoiceOver and the
-            // UI tests already know.
+            // Picture and a short name (owner, 2026-11-23: "less words").
+            // Accessibility labels stay the sentences VoiceOver and the UI
+            // tests already know.
             HStack(alignment: .top, spacing: 10) {
                 if let laundry = weighedLine {
                     Button {
                         estimatingWeight = true
                     } label: {
-                        ToolCard(art: .scale, title: "Estimate weight", detail: "From a photo")
+                        ToolCard(art: .scale, title: "Weigh")
                     }
                     .buttonStyle(PressableStyle())
                     .accessibilityLabel("Estimate weight from a photo")
@@ -216,18 +216,18 @@ struct SmartOrderTools: View {
                             quantities[laundry.id] = max(estimate.pounds, ServicePricing.startingUnits(laundry))
                             extras.weightEstimate = (estimate.pounds, method)
                             if let photo { extras.addHandoff(photo) }
-                            result = "Set to \(Int(estimate.pounds)) lb. \(laundry.label) is weighed at the counter, and that's what you pay."
+                            result = "Set to \(Int(estimate.pounds)) lb"
                             estimatingWeight = false
                         }
                         .presentationDetents([.large])
                     }
                 }
                 ImageSourceButton(onImage: { image in Task { await scanClothes(image) } }) {
-                    ToolCard(art: .camera, title: "Scan clothes", detail: "Suggests lines")
+                    ToolCard(art: .camera, title: "Scan")
                 }
                 .accessibilityLabel("Scan clothes")
                 ImageSourceButton(onImage: { image in Task { await readCareLabel(image) } }) {
-                    ToolCard(art: .careTag, title: "Care label", detail: "Reads the tag")
+                    ToolCard(art: .careTag, title: "Label")
                 }
                 .accessibilityLabel("Care label")
             }
@@ -245,10 +245,6 @@ struct SmartOrderTools: View {
                     .foregroundStyle(Theme.muted)
                     .accessibilityIdentifier("smart-result")
             }
-        } header: {
-            Text("Quick add")
-        } footer: {
-            Text("Runs on your iPhone. Photos and words stay on your phone unless you add a photo for the shop at checkout.")
         }
     }
 
@@ -259,7 +255,7 @@ struct SmartOrderTools: View {
         var parsed = OrderTextParser.parse(description, menu: menu)
         parsed = await OnDeviceLanguage.improve(parsed, text: description, menu: menu)
         guard !parsed.isEmpty else {
-            result = "Couldn't match that to \(menu.isEmpty ? "this shop" : "this shop's") price list. Try naming the items, like \"3 shirts\"."
+            result = "No match. Try \"3 shirts\"."
             return
         }
         if let service = parsed.service, offered.contains(service) { kind = service }
@@ -269,10 +265,10 @@ struct SmartOrderTools: View {
         let names = parsed.quantities.compactMap { id, _ in menu.first { $0.id == id }?.label }
         if !names.isEmpty { said.append("Added \(names.sorted().joined(separator: ", ")).") }
         if let when = parsed.pickupAt {
-            said.append("Pickup set for \(when.formatted(date: .abbreviated, time: .shortened)).")
+            said.append("Pickup \(when.formatted(date: .abbreviated, time: .shortened)).")
         }
         if !parsed.unmatched.isEmpty {
-            said.append("Not on this shop's list: \(parsed.unmatched.joined(separator: ", ")).")
+            said.append("Not listed: \(parsed.unmatched.joined(separator: ", ")).")
         }
         result = said.joined(separator: " ")
     }
@@ -283,7 +279,7 @@ struct SmartOrderTools: View {
         let labels = await OnDeviceVision.classify(image)
         let found = GarmentMatcher.suggestions(labels: labels, menu: menu)
         guard !found.isEmpty else {
-            result = "Couldn't tell what's in that photo. Add the items below."
+            result = "Nothing recognised."
             return
         }
         if let first = found.first, let service = ServiceKind(rawValue: first.serviceType), offered.contains(service) {
@@ -293,7 +289,7 @@ struct SmartOrderTools: View {
             quantities[item.id] = item.isByWeight ? ServicePricing.openingUnits(item) : 1
         }
         extras.addHandoff(image)
-        result = "Looks like: \(found.map(\.label).joined(separator: ", ")). Check the counts. The photo is saved as your handoff photo for the shop."
+        result = "Added \(found.map(\.label).joined(separator: ", ")). Check the counts."
     }
 
     private func readCareLabel(_ image: UIImage) async {
@@ -318,32 +314,23 @@ struct SmartOrderTools: View {
 struct ToolCard: View {
     let art: Illustration
     let title: String
-    let detail: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ZStack(alignment: .topTrailing) {
-                art.image
-                    .resizable()
-                    .scaledToFit()
-                    .padding(12)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 76)
-                    .background(Theme.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                PlusBadge(size: 26).padding(5)
-            }
-            .padding(.bottom, 4)
+        VStack(spacing: 6) {
+            art.image
+                .resizable()
+                .scaledToFit()
+                .padding(10)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Theme.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             Text(title)
                 .font(.app(.footnote).weight(.semibold))
                 .foregroundStyle(Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text(detail)
-                .font(.app(.caption2))
-                .foregroundStyle(Theme.muted)
-                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
     }
 }

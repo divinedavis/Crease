@@ -65,32 +65,29 @@ struct ServiceMenuView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                NumberedStepper(current: 2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // No step indicator: this sheet sits over the booking screen,
+                // which already shows it (owner, 2026-11-23: "simplify").
+                if !menu.isEmpty {
+                    // Three equal tabs that always fit, rather than chips that
+                    // scrolled "Press only" off the edge.
+                    HStack(spacing: 6) {
+                        ForEach(ServiceKind.allCases) { service in
+                            let on = service == kind
+                            Button { withAnimation(Motion.snappy) { kind = service } } label: {
+                                Text(service.label)
+                                    .font(.app(.subheadline).weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .foregroundStyle(on ? Theme.onInk : Theme.ink)
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .background(on ? Theme.ink : Theme.surface, in: Capsule())
+                            }
+                            .buttonStyle(PressableStyle())
+                            .accessibilityAddTraits(on ? [.isSelected] : [])
+                        }
+                    }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
-                    .padding(.bottom, 12)
-                if !menu.isEmpty {
-                    // Chips, not a segmented control: the selected service is
-                    // the black one, like the reference's filled step dot.
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(ServiceKind.allCases) { service in
-                                let on = service == kind
-                                Button { withAnimation(Motion.snappy) { kind = service } } label: {
-                                    Text(service.label)
-                                        .font(.app(.subheadline).weight(.semibold))
-                                        .foregroundStyle(on ? Theme.onInk : Theme.ink)
-                                        .padding(.horizontal, 16)
-                                        .frame(minHeight: 40)
-                                        .background(on ? Theme.ink : Theme.surface, in: Capsule())
-                                }
-                                .buttonStyle(PressableStyle())
-                                .accessibilityAddTraits(on ? [.isSelected] : [])
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
                     .padding(.bottom, 8)
                     // Switching tabs used to empty the bag. An order does carry
                     // one service type, so that was enforcing something real —
@@ -120,10 +117,6 @@ struct ServiceMenuView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("\(shopName) doesn't offer \(kind.label.lowercased()) yet")
                                     .font(.app(.subheadline).weight(.semibold))
-                                Text("They haven't published \(kind.label.lowercased()) prices, so it can't be booked with them. Pick another service above, or change the cleaner on the booking screen.")
-                                    .font(.app(.caption))
-                                    .foregroundStyle(Theme.muted)
-                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             .padding(.vertical, 4)
                             .accessibilityElement(children: .combine)
@@ -133,12 +126,6 @@ struct ServiceMenuView: View {
                                 .listRowBackground(
                                     RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface)
                                 )
-                        }
-                    } header: {
-                        Text(kind.prompt)
-                    } footer: {
-                        if !items.isEmpty {
-                            Text("These are \(shopName)'s prices. They count the bag at the counter and that count is what you pay — this is what to expect.")
                         }
                     }
                 }
@@ -164,10 +151,14 @@ struct ServiceMenuView: View {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
                         .accessibilityLabel("Close")
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                        .disabled(!isResolvable)
+                // The total bar carries Done; a service the shop has not
+                // priced has no total bar, so it gets one up here instead.
+                if items.isEmpty {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                            .fontWeight(.semibold)
+                            .disabled(!isResolvable)
+                    }
                 }
             }
         }
@@ -180,7 +171,7 @@ struct ServiceMenuView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("One service per order")
                     .font(.app(.footnote).weight(.semibold))
-                Text("You've also got \(other.label.lowercased()) in this bag. They're cleaned on different machines and come back on different days, so they have to be booked separately.")
+                Text("Remove \(other.label.lowercased()) to continue.")
                     .font(.app(.caption))
                     .foregroundStyle(Theme.muted)
             }
@@ -208,7 +199,6 @@ struct ServiceMenuView: View {
         let entered = quantities[item.id] ?? 0
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 12) {
-                IllustrationTile(art: kind.illustration, size: 52, corner: 16, fill: Theme.raised, inset: 0.1)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.label).font(.app(.headline))
                     Text(priceLine(item))
@@ -254,22 +244,14 @@ struct ServiceMenuView: View {
                 // Said here rather than discovered at the counter: a 15 lb
                 // floor turns an 8 lb bag into a 15 lb bill, and that is the
                 // single most surprising number in laundry pricing.
-                Text("\(shopName) has a \(unitsLabel(item.minimumUnits)) lb minimum, so this bills as \(unitsLabel(ServicePricing.billableUnits(item, entered: entered))) lb.")
+                Text("Bills as \(unitsLabel(ServicePricing.billableUnits(item, entered: entered))) lb (minimum)")
                     .font(.app(.caption2))
                     .foregroundStyle(.orange)
             } else if item.isByWeight, entered > ServicePricing.startingUnits(item),
                       entered == LastBagSize.pounds(for: item) {
                 // Why the line opened above the floor: it is the bag they
                 // booked last time here, not a number the app made up.
-                Text("Same as your last order at \(shopName). Change it if this bag is different.")
-                    .font(.app(.caption2))
-                    .foregroundStyle(Theme.muted)
-            } else if entered == ServicePricing.startingUnits(item), item.minimumUnits > 0 {
-                // Why the line already has a number in it. A count nobody
-                // typed needs saying, or it reads as the app having decided how
-                // much laundry they have — and the floor is the one weight it
-                // can state without guessing.
-                Text("That's \(shopName)'s minimum, so it's where this starts. Add pounds if your bag is bigger.")
+                Text("Same as last time")
                     .font(.app(.caption2))
                     .foregroundStyle(Theme.muted)
             }
@@ -285,11 +267,14 @@ struct ServiceMenuView: View {
         // charged the sum of both — so the bar says so under the number.
         TotalBar(
             amount: subtotal.asMoney,
-            note: "Estimated cleaning · courier fee separate",
+            note: "Cleaning estimate",
             action: "Done",
             enabled: isResolvable,
             accessibilityText: "Estimated cleaning \(subtotal.asMoney), courier fee charged separately. Done"
         ) { dismiss() }
+        // The only Done on the sheet now; found by this name, as the toolbar
+        // button it replaced was.
+        .accessibilityIdentifier("Done")
         .padding(.top, 8)
     }
 

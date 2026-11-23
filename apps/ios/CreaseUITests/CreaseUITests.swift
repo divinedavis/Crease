@@ -528,6 +528,42 @@ final class CreaseUITests: XCTestCase {
     /// the bag, and the hold was too small for any real cleaning bill. Both
     /// halves are asserted here: that the shop's own prices are on screen, and
     /// that laundry is offered by the pound with its minimum spelled out.
+    /// The order sheet, simplified (owner, 2026-11-23: "simplify this entire
+    /// view", "less words"): all three services fit without scrolling, the
+    /// long explanations are gone, and there is one Done.
+    func testTheOrderSheetIsShortAndFits() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        home.tap()
+        let serviceRow = app.buttons
+            .matching(NSPredicate(format: "label CONTAINS 'Wash & fold' OR label CONTAINS 'Choose what'"))
+            .firstMatch
+        XCTAssertTrue(serviceRow.waitForExistence(timeout: 15))
+        serviceRow.tap()
+        XCTAssertTrue(app.navigationBars["Your order"].waitForExistence(timeout: 10))
+
+        let window = app.windows.firstMatch.frame
+        for name in ["Dry cleaning", "Wash & fold", "Press only"] {
+            let tab = app.buttons[name]
+            XCTAssertTrue(tab.waitForExistence(timeout: 5), "\(name) tab missing")
+            XCTAssertTrue(window.contains(tab.frame), "\(name) runs off the screen")
+        }
+        for gone in ["Quick add", "About how much laundry?"] {
+            XCTAssertFalse(app.staticTexts[gone].exists, "\(gone) should be gone")
+        }
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Runs on your iPhone'")).firstMatch.exists)
+        XCTAssertEqual(app.buttons.matching(identifier: "Done").count, 1, "one Done, in the total bar")
+        attach(app, "order-sheet-simplified")
+        app.buttons["Done"].tap()
+    }
+
     func testTheCustomerPicksAServiceAndSeesTheShopsPrices() throws {
         let app = launch(signedIn: true)
         XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
@@ -558,11 +594,7 @@ final class CreaseUITests: XCTestCase {
         // list for it, and offering a service nobody can quote is how an order
         // reaches a counter as a question.
         XCTAssertTrue(
-            app.staticTexts["About how much laundry?"].waitForExistence(timeout: 5),
-            "laundry is weighed, and the prompt should say so"
-        )
-        XCTAssertTrue(
-            app.staticTexts.matching(NSPredicate(format: "label CONTAINS '/ lb'")).firstMatch.exists,
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS '/ lb'")).firstMatch.waitForExistence(timeout: 5),
             "laundry must be priced by the pound"
         )
         XCTAssertTrue(
