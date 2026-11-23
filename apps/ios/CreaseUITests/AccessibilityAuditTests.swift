@@ -150,7 +150,7 @@ final class AccessibilityAuditTests: XCTestCase {
     func testSignInAndEmailSheet() {
         let app = launch(signedIn: false)
         XCTAssertTrue(app.buttons["Continue with email"].waitForExistence(timeout: 15))
-        // the splash folds away and the screen scales up into place first
+        // the splash lifts away and the screen rises into place first
         let mark = app.descendants(matching: .any).matching(identifier: "splash.wordmark").firstMatch
         _ = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: mark)], timeout: 8)
         sleep(2)

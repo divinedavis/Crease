@@ -44,8 +44,10 @@ targets:
         CFBundleDisplayName: Crease
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleShortVersionString: $(MARKETING_VERSION)
+        # The splash's cream (dark: near-black), so the static launch image
+        # hands off to SplashView without a flash.
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: SplashBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiredDeviceCapabilities:

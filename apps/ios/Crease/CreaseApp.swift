@@ -52,10 +52,10 @@ struct RootView: View {
     /// very window they are meant to dismiss.
     @State private var appActive = UIApplication.shared.applicationState == .active
 
-    /// The wordmark splash stays over `content` until the auth gate has
-    /// resolved and its fold-away has played. `revealed` flips as the overlay
-    /// starts lifting, so the screen underneath rises into view while the last
-    /// bar is still shrinking rather than popping in after.
+    /// The Pleat splash stays over `content` until the auth gate has resolved
+    /// and the mark has drawn itself. `revealed` flips as the overlay starts
+    /// lifting, so the screen underneath rises into view while the mark is
+    /// still going rather than popping in after.
     @State private var showSplash = true
     @State private var revealed = false
 
@@ -66,7 +66,6 @@ struct RootView: View {
             if showSplash {
                 SplashView(
                     ready: !isLoading,
-                    dimsTo: isSignedIn ? Theme.canvas : Color(.systemBackground),
                     onReveal: { revealed = true },
                     onFinished: { showSplash = false }
                 )

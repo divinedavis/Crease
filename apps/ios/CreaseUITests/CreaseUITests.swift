@@ -106,8 +106,9 @@ final class CreaseUITests: XCTestCase {
     func testTheSplashLiftsOnItsOwn() {
         let app = launch(signedIn: false)
         // Merged into one accessibility element, so it is not a static text.
-        // Not asserted present: on a signed-out launch it folds away in about
-        // a second and a half, and `launch()` blocks for longer than that.
+        // Not asserted present: on a signed-out launch the mark draws itself
+        // and lifts after about two seconds, and `launch()` can block for
+        // longer than that.
         let mark = app.descendants(matching: .any).matching(identifier: "splash.wordmark").firstMatch
         let gone = NSPredicate(format: "exists == false")
         let lifted = XCTNSPredicateExpectation(predicate: gone, object: mark)

@@ -27,6 +27,7 @@
 		3DEE35811EB0A36066EF9EA9 /* PlusJakartaSans-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4560014C0435D825C71DF2A2 /* PlusJakartaSans-SemiBold.ttf */; };
 		3F04AEE69E18A24318AF284F /* NoteTranslation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F939BB829C1004564DF9307F /* NoteTranslation.swift */; };
 		3F514BE3D9B58E5AB54D202B /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE69E283A450126889E7437E /* ActivityView.swift */; };
+		41A362C79202FB1F5EB51C6E /* SplashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38EC9C3C45E045E3B29E6B45 /* SplashTests.swift */; };
 		455859FE9B47B06E977D510F /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B408BA2AD91EBF8331E717D /* Motion.swift */; };
 		4A7AED58EED6FEDB7D380565 /* PinMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566CE85EF398EA3372286C06 /* PinMemoryTests.swift */; };
 		4BC1C05DEFF2C71AD9B8CAD0 /* SavedPointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39485667720C59ACADF1C34E /* SavedPointTests.swift */; };
@@ -132,6 +133,7 @@
 		2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicePricingTests.swift; sourceTree = "<group>"; };
 		30AF20045A280A1ED76A1B7D /* AddressRankingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressRankingTests.swift; sourceTree = "<group>"; };
 		38CF7207BB0813CE710B6BB2 /* PriceCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceCopyTests.swift; sourceTree = "<group>"; };
+		38EC9C3C45E045E3B29E6B45 /* SplashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashTests.swift; sourceTree = "<group>"; };
 		39485667720C59ACADF1C34E /* SavedPointTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPointTests.swift; sourceTree = "<group>"; };
 		39B2121EE8C6FDE0D63F2C17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3A563ABCE43F11DA48EA6E73 /* PlusJakartaSans-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-ExtraBold.ttf"; sourceTree = "<group>"; };
@@ -196,7 +198,7 @@
 		F86DCA15AB65C766DF0F5BDE /* CreaseUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CreaseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F939BB829C1004564DF9307F /* NoteTranslation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTranslation.swift; sourceTree = "<group>"; };
 		FE9754ABB76DF4702653DFCE /* CleanerPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanerPickerView.swift; sourceTree = "<group>"; };
-		"TEMP_B704E0FA-68E8-49C6-8D4A-DEFB8A5A1396" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		"TEMP_6692711A-1815-4C0B-94BD-3A58622225D5" /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -371,15 +373,16 @@
 				2F93E7338650C6F0E353CA36 /* ServicePricingTests.swift */,
 				94CCCF60E110ACED75AAD19D /* ServiceTierCopyTests.swift */,
 				68B2734F9E22032445B0D437 /* SoftUITests.swift */,
+				38EC9C3C45E045E3B29E6B45 /* SplashTests.swift */,
 				539EDE40E133C878DDC65F56 /* WordmarkFontTests.swift */,
 			);
 			path = CreaseTests;
 			sourceTree = "<group>";
 		};
-		"TEMP_DC3B631B-CD18-420E-AC03-8E99C90FDDA3" /* ios */ = {
+		"TEMP_5E3C09AE-B51C-4597-80C6-0AB9B8B2ED78" /* ios */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_B704E0FA-68E8-49C6-8D4A-DEFB8A5A1396" /* Secrets.xcconfig */,
+				"TEMP_6692711A-1815-4C0B-94BD-3A58622225D5" /* Secrets.xcconfig */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -596,6 +599,7 @@
 				2F3FD22A0A96B510AA7CBE53 /* ServicePricingTests.swift in Sources */,
 				BC082688B18A5B6C664D20AA /* ServiceTierCopyTests.swift in Sources */,
 				F5590267A666A0B8334574E4 /* SoftUITests.swift in Sources */,
+				41A362C79202FB1F5EB51C6E /* SplashTests.swift in Sources */,
 				BF960DB56B5E5B5ED0B395C6 /* WordmarkFontTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -684,7 +688,7 @@
 		};
 		2859B3B9433124CC0F7950A9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_B704E0FA-68E8-49C6-8D4A-DEFB8A5A1396" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_6692711A-1815-4C0B-94BD-3A58622225D5" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -834,7 +838,7 @@
 		};
 		E0B41F7DB392C54D821103B7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_B704E0FA-68E8-49C6-8D4A-DEFB8A5A1396" /* Secrets.xcconfig */;
+			baseConfigurationReference = "TEMP_6692711A-1815-4C0B-94BD-3A58622225D5" /* Secrets.xcconfig */;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

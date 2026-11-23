@@ -1,87 +1,106 @@
 import SwiftUI
+import UIKit
 
-/// Launch splash, modelled on Lyft's.
+/// Launch splash: the Pleat mark draws itself (owner's pick, 2026-11-23,
+/// option 1 "Draw" of five).
 ///
-/// The wordmark sits alone on a plain screen for a beat. When the app knows
-/// where it is going, the letters fold away one at a time from the left — each
-/// squeezes into a thin vertical bar and vanishes, the last bar shrinks to a
-/// point — while the screen underneath fades up and settles into place.
+/// On the brand's cream, the pleat is drawn in one stroke like a stitch, the
+/// pressed line slides out under it from the middle, and "crease" rises into
+/// place. When the app knows where it is going, the cream fades away and the
+/// mark lifts up and out while the screen underneath rises into view.
 ///
-/// The fold is the "we're ready" signal, not a timer: `ready` is the auth gate
+/// The lift is the "we're ready" signal, not a timer: `ready` is the auth gate
 /// having resolved. A slow keychain read keeps the mark on screen rather than
-/// folding it away to reveal a spinner, which is what the two-second static
-/// logo in Lyft's own launch is doing. A short minimum hold stops a fast launch
-/// from folding a mark nobody had time to see.
+/// lifting it to reveal a spinner. The intro always finishes first, so a fast
+/// launch never cuts the drawing off halfway.
 ///
-/// Reduce Motion gets a plain crossfade: the squeeze is the kind of motion
-/// that setting exists to switch off.
+/// The cream matches the launch screen (the `SplashBackground` colour, which
+/// Info.plist's UILaunchScreen also names), so the hand-off from the static
+/// launch image is invisible. Reduce Motion gets the finished mark and a plain
+/// crossfade.
 struct SplashView: View {
     /// True once the screen behind this one is the real one.
     let ready: Bool
-    /// The background of that screen, so the dim lands on it exactly: the
-    /// order list sits on grouped grey, sign-in on plain white.
-    let dimsTo: Color
     /// Fired as the overlay starts lifting, so the screen underneath can rise
-    /// into view while the last bar is still shrinking.
+    /// into view while the mark is still going.
     let onReveal: () -> Void
     /// Fired once, after the last frame, so the owner can drop the overlay.
     let onFinished: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let letters = Array("crease")
-    /// How long the mark stays up even on an instant launch.
-    private static let minimumHold: TimeInterval = 0.7
-    /// Gap between one letter starting to fold and the next.
-    private static let stagger: TimeInterval = 0.07
-    private static let fold: TimeInterval = 0.2
-    private static let reveal: TimeInterval = 0.32
+    // Timings from the approved mock-up (seconds from first frame).
+    private static let drawStart: TimeInterval = 0.15
+    private static let drawLength: TimeInterval = 0.75
+    private static let pressStart: TimeInterval = 0.8
+    private static let pressLength: TimeInterval = 0.35
+    private static let wordStart: TimeInterval = 1.0
+    private static let wordLength: TimeInterval = 0.45
+    /// The finished mark stays up a beat before it can lift.
+    static let introLength: TimeInterval = 1.8
+    /// Reduce Motion skips the drawing, so only a short hold.
+    private static let stillHold: TimeInterval = 0.7
+    private static let exitLength: TimeInterval = 0.45
+
+    /// The pleat's brand colour (the app icon's terracotta), on cream and on
+    /// the dark launch colour alike.
+    static let markColor = Color(red: 0.722, green: 0.341, blue: 0.227)
+    /// Deep brown on cream; cream on the dark launch colour.
+    static let wordColor = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 0.965, blue: 0.933, alpha: 1)
+            : UIColor(red: 0.494, green: 0.212, blue: 0.133, alpha: 1)
+    })
 
     @State private var heldLongEnough = false
     /// `ready` as last seen. The `.task` closure below captures the view value
     /// it was created with, so reading `ready` from inside it after the hold
-    /// gives the value at launch — false — and the fold never plays. State is
+    /// gives the value at launch, false, and the exit never plays. State is
     /// read through storage, so it is current.
     @State private var isReady = false
     @State private var exiting = false
-    /// Per letter: 0 = upright, 1 = folded to a bar, 2 = gone.
-    @State private var stage: [Int] = Array(repeating: 0, count: letters.count)
-    @State private var lastBarShrunk = false
-    @State private var backgroundOpacity = 1.0
+    @State private var drawn: CGFloat = 0
+    @State private var pressed: CGFloat = 0
+    @State private var wordShown = false
+    @State private var lifted = false
+    @State private var coverOpacity = 1.0
+    @State private var overallOpacity = 1.0
 
     var body: some View {
         ZStack {
-            // Starts as the launch screen's colour so the hand-off from the
-            // static launch image is invisible, and dims toward the next
-            // screen's own background as the letters start to fold — the same
-            // beat where Lyft's white goes dark.
-            Color(.systemBackground)
-            dimsTo.opacity(exiting ? 1 : 0)
+            Color("SplashBackground")
+                .opacity(coverOpacity)
 
-            HStack(spacing: 0) {
-                ForEach(Self.letters.indices, id: \.self) { i in
-                    let isLast = i == Self.letters.count - 1
-                    Text(String(Self.letters[i]))
-                        .scaleEffect(
-                            x: stage[i] >= 1 ? 0.12 : 1,
-                            y: isLast && lastBarShrunk ? 0.14 : 1
-                        )
-                        .opacity(stage[i] >= 2 ? 0 : 1)
+            VStack(spacing: 10) {
+                ZStack {
+                    PleatStroke()
+                        .trim(from: 0, to: drawn)
+                        .stroke(Self.markColor, style: StrokeStyle(lineWidth: 150 * 0.075, lineCap: .round, lineJoin: .round))
+                    PressLine()
+                        .stroke(Self.markColor, style: StrokeStyle(lineWidth: 150 * 0.03, lineCap: .round))
+                        .scaleEffect(x: pressed, y: 1, anchor: .center)
+                        .opacity(0.55)
                 }
+                .frame(width: 150, height: 150)
+
+                Text("crease")
+                    .font(Font(WordmarkFont.uiFont(size: 46)))
+                    .foregroundStyle(Self.wordColor)
+                    .opacity(wordShown ? 1 : 0)
+                    .offset(y: wordShown ? 0 : 10)
             }
-            // The wordmark face (Playfair Display Italic), as on sign-in and
-            // the Home bar. Letters are drawn one by one for the fold, so the
-            // italic's overhang is what spaces them; no kerning on top.
-            .font(Font(WordmarkFont.uiFont(size: 76)))
-            .foregroundStyle(Theme.accent)
+            .offset(y: lifted ? -40 : 0)
+            .scaleEffect(lifted ? 1.15 : 1)
+            .opacity(lifted ? 0 : 1)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Crease")
             .accessibilityIdentifier("splash.wordmark")
         }
         .ignoresSafeArea()
-        .opacity(backgroundOpacity)
+        .opacity(overallOpacity)
         .task {
-            try? await Task.sleep(for: .seconds(Self.minimumHold))
+            playIntro()
+            try? await Task.sleep(for: .seconds(reduceMotion ? Self.stillHold : Self.introLength))
             heldLongEnough = true
             exitIfDue()
         }
@@ -95,34 +114,57 @@ struct SplashView: View {
         }
     }
 
+    private func playIntro() {
+        if reduceMotion {
+            drawn = 1; pressed = 1; wordShown = true
+            return
+        }
+        withAnimation(.timingCurve(0.6, 0, 0.2, 1, duration: Self.drawLength).delay(Self.drawStart)) { drawn = 1 }
+        withAnimation(.easeOut(duration: Self.pressLength).delay(Self.pressStart)) { pressed = 1 }
+        withAnimation(.easeOut(duration: Self.wordLength).delay(Self.wordStart)) { wordShown = true }
+    }
+
     private func exitIfDue() {
         guard isReady, heldLongEnough, !exiting else { return }
         exiting = true
-
+        onReveal()
         if reduceMotion {
-            onReveal()
-            withAnimation(.easeOut(duration: Self.reveal)) { backgroundOpacity = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.reveal, execute: onFinished)
-            return
-        }
-
-        let n = Self.letters.count
-        for i in 0..<n {
-            let start = Double(i) * Self.stagger
-            withAnimation(.easeIn(duration: Self.fold).delay(start)) { stage[i] = 1 }
-            if i < n - 1 {
-                withAnimation(.easeOut(duration: 0.08).delay(start + Self.fold)) { stage[i] = 2 }
+            // A plain crossfade: nothing moves.
+            withAnimation(.easeOut(duration: Self.exitLength)) { overallOpacity = 0 }
+        } else {
+            withAnimation(.easeIn(duration: Self.exitLength)) {
+                coverOpacity = 0
+                lifted = true
             }
         }
-        // The last bar lingers, then shrinks to a point and is gone.
-        let lastStart = Double(n - 1) * Self.stagger + Self.fold + 0.05
-        withAnimation(.easeIn(duration: 0.18).delay(lastStart)) { lastBarShrunk = true }
-        withAnimation(.easeOut(duration: 0.1).delay(lastStart + 0.16)) { stage[n - 1] = 2 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.exitLength, execute: onFinished)
+    }
+}
 
-        let revealAt = lastStart + 0.2
-        withAnimation(.easeOut(duration: Self.reveal).delay(revealAt)) { backgroundOpacity = 0 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + revealAt, execute: onReveal)
-        DispatchQueue.main.asyncAfter(deadline: .now() + revealAt + Self.reveal, execute: onFinished)
+/// The Pleat mark's zigzag, on the icon's 100-point canvas.
+struct PleatStroke: Shape {
+    static let points: [CGPoint] = [
+        CGPoint(x: 18, y: 62), CGPoint(x: 30, y: 38), CGPoint(x: 42, y: 62),
+        CGPoint(x: 54, y: 38), CGPoint(x: 66, y: 62), CGPoint(x: 78, y: 38),
+    ]
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        for (i, p) in Self.points.enumerated() {
+            let point = CGPoint(x: rect.minX + p.x / 100 * rect.width, y: rect.minY + p.y / 100 * rect.height)
+            if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
+        }
+        return path
+    }
+}
+
+/// The pressed line under the pleat.
+struct PressLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 0.2 * rect.width, y: rect.minY + 0.74 * rect.height))
+        path.addLine(to: CGPoint(x: rect.minX + 0.8 * rect.width, y: rect.minY + 0.74 * rect.height))
+        return path
     }
 }
 
