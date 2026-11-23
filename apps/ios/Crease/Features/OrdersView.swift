@@ -36,12 +36,9 @@ struct OrdersView: View {
                 // The lowercase wordmark stands in for the title text; the
                 // bar keeps its "Crease" title for VoiceOver and the tests.
                 ToolbarItem(placement: .principal) {
-                    Text("crease")
-                        .font(.app(size: 26, relativeTo: .title2).weight(.heavy))
-                        .kerning(-1.2)
+                    WordmarkText(size: 28, relativeTo: .title2)
                         .foregroundStyle(Theme.ink)
                         .accessibilityAddTraits(.isHeader)
-                        .accessibilityLabel("Crease")
                 }
             }
             .sheet(isPresented: $scheduling, onDismiss: {

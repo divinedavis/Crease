@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreText
 
 /// One place for the app's visual language.
 ///
@@ -217,6 +218,51 @@ enum AppFont {
         UINavigationBar.appearance().scrollEdgeAppearance = edge
         UITabBarItem.appearance().setTitleTextAttributes(
             [.font: ui(10, weight: .semibold, relativeTo: .caption2)], for: .normal)
+    }
+}
+
+// MARK: - Wordmark (Playfair Display Italic, owner's pick 2026-11-23)
+
+/// The "crease" wordmark's face, which matches the Pleat app icon. Only the
+/// wordmark uses it; everything else stays in Plus Jakarta Sans.
+///
+/// The font ships as the unmodified variable file (its licence reserves the
+/// name, so no static Bold cut can be made from it), and `.weight()` does not
+/// reach a variable font's axis reliably, so the weight is set on the `wght`
+/// axis directly.
+enum WordmarkFont {
+    static let postScriptName = "PlayfairDisplay-Italic"
+    static let weight: CGFloat = 700
+    /// The OpenType tag 'wght' as a number, the key Core Text expects.
+    static let weightAxis = 0x7767_6874
+
+    static func uiFont(size: CGFloat) -> UIFont {
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: postScriptName,
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String):
+                [NSNumber(value: weightAxis): NSNumber(value: Double(weight))],
+        ])
+        return UIFont(descriptor: descriptor, size: size)
+    }
+}
+
+/// "crease" in the wordmark face. Scales with Dynamic Type relative to a text
+/// style unless `relativeTo` is nil (the splash, which matches the launch).
+struct WordmarkText: View {
+    @ScaledMetric private var scaledSize: CGFloat
+    private let baseSize: CGFloat
+    private let scales: Bool
+
+    init(size: CGFloat, relativeTo style: Font.TextStyle? = nil) {
+        baseSize = size
+        scales = style != nil
+        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: style ?? .body)
+    }
+
+    var body: some View {
+        Text("crease")
+            .font(Font(WordmarkFont.uiFont(size: scales ? scaledSize : baseSize)))
+            .accessibilityLabel("Crease")
     }
 }
 

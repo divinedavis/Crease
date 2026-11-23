@@ -43,11 +43,8 @@ struct SignInView: View {
                 IllustrationTile(art: .basket, size: 96, corner: 28, inset: 0.1)
                     .padding(.bottom, 2)
 
-                Text("crease")
-                    .font(.app(size: 46, relativeTo: .largeTitle).weight(.heavy))
-                    .kerning(-2.5)
+                WordmarkText(size: 52, relativeTo: .largeTitle)
                     .foregroundStyle(Theme.ink)
-                    .accessibilityLabel("Crease")
                 Text("Laundry & Dry Cleaning")
                     .font(.app(.headline))
                 Text("Laundry, picked up and delivered.")

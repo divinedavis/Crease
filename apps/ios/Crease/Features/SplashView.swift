@@ -69,9 +69,11 @@ struct SplashView: View {
                         .opacity(stage[i] >= 2 ? 0 : 1)
                 }
             }
-            .font(.app(size: 72).weight(.heavy))
+            // The wordmark face (Playfair Display Italic), as on sign-in and
+            // the Home bar. Letters are drawn one by one for the fold, so the
+            // italic's overhang is what spaces them; no kerning on top.
+            .font(Font(WordmarkFont.uiFont(size: 76)))
             .foregroundStyle(Theme.accent)
-            .kerning(-3)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Crease")
             .accessibilityIdentifier("splash.wordmark")

@@ -59,6 +59,11 @@ targets:
           - PlusJakartaSans-SemiBold.ttf
           - PlusJakartaSans-Bold.ttf
           - PlusJakartaSans-ExtraBold.ttf
+          # The "crease" wordmark only (owner's pick, 2026-11-23): Playfair
+          # Display Italic, the unmodified Google Fonts variable file (OFL
+          # with Reserved Font Name, so it is never subset or instanced).
+          # Licence in Crease/Resources/Fonts/OFL-PlayfairDisplay.txt.
+          - PlayfairDisplay-Italic-Variable.ttf
         # Required. Calling requestWhenInUseAuthorization without this string
         # does not fail gracefully — it terminates the app.
         NSLocationWhenInUseUsageDescription: Crease uses your location to suggest nearby addresses when you book a pickup. It is never used in the background or shared.

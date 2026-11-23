@@ -58,6 +58,7 @@
 		<string>PlusJakartaSans-SemiBold.ttf</string>
 		<string>PlusJakartaSans-Bold.ttf</string>
 		<string>PlusJakartaSans-ExtraBold.ttf</string>
+		<string>PlayfairDisplay-Italic-Variable.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>
