@@ -44,7 +44,7 @@ export async function currentStaff() {
 
   const { data: staff } = await db
     .from('cleaner_staff')
-    .select('cleaner_id, role, cleaners(id, name, slug, turnaround_hours)')
+    .select('cleaner_id, role, cleaners(id, name, slug, turnaround_hours, active)')
     .eq('user_id', user.id);
 
   return { user, staff: staff ?? [] };

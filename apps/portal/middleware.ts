@@ -37,8 +37,12 @@ export async function middleware(request: NextRequest) {
   // the session. Bouncing it to /login for not having a session yet would make
   // signing in impossible — the one request that cannot require being signed
   // in already.
+  //
+  // /join/ is the shop sign-up page: the person holding an invite link has no
+  // shop yet, so the staff check below would sign them straight back out.
+  // What it shows is decided by the invite code, not by this middleware.
   const path = request.nextUrl.pathname;
-  const isPublic = path.startsWith('/login') || path.startsWith('/auth/');
+  const isPublic = path.startsWith('/login') || path.startsWith('/auth/') || path.startsWith('/join/');
 
   // An OAuth code that arrives anywhere other than the callback is still a
   // valid code, and dropping it strands somebody on the sign-in page with no

@@ -39,6 +39,9 @@ export default async function QueuePage() {
 
   const rows = orders ?? [];
   const shopName = (staff.staff[0]?.cleaners as any)?.name ?? 'Your shop';
+  // A shop that signed up by invite and is not switched on yet has no orders
+  // to show; say why instead of leaving an empty board that looks broken.
+  const pendingApproval = staff.staff.some((s) => (s.cleaners as any)?.active === false);
 
   // The first column that claims a row keeps it. Filtering each column
   // independently would draw a drop-off under both "Expecting a drop-off" and
@@ -133,6 +136,14 @@ export default async function QueuePage() {
           </form>
         </div>
       </header>
+
+      {pendingApproval && (
+        <div className="notice warn">
+          Crease is checking your shop and will switch it on soon — customers can’t book you until
+          then. Set up payouts in <Link href="/settings">Settings</Link> so you can be paid from your
+          first bag.
+        </div>
+      )}
 
       {cleanerIds.length === 0 && (
         <div className="notice warn">

@@ -11,7 +11,7 @@
   (live tree + systemd units to `/var/backups/crease-app/<ts>`, 15 kept) ->
   upload -> `deploy/health.sh` -> `deploy/journeys.sh` (the live journey
   suite over an SSH tunnel: e2e, cancel, confirm, stripe-webhook,
-  service-area, rls-check; failures re-run once). Any failure after the
+  service-area, rls-check, invite-check; failures re-run once). Any failure after the
   snapshot runs `deploy/rollback.sh <ts>` and exits 1.
   `CREASE_SKIP_JOURNEYS=1` only for an emergency, said in the commit.
 - `deploy/deploy-prospects.sh`: `scripts/test.sh --browser` -> snapshot to

@@ -60,6 +60,14 @@
     createClient() {
       return {
         from: (t) => query(t),
+        // Functions answer only if a test installs a handler in __server.rpc;
+        // otherwise they refuse the way a non-admin is refused (migration
+        // 0055), so the canvass page renders exactly as it always has.
+        rpc: async (name, args) => {
+          const h = server.rpc && server.rpc[name];
+          if (!h || !session()) return { data: null, error: { code: '42501', message: 'not allowed' } };
+          return h(args ?? {});
+        },
         auth: {
           async getSession() { return { data: { session: session() } }; },
           async signInWithPassword({ email, password }) {

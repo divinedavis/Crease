@@ -8,6 +8,7 @@ import { callDispatch } from '@/lib/dispatch';
 import { parseHoursForm } from '@/lib/hours';
 import { codeFor, parseServiceItemForm } from '@/lib/price-list';
 import { noteLanguage } from '@/lib/languages';
+import { geocode } from '@/lib/geocode';
 
 /**
  * Every write here rides the staff member's own session, so RLS decides which
@@ -193,28 +194,6 @@ export async function refreshPayoutStatus(cleanerId: string) {
   return { ok: true };
 }
 
-/**
- * The Census Bureau's geocoder: free, keyless, and US-only — which is fine,
- * because so are the couriers. One match or nothing; a guessed rooftop is a
- * courier at the wrong building.
- */
-async function geocode(
-  oneline: string,
-): Promise<{ lat: number; lng: number } | 'nomatch' | 'unreachable'> {
-  const url =
-    'https://geocoding.geo.census.gov/geocoder/locations/onelineaddress' +
-    `?address=${encodeURIComponent(oneline)}&benchmark=Public_AR_Current&format=json`;
-  try {
-    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return 'unreachable';
-    const json = await res.json();
-    const match = json?.result?.addressMatches?.[0];
-    if (!match?.coordinates) return 'nomatch';
-    return { lat: Number(match.coordinates.y), lng: Number(match.coordinates.x) };
-  } catch {
-    return 'unreachable';
-  }
-}
 
 /**
  * The shop's price list. What is saved here is what the app quotes on the next

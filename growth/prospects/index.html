@@ -130,6 +130,17 @@
   @media (max-width: 520px) { .syncbar form { grid-template-columns: 1fr; } }
   .syncbar input { min-height: 40px; }
   .syncbar button { min-height: 40px; }
+
+  /* Shop sign-up: the invite link for a canvassed shop, and the shops that
+     used one and are waiting for the founder to switch them on. */
+  .invite { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: grid; gap: 8px; }
+  .invite .link { font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+  .invite .actions { display: grid; grid-auto-flow: column; gap: 6px; }
+  .invite img { width: 180px; height: 180px; justify-self: center; background: #fff; border-radius: 8px; }
+  .approvals { margin-bottom: 12px; }
+  .approvals .item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+                     padding: 8px 0; border-top: 1px solid var(--border); }
+  .chip.inv { background: var(--live-bg); color: var(--live-fg); }
 </style>
 </head>
 <body>
@@ -165,6 +176,21 @@ const KIND_LABEL = { dry_cleaner: 'Dry cleaner', laundromat: 'Laundromat' };
 const OUTCOMES = [['interested', 'Interested'], ['follow_up', 'Follow up'], ['declined', 'Declined']];
 
 let rows = [];
+/* Invites come from list_shop_invites(), which answers only for a Crease
+ * admin (migration 0055). Anyone else gets an error, keeps an empty list, and
+ * sees the canvass page exactly as before. */
+let invites = [];
+let canInvite = false;
+const inviteFor = (prospectId) => invites.find((i) => i.prospect_id === prospectId) ?? null;
+const joinUrl = (code) => `${location.origin}/join/${code}`;
+const dollars = (cents) => (cents == null ? '?' : `$${(cents / 100).toFixed(2)}`);
+async function loadInvites() {
+  if (typeof db.rpc !== 'function') return;
+  const { data, error } = await db.rpc('list_shop_invites');
+  if (error) { canInvite = false; invites = []; return; }
+  canInvite = true;
+  invites = data ?? [];
+}
 const ui = {
   kind: localStorage.canvassKind ?? 'dry_cleaner',
   // Which market's list is on screen. Only ever offered when the table holds
@@ -176,6 +202,7 @@ const ui = {
   fullOnly: localStorage.canvassFull === '1',
   open: new Set(JSON.parse(localStorage.canvassOpen ?? '[]')),
   expanded: null,           // id of the row whose editor is showing
+  qr: null,                 // id of the row showing its sign-up QR code
 };
 const persistUi = () => {
   localStorage.canvassKind = ui.kind;
@@ -233,6 +260,7 @@ async function main() {
   // Unsynced local edits outrank the server copy: they're newer by definition,
   // and they're what the person believes they recorded.
   for (const r of rows) if (pending[r.id]) Object.assign(r, pending[r.id]);
+  await loadInvites();
   render();
   flush();
 }
@@ -360,6 +388,7 @@ function render() {
       </div>
     </header>
     <div class="syncbar" id="syncbar">${syncBarHTML()}</div>
+    ${approvalsHTML()}
     <div class="filters">
       ${boroughs().length > 1 ? `<div class="seg" id="boroseg">
         ${boroughs().map((b) => `<button data-b="${esc(b)}" ${ui.borough === b ? 'class="on"' : ''}>${esc(b)}</button>`).join('')}
@@ -397,6 +426,51 @@ function render() {
   wire();
 }
 
+function approvalsHTML() {
+  const waiting = invites.filter((i) => i.claimed_at && !i.active);
+  if (!canInvite || waiting.length === 0) return '';
+  return `
+    <div class="card approvals" id="approvals">
+      <strong>${waiting.length} shop${waiting.length === 1 ? '' : 's'} waiting for your approval</strong>
+      ${waiting.map((i) => `
+        <div class="item">
+          <div>
+            <div class="name">${esc(i.shop_name ?? i.label)}</div>
+            <div class="sub">${esc(i.shop_address ?? '')}${i.shop_phone ? ' · ' + esc(i.shop_phone) : ''}</div>
+            <div class="sub">Wash &amp; fold ${dollars(i.price_cents_per_lb)}/lb${i.minimum_lbs ? `, ${Number(i.minimum_lbs)} lb minimum` : ''}
+              · ${i.payouts_enabled ? 'payouts set up' : 'payouts not set up yet'}</div>
+          </div>
+          <button class="primary" data-approve="${esc(i.cleaner_id)}">Approve</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+function inviteHTML(r) {
+  if (!canInvite) return '';
+  const inv = inviteFor(r.id);
+  if (!inv || (!inv.claimed_at && new Date(inv.expires_at) <= new Date())) {
+    return `<div class="invite"><button class="primary" data-invite>Sign up this shop</button></div>`;
+  }
+  if (inv.claimed_at && inv.active) {
+    return `<div class="invite"><div><span class="chip inv">Live on Crease</span> ${esc(inv.shop_name ?? '')}</div></div>`;
+  }
+  if (inv.claimed_at) {
+    return `<div class="invite"><div><span class="chip follow_up">Signed up</span> waiting for your approval (top of the page)</div></div>`;
+  }
+  const url = joinUrl(inv.code);
+  return `
+    <div class="invite">
+      <div class="sub">Sign-up link — works once, until ${new Date(inv.expires_at).toLocaleDateString()}</div>
+      <div class="link" data-link>${esc(url)}</div>
+      <div class="actions">
+        <button data-share>Text it</button>
+        <button data-copy>Copy</button>
+        <button data-qr>${ui.qr === r.id ? 'Hide QR' : 'Show QR'}</button>
+      </div>
+      ${ui.qr === r.id ? `<img alt="QR code for the sign-up link" src="/join/${esc(inv.code)}/qr.svg" />` : ''}
+    </div>`;
+}
+
 function shopRow(r) {
   // ll + q drops a pin at the exact coords labeled with the shop name; a bare
   // q search near ll could resolve to a different storefront on the block.
@@ -413,6 +487,7 @@ function shopRow(r) {
         ${r.kind === 'laundromat' && r.full_service === false ? '<span class="chip ss">Self-serve only</span>' : ''}
         ${r.own_app === true ? '<span class="chip oa">Own app</span>' : ''}
         ${r.cash_only === true ? '<span class="chip co">Cash only</span>' : ''}
+        ${inviteFor(r.id)?.active ? '<span class="chip inv">On Crease</span>' : ''}
       </div>
       <div class="meta">${esc(r.address ?? 'No address on file')}${r.zip ? ' · ' + esc(r.zip) : ''}</div>
       ${r.notes && !expanded ? `<div class="notes-preview">${esc(r.notes)}</div>` : ''}
@@ -437,6 +512,7 @@ function shopRow(r) {
       </div>
       <textarea data-notes placeholder="Notes — who you spoke to, pricing, objections…">${esc(r.notes ?? '')}</textarea>
       <div class="savestate ${r._save === 'ok' ? 'ok' : ''}" data-save>${esc(saveText(r))}</div>
+      ${inviteHTML(r)}
     </div>` : ''}
   </div>`;
 }
@@ -618,8 +694,57 @@ function wire() {
     };
   }
 
+  for (const b of document.querySelectorAll('[data-approve]')) {
+    b.onclick = async () => {
+      b.disabled = true;
+      b.textContent = 'Approving…';
+      const { data, error } = await db.rpc('approve_shop', { p_cleaner: b.dataset.approve });
+      if (error || data !== true) {
+        b.disabled = false;
+        b.textContent = 'Approve';
+        alert(`Couldn't approve: ${error?.message ?? 'not an invited shop'}`);
+        return;
+      }
+      await loadInvites();
+      render();
+    };
+  }
+
   for (const shopEl of document.querySelectorAll('.shop')) {
     const r = rows.find((x) => x.id === shopEl.dataset.id);
+
+    const inviteBtn = shopEl.querySelector('[data-invite]');
+    if (inviteBtn) inviteBtn.onclick = async () => {
+      inviteBtn.disabled = true;
+      inviteBtn.textContent = 'Making a link…';
+      const { error } = await db.rpc('create_shop_invite', { p_label: r.name, p_prospect: r.id });
+      if (error) {
+        inviteBtn.disabled = false;
+        inviteBtn.textContent = 'Sign up this shop';
+        alert(`Couldn't make a link: ${error.message}`);
+        return;
+      }
+      await loadInvites();
+      render();
+    };
+    const inv = inviteFor(r.id);
+    const shareBtn = shopEl.querySelector('[data-share]');
+    if (shareBtn && inv) shareBtn.onclick = async () => {
+      const url = joinUrl(inv.code);
+      const text = `Sign ${r.name} up for Crease deliveries (takes 2 minutes):`;
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Crease sign-up', text, url }); } catch { /* sheet closed */ }
+      } else {
+        location.href = `sms:?&body=${encodeURIComponent(`${text} ${url}`)}`;
+      }
+    };
+    const copyBtn = shopEl.querySelector('[data-copy]');
+    if (copyBtn && inv) copyBtn.onclick = async () => {
+      try { await navigator.clipboard.writeText(joinUrl(inv.code)); copyBtn.textContent = 'Copied'; }
+      catch { copyBtn.textContent = 'Copy failed'; }
+    };
+    const qrBtn = shopEl.querySelector('[data-qr]');
+    if (qrBtn) qrBtn.onclick = () => { ui.qr = ui.qr === r.id ? null : r.id; render(); };
 
     shopEl.querySelector('[data-visit]').onchange = (e) => {
       // The tap sticks immediately — the queue owns getting it to the server —

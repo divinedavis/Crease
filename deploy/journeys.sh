@@ -51,7 +51,7 @@ run() {
 # signs in as it.
 node scripts/seed.mjs >/dev/null 2>&1 || { echo "journeys: seed failed" >&2; exit 1; }
 
-JOURNEYS=(e2e e2e-cancel e2e-confirm e2e-stripe-webhook e2e-service-area rls-check)
+JOURNEYS=(e2e e2e-cancel e2e-confirm e2e-stripe-webhook e2e-service-area rls-check invite-check)
 failed=()
 for j in "${JOURNEYS[@]}"; do
   if run "$j"; then echo "    ok    $j"; else echo "    fail  $j (retrying once)"; failed+=("$j"); fi

@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payouts?: string }>;
+  searchParams: Promise<{ payouts?: string; welcome?: string }>;
 }) {
   const staff = await currentStaff();
   if (!staff) redirect('/login');
@@ -26,7 +26,7 @@ export default async function SettingsPage({
         .from('cleaners')
         .select(
           `id, name, phone, email, line1, line2, city, state, postal_code,
-           turnaround_hours, hours, notes_language`,
+           turnaround_hours, hours, notes_language, active`,
         )
         .eq('id', cleanerId)
         .maybeSingle()
@@ -53,7 +53,7 @@ export default async function SettingsPage({
         .order('sort_order')
     : { data: null };
 
-  const { payouts } = await searchParams;
+  const { payouts, welcome } = await searchParams;
 
   return (
     <div className="shell">
@@ -73,6 +73,13 @@ export default async function SettingsPage({
         </div>
       ) : (
         <>
+          {!shop.active && (
+            <div className={welcome ? 'notice ok' : 'notice warn'}>
+              {welcome ? 'You’re signed up. ' : ''}
+              Crease is checking your shop and will switch it on soon — customers can’t book you
+              until then. Meanwhile, set up payouts below so you can be paid from your first bag.
+            </div>
+          )}
           {payouts === 'done' && (
             <div className="notice ok">
               Stripe onboarding finished. Press “Check status” below to confirm payouts are on.

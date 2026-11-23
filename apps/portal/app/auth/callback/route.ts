@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { SESSION_COOKIE_OPTIONS } from '@/lib/session-cookie';
 import { publicOrigin } from '@/lib/public-origin';
+import { JOIN_COOKIE, joinPathFromCookie } from '@/lib/join';
 
 /**
  * Where Google sends somebody back to.
@@ -64,6 +65,16 @@ export async function GET(request: Request) {
       ? 'exchange_failed'
       : 'wrong_host';
     return NextResponse.redirect(`${origin}/login?error=${why}`);
+  }
+
+  // Started from a shop invite link (app/join): go back there to finish
+  // signing up. Such a person is not staff YET, which is the whole point, so
+  // the staff gate below does not apply. The cookie only ever becomes a
+  // /join/<code> path built by joinPathFromCookie, never a URL.
+  const joinPath = joinPathFromCookie(jar.get(JOIN_COOKIE)?.value);
+  if (joinPath) {
+    jar.delete(JOIN_COOKIE);
+    return NextResponse.redirect(origin + joinPath);
   }
 
   // Signed in, but is this person staff anywhere? RLS answers honestly: a

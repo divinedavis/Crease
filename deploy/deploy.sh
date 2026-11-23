@@ -191,6 +191,7 @@ cp -R scripts "$STAGE/scripts"
 rm -f "$STAGE"/scripts/e2e*.mjs \
       "$STAGE"/scripts/seed*.mjs \
       "$STAGE"/scripts/rls-check.mjs \
+      "$STAGE"/scripts/invite-check.mjs \
       "$STAGE"/scripts/ios-session.mjs \
       "$STAGE"/scripts/ios-test.sh \
       "$STAGE"/scripts/testflight.sh \
