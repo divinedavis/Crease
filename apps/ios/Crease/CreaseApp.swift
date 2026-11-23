@@ -53,20 +53,24 @@ struct RootView: View {
     @State private var appActive = UIApplication.shared.applicationState == .active
 
     /// The Pleat splash stays over `content` until the auth gate has resolved
-    /// and the mark has drawn itself. `revealed` flips as the overlay starts
-    /// lifting, so the screen underneath rises into view while the mark is
-    /// still going rather than popping in after.
+    /// and the mark has drawn itself. `revealed` flips as soon as the screen
+    /// underneath is the real one, while the opaque cream still hides it, so
+    /// it has settled into place before the splash word flies onto its
+    /// wordmark. `interactive` flips as the splash starts lifting: until then
+    /// the screen is hidden from touch, VoiceOver and UI tests.
     @State private var showSplash = true
     @State private var revealed = false
+    @State private var interactive = false
 
     var body: some View {
         ZStack {
             content
-                .modifier(SplashRevealModifier(revealed: revealed))
+                .modifier(SplashRevealModifier(revealed: revealed, interactive: interactive))
             if showSplash {
                 SplashView(
                     ready: !isLoading,
-                    onReveal: { revealed = true },
+                    onPrepare: { revealed = true },
+                    onReveal: { interactive = true },
                     onFinished: { showSplash = false }
                 )
                 .zIndex(1)

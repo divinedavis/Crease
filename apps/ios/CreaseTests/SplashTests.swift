@@ -33,8 +33,27 @@ struct SplashTests {
     }
 
     @Test func theDrawingFinishesBeforeTheSplashCanLift() {
-        // Word rises from 1.0 s for 0.45 s; the lift may start at 1.8 s.
-        #expect(SplashView.introLength >= 1.45)
+        // Word rises from 1.35 s for 0.45 s; the flight may start at 1.95 s.
+        #expect(SplashView.introLength >= 1.8)
         #expect(SplashView.introLength <= 2.0)
     }
+
+    @Test func theWordFliesOntoTheHeaderWordmark() throws {
+        // The splash word at rest mid-screen, and the Home bar's wordmark
+        // where it has settled under the cream.
+        let word = CGRect(x: 137, y: 407, width: 128, height: 61)
+        let header = CGRect(x: 161, y: 78, width: 78, height: 37)
+        let flight = try #require(SplashView.flight(from: word, to: header))
+        #expect(abs(flight.offset.width - (200 - 201)) < 0.001)
+        #expect(abs(flight.offset.height - (96.5 - 437.5)) < 0.001)
+        #expect(abs(flight.scale - 78.0 / 128.0) < 0.0001)
+        // The cream shrinks to a strip just below where the word lands.
+        #expect(abs(flight.stripBottom - (78 + 37 + 14)) < 0.001)
+    }
+
+    @Test func noFlightBeforeEitherWordIsMeasured() {
+        #expect(SplashView.flight(from: .zero, to: CGRect(x: 0, y: 0, width: 78, height: 37)) == nil)
+        #expect(SplashView.flight(from: CGRect(x: 0, y: 0, width: 128, height: 61), to: .zero) == nil)
+    }
 }
+

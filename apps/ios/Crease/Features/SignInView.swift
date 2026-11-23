@@ -43,7 +43,7 @@ struct SignInView: View {
                 IllustrationTile(art: .basket, size: 96, corner: 28, inset: 0.1)
                     .padding(.bottom, 2)
 
-                WordmarkText(size: 52, relativeTo: .largeTitle)
+                WordmarkText(size: 52, relativeTo: .largeTitle, isSplashTarget: true)
                     .foregroundStyle(Theme.ink)
                 Text("Laundry & Dry Cleaning")
                     .font(.app(.headline))

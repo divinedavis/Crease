@@ -36,7 +36,7 @@ struct OrdersView: View {
                 // The lowercase wordmark stands in for the title text; the
                 // bar keeps its "Crease" title for VoiceOver and the tests.
                 ToolbarItem(placement: .principal) {
-                    WordmarkText(size: 28, relativeTo: .title2)
+                    WordmarkText(size: 28, relativeTo: .title2, isSplashTarget: true)
                         .foregroundStyle(Theme.ink)
                         .accessibilityAddTraits(.isHeader)
                 }

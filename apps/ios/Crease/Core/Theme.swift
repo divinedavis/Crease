@@ -264,9 +264,14 @@ struct WordmarkText: View {
     private let baseSize: CGFloat
     private let scales: Bool
 
-    init(size: CGFloat, relativeTo style: Font.TextStyle? = nil) {
+    private let isSplashTarget: Bool
+
+    /// `isSplashTarget`: this is the screen's main wordmark, the one the
+    /// launch splash's word flies onto (see SplashView).
+    init(size: CGFloat, relativeTo style: Font.TextStyle? = nil, isSplashTarget: Bool = false) {
         baseSize = size
         scales = style != nil
+        self.isSplashTarget = isSplashTarget
         _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: style ?? .body)
     }
 
@@ -274,6 +279,12 @@ struct WordmarkText: View {
         Text("crease")
             .font(Font(WordmarkFont.uiFont(size: scales ? scaledSize : baseSize)))
             .accessibilityLabel("Crease")
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                if isSplashTarget { SplashTarget.shared.frame = frame }
+            }
+            .onDisappear {
+                if isSplashTarget { SplashTarget.shared.frame = nil }
+            }
     }
 }
 
