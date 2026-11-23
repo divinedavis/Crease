@@ -2,16 +2,17 @@ import SwiftUI
 
 /// Home.
 ///
-/// Laid out like a ride-hailing home screen (owner, 2026-10-08): one search bar
-/// that pins to the top as the page scrolls, the places this customer books
-/// from right under it, then everything else Crease does. Orders are not shown
-/// here (owner, 2026-10-10): they live on the Activity tab, which carries a
-/// badge when one needs the customer.
+/// One screen, no scrolling (owner, 2026-11-22): the search bar, the three
+/// services, the customer's usual when they have one, and where Crease
+/// reaches. The driver-ETA card, the saved-place rows and the "For you" tier
+/// row were removed that day; saved places are still one tap away on the
+/// address screen, and tiers are chosen in the booking sheet. Orders are not
+/// shown here (owner, 2026-10-10): they live on the Activity tab, which
+/// carries a badge when one needs the customer.
 struct OrdersView: View {
     @EnvironmentObject private var store: OrderStore
 
     let start: (BookingIntent) -> Void
-    let startSaved: (Address, BookingIntent) -> Void
     let startUsual: (UsualOrder) -> Void
 
     @State private var scheduling = false
@@ -20,28 +21,14 @@ struct OrdersView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        VStack(alignment: .leading, spacing: 22) {
-                            etaCard
-                            serviceGrid
-                            if let usual = UsualOrder.from(store.orders) {
-                                UsualOrderCard(usual: usual) { startUsual(usual) }
-                                    .staggeredAppear(0)
-                            }
-                            recents
-                            PromoCard { showingArea = true }
-                            forYou
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        .padding(.bottom, 28)
-                    } header: {
-                        searchBar
-                    }
-                }
+            // Fits on one screen at every normal text size. At the largest
+            // accessibility sizes it cannot, and clipping a button off the
+            // bottom would hide it, so only then does the page scroll.
+            ViewThatFits(in: .vertical) {
+                content
+                ScrollView { content }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Theme.canvas)
             .navigationTitle("Crease")
             .navigationBarTitleDisplayMode(.inline)
@@ -57,7 +44,6 @@ struct OrdersView: View {
                         .accessibilityLabel("Crease")
                 }
             }
-            .refreshable { await store.loadAll() }
             .sheet(isPresented: $scheduling, onDismiss: {
                 // "Later" is a time first and an address second, like the
                 // ride apps: the time is asked here, then the usual flow.
@@ -73,32 +59,24 @@ struct OrdersView: View {
                 ServiceAreaSheet()
                     .presentationDetents([.medium])
             }
-            .task { if store.addresses.isEmpty { await store.loadAddresses() } }
         }
     }
 
-    /// The reference's hero: a courier on a white tile inside a grey card, and
-    /// the one number people open the app for — how soon someone can come.
-    private var etaCard: some View {
-        let minutes = ServiceOption.recommended.pickupEtaMinutes ?? 30
-        return Button { start(BookingIntent()) } label: {
-            HStack(spacing: 16) {
-                IllustrationTile(art: .courier, size: 92, fill: Theme.raised, inset: 0.08)
-                // One Text, so the number is never read without what it is:
-                // the driver's arrival, not the whole cleaning cycle.
-                (Text("~\(minutes) min")
-                    .font(.app(size: 30, relativeTo: .title).weight(.bold))
-                    .foregroundStyle(Theme.ink)
-                 + Text("\nA driver to your door")
-                    .font(.app(.subheadline))
-                    .foregroundStyle(Theme.muted))
-                    .lineSpacing(2)
-                Spacer(minLength: 0)
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            searchBar
+            VStack(alignment: .leading, spacing: 22) {
+                serviceGrid
+                if let usual = UsualOrder.from(store.orders) {
+                    UsualOrderCard(usual: usual) { startUsual(usual) }
+                        .staggeredAppear(0)
+                }
+                PromoCard { showingArea = true }
             }
-            .softCard(padding: 16)
+            .padding(.horizontal, 20)
         }
-        .buttonStyle(PressableStyle())
-        .accessibilityLabel("A driver in about \(minutes) minutes. Book now")
+        .padding(.top, 8)
+        .padding(.bottom, 20)
     }
 
     /// What Crease does, as three illustrated tiles. Each one opens the
@@ -136,9 +114,8 @@ struct OrdersView: View {
         }
     }
 
-    /// Looks like a text field, behaves like a button, and pins to the top
-    /// once the page scrolls under it. Tapping opens the address screen with
-    /// the keyboard already up.
+    /// Looks like a text field, behaves like a button. Tapping opens the
+    /// address screen with the keyboard already up.
     private var searchBar: some View {
         HStack(spacing: 0) {
             Button { start(BookingIntent()) } label: {
@@ -176,93 +153,6 @@ struct OrdersView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(Theme.canvas)
-    }
-
-    /// Saved places, newest first, two at most: the right answer is nearly
-    /// always one of them, and a tap books straight from it.
-    @ViewBuilder private var recents: some View {
-        let places = Array(store.addresses.prefix(2))
-        if !places.isEmpty {
-            VStack(spacing: 0) {
-                ForEach(Array(places.enumerated()), id: \.element.id) { i, place in
-                    Button { startSaved(place, BookingIntent()) } label: {
-                        GlyphRow(
-                            symbol: place.label == nil ? "clock.fill" : place.symbol,
-                            title: place.label ?? place.line1,
-                            subtitle: place.oneLine
-                        ) {
-                            Image(systemName: "chevron.right")
-                                .font(.app(.footnote).weight(.semibold))
-                                .foregroundStyle(Theme.muted)
-                                .padding(.top, 4)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PressableStyle())
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Book from \(place.label ?? place.line1), \(place.oneLine)")
-                    .staggeredAppear(i)
-                    if i < places.count - 1 { Divider().overlay(Theme.line).padding(.leading, 44) }
-                }
-            }
-        }
-    }
-
-    /// The booking tiers as illustrated cards, the "For you" row.
-    private var forYou: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Eyebrow("For you")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(Array(ServiceOption.all.enumerated()), id: \.element.id) { i, option in
-                        Button { start(BookingIntent(tierId: option.id)) } label: {
-                            OptionCard(option: option)
-                        }
-                        .buttonStyle(PressableStyle())
-                        .accessibilityLabel("Book \(option.name), \(option.priceCents.asMoney). \(option.blurb)")
-                        .staggeredAppear(i)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .scrollClipDisabled()
-        }
-    }
-}
-
-/// A delivery tier as a white card: illustration, name, price, and the
-/// "Best value" tag where the arithmetic earns it.
-struct OptionCard: View {
-    let option: ServiceOption
-    var width: CGFloat = 150
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                IllustrationTile(art: option.illustration, size: width - 24, corner: 18)
-                PlusBadge(size: 30).padding(6)
-            }
-            Text(option.name)
-                .font(.app(.subheadline).weight(.semibold))
-                .foregroundStyle(Theme.ink)
-            HStack(spacing: 6) {
-                Text(option.priceCents.asMoney)
-                    .font(.app(.caption).monospacedDigit())
-                    .foregroundStyle(Theme.muted)
-                if option.isRecommended {
-                    Text("Best value")
-                        .font(.app(.caption2).weight(.bold))
-                        .foregroundStyle(Theme.onInk)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Theme.ink, in: Capsule())
-                }
-            }
-        }
-        .padding(12)
-        .frame(width: width, alignment: .leading)
-        .background(Theme.canvas, in: RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous).strokeBorder(Theme.line, lineWidth: 1.5))
     }
 }
 

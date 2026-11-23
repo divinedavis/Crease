@@ -257,6 +257,27 @@ final class CreaseUITests: XCTestCase {
         attach(app, "orders-list")
     }
 
+    /// Home fits on one screen with no scrolling, and the driver-ETA card,
+    /// the saved-place rows and the "For you" row are gone (owner,
+    /// 2026-11-22). Every remaining button must be tappable where it lands.
+    func testHomeFitsOnOneScreenWithoutTheRemovedRows() {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.buttons["Book a pickup"].waitForExistence(timeout: 20))
+        sleep(3)   // addresses and orders loaded, so their rows would be drawn by now
+
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'A driver in about'")).firstMatch.exists,
+                       "the driver-ETA card was removed")
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Book from '")).firstMatch.exists,
+                       "the saved-place rows were removed")
+        XCTAssertFalse(app.staticTexts["For you"].exists, "the For you row was removed")
+
+        for label in ["Book a pickup", "Schedule a pickup for later",
+                      "Book Dry cleaning", "Book Wash & fold", "Book Press only", "Learn more"] {
+            XCTAssertTrue(app.buttons[label].isHittable, "\(label) should be on screen without scrolling")
+        }
+        attach(app, "home-one-screen")
+    }
+
     /// The orders have to survive a re-render of the root view.
     ///
     /// `RootView.body` used to build `OrderStore(client:)` inline, so every

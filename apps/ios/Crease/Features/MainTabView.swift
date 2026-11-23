@@ -55,7 +55,7 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            OrdersView(start: start, startSaved: startSaved, startUsual: startUsual)
+            OrdersView(start: start, startUsual: startUsual)
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(AppTab.home)
             ServicesView(start: start)
@@ -145,12 +145,6 @@ struct MainTabView: View {
         var instant = Transaction()
         instant.disablesAnimations = true
         withTransaction(instant) { flow = .address(intent) }
-    }
-
-    /// A saved place tapped on Home skips the search, exactly as picking it on
-    /// the address screen does.
-    private func startSaved(_ address: Address, _ intent: BookingIntent) {
-        flow = .book(address.asResolved, address.accessNotes ?? "", intent)
     }
 
     private func startUsual(_ usual: UsualOrder) {
