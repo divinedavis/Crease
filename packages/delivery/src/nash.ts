@@ -217,7 +217,11 @@ export class NashProvider implements DeliveryProvider {
         {},
       );
     }
-    return this.toState(res?.id ? res : job);
+    // Nash answers a cancel with the job wrapped as { job: {...} } (seen in
+    // the sandbox 11/22). If neither shape carries the job, read it again:
+    // the copy fetched before the cancel would still say it is live.
+    const after = res?.job?.id ? res.job : res?.id ? res : undefined;
+    return this.toState(after ?? (await this.call<any>('GET', `/v1/jobs/${encodeURIComponent(providerDeliveryId)}`)));
   }
 
   async handleWebhook(input: WebhookInput): Promise<WebhookResult> {

@@ -245,6 +245,26 @@ test('cancel goes through the external id', async () => {
   assert.equal(st.status, 'cancelled');
 });
 
+test('cancel reads the job out of Nash\'s { job } wrapper', async () => {
+  const { impl } = fakeFetch([
+    { status: 200, body: JOB('assigned_driver') },
+    { status: 200, body: { job: JOB('canceled_by_customer') } },
+  ]);
+  assert.equal((await provider(impl).cancelDelivery('job_1')).status, 'cancelled');
+});
+
+test('a cancel answer without the job re-reads it instead of trusting the old copy', async () => {
+  const { impl, seen } = fakeFetch([
+    { status: 200, body: JOB('assigned_driver') },
+    { status: 200, body: {} },
+    { status: 200, body: JOB('canceled_by_customer') },
+  ]);
+  const st = await provider(impl).cancelDelivery('job_1');
+  assert.equal(seen.length, 3);
+  assert.equal(seen[2].method, 'GET');
+  assert.equal(st.status, 'cancelled');
+});
+
 test('retry classes: network and 5xx retry, 4xx does not', async () => {
   const net = fakeFetch([new TypeError('socket hang up')]);
   await assert.rejects(provider(net.impl).getDelivery('job_1'), (e: any) => e.opts.retryable === true);
