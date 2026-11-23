@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import UIKit
 
@@ -85,8 +86,20 @@ struct MainTabView: View {
                         }
                     },
                     onPickedSaved: { saved in
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            flow = .book(saved.asResolved, saved.accessNotes ?? "", intent)
+                        // A saved row with no real point (or the old Brooklyn
+                        // stand-in) is geocoded and confirmed on the map
+                        // first; booking straight from it measured the trip
+                        // from Williamsburg (owner, 2026-11-22).
+                        guard saved.knownCoordinate == nil else {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                flow = .book(saved.asResolved, saved.accessNotes ?? "", intent)
+                            }
+                            return
+                        }
+                        Task {
+                            let located = await Self.geocoded(saved)
+                            try? await Task.sleep(for: .milliseconds(350))
+                            flow = .pin(located, intent)
                         }
                     }
                 )
@@ -100,6 +113,18 @@ struct MainTabView: View {
                     // the one under the pin, which can differ by a door.
                     PinMemory.remember(resolved, at: confirmed.coordinate)
                     PinMemory.remember(confirmed, at: confirmed.coordinate)
+                    // And mend the saved row it came from, if that row had
+                    // no real point, so the next booking skips this step.
+                    let key = PinMemory.addressKey(line1: resolved.line1, postalCode: resolved.postalCode)
+                    for saved in store.addresses where saved.knownCoordinate == nil
+                        && PinMemory.addressKey(line1: saved.line1, postalCode: saved.postalCode) == key {
+                        Task {
+                            await store.updateAddressDetails(
+                                id: saved.id, accessNotes: saved.accessNotes,
+                                lat: confirmed.coordinate.latitude, lng: confirmed.coordinate.longitude
+                            )
+                        }
+                    }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         flow = .book(confirmed, notes, intent)
                     }
@@ -156,6 +181,20 @@ struct MainTabView: View {
         var instant = Transaction()
         instant.disablesAnimations = true
         withTransaction(instant) { flow = .address(intent) }
+    }
+
+    /// A saved address's text turned into a point, for a row that has none.
+    /// Falls back to where the phone is (or Brooklyn) so the pin screen still
+    /// opens and the customer can place it by hand.
+    static func geocoded(_ saved: Address) async -> ResolvedAddress {
+        var resolved = saved.asResolved
+        let text = "\(saved.line1), \(saved.city), \(saved.state) \(saved.postalCode)"
+        if let point = try? await CLGeocoder().geocodeAddressString(text).first?.location?.coordinate {
+            resolved.coordinate = point
+        } else {
+            resolved.coordinate = LocationProvider.lastKnown ?? .brooklyn
+        }
+        return resolved
     }
 
     private func startUsual(_ usual: UsualOrder) {

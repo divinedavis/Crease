@@ -69,7 +69,6 @@ struct CheckoutView: View {
     let onPay: () -> Void
 
     @State private var editingPin = false
-    @State private var pinAdjusted = false
     @State private var editingNotes = false
     @State private var editingPhone = false
     @State private var choosingShop = false
@@ -128,10 +127,12 @@ struct CheckoutView: View {
             if selected.pickupEtaMinutes == nil { scheduledPickup = nil }
         }
         .sheet(isPresented: $editingPin) {
-            // Where they're standing the first time; after that, the pin they set.
-            PinConfirmView(address: pickup, startsAtCurrentLocation: !pinAdjusted) { confirmed, notes in
+            // On the pin they already set (owner, 2026-11-22: "This pin isn't
+            // where I set it in a previous screen"). Where the phone is only
+            // when the pickup has no real point, which is what opening on the
+            // current location was protecting against.
+            PinConfirmView(address: pickup, startsAtCurrentLocation: pickup.isPlaceholderPoint) { confirmed, notes in
                 pickup = confirmed
-                pinAdjusted = true
                 // Only when they wrote one. The field in that sheet starts
                 // empty every time, so treating a blank as an answer would
                 // erase the instruction they set two taps ago.

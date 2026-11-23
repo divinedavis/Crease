@@ -694,7 +694,29 @@ extension Int {
     }
 }
 
+extension CLLocationCoordinate2D {
+    /// The "somewhere in Brooklyn" stand-in, never a real door. Saved rows
+    /// carried it as if it were one until 2026-11-22 (migration 0056).
+    var isPlaceholder: Bool {
+        abs(latitude - CLLocationCoordinate2D.brooklyn.latitude) < 0.00005
+            && abs(longitude - CLLocationCoordinate2D.brooklyn.longitude) < 0.00005
+    }
+}
+
+extension ResolvedAddress {
+    var isPlaceholderPoint: Bool { coordinate.isPlaceholder }
+}
+
 extension Address {
+    /// The stored point, when there is a real one. Nil for a row saved
+    /// without a point or with the Brooklyn stand-in, which must be geocoded
+    /// and confirmed on the map before a courier is sent anywhere.
+    var knownCoordinate: CLLocationCoordinate2D? {
+        guard let lat, let lng else { return nil }
+        let point = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        return point.isPlaceholder ? nil : point
+    }
+
     /// A saved address already has everything the flow needs, so picking one
     /// skips both the search and the pin step entirely — the fast path for a
     /// returning customer, who is most of them.

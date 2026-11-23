@@ -52,5 +52,28 @@ class Migrations(unittest.TestCase):
         self.assertFalse(SINGLE_ROW.search(DELETE_RETURNING_INTO.search(old).group(0)))
 
 
+
+
+class PlaceholderPointMigration(unittest.TestCase):
+    """0056: the app's Brooklyn stand-in point is never stored as a door."""
+
+    SQL = re.sub(r"--[^\n]*", "", (MIGRATIONS / "0056_addresses_drop_placeholder_point.sql").read_text())
+
+    def test_trigger_runs_before_writes_to_the_point(self):
+        self.assertRegex(self.SQL, r"before insert or update of lat, lng on public\.addresses")
+
+    def test_stand_in_becomes_null_not_an_error(self):
+        self.assertRegex(self.SQL, r"abs\(new\.lat - 40\.7178\) < 0\.00005 and abs\(new\.lng \+ 73\.9569\) < 0\.00005")
+        self.assertRegex(self.SQL, r"new\.lat := null;\s*new\.lng := null;")
+        self.assertNotRegex(self.SQL, r"raise exception")
+
+    def test_matches_the_ios_stand_in(self):
+        swift = (MIGRATIONS.parent.parent / "apps/ios/Crease/Features/Pickup/AddressSearch.swift").read_text()
+        self.assertIn("CLLocationCoordinate2D(latitude: 40.7178, longitude: -73.9569)", swift)
+
+    def test_function_is_not_callable_by_clients(self):
+        self.assertRegex(self.SQL, r"revoke all on function public\.addresses_drop_placeholder_point\(\) from public, anon, authenticated")
+
+
 if __name__ == "__main__":
     unittest.main()
