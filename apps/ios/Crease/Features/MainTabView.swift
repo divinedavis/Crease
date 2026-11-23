@@ -73,7 +73,7 @@ struct MainTabView: View {
                 .tabItem { Label("Account", systemImage: "person.fill") }
                 .tag(AppTab.account)
         }
-        .tint(Theme.ink)
+        .tint(Theme.accent)
         .fullScreenCover(item: $flow) { step in
             switch step {
             case let .address(intent):

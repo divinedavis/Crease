@@ -9,45 +9,56 @@ import CoreText
 /// state that matters — the one live order, the one thing needing a decision —
 /// so it means something when it appears.
 enum Theme {
-    // Monochrome since 2026-10-08, after the ride-hailing look the owner
-    // asked for: ink (black in light mode, white in dark) carries every
-    // primary action, and the rest is greys. Ink on the canvas is the
-    // highest contrast the system has, so Apple's audit cannot fail it in
-    // either mode — the green this replaced needed hand-tuned dark twins.
-    static let ink = Color(.label)
+    // Espresso since 2026-11-23 (owner's pick of ten palettes drawn from the
+    // Pleat logo): a near-black brown carries text and every primary action,
+    // cards are a warm grey, and the logo's terracotta is the one accent —
+    // the selected tab, the map route, status lines. Before this the app was
+    // monochrome (ink = black/white, 2026-10-08).
+    //
+    // Dark mode mirrors it: cream ink on the splash's near-black, with a
+    // lighter terracotta so accent text stays above 4.5:1 on the cards.
+    // SplashBackground's dark value is the dark canvas, so the launch hands
+    // off without a seam.
+    static let ink = hex(light: 0x2B1D18, dark: 0xFFF6EE)
     /// Text and icons drawn ON an ink fill.
-    static let onInk = Color(.systemBackground)
-    static let accent = ink
-    static let accentSoft = Color(.label).opacity(0.08)
+    static let onInk = hex(light: 0xFFF6EE, dark: 0x1A1412)
+    /// The logo's terracotta, a shade deeper in light mode so text in it
+    /// passes 4.5:1 on `surface` (the logo's #B8573A reads 4.2:1 there).
+    static let accent = hex(light: 0xA84E32, dark: 0xE0805F)
+    static let accentSoft = ink.opacity(0.08)
     /// For FILLS under `onInk` text (primary buttons, capsules).
     static let accentFill = ink
-    /// The page: white in light mode, black in dark.
-    static let canvas = Color(.systemBackground)
-    /// Cards, search pills and tiles sitting on the canvas. A neutral grey
-    /// (#F4F4F5), not the system's blue-tinted one: the soft-card look
-    /// (2026-11-06) puts illustrations on it and they read warm on neutral.
-    static let surface = adaptive(light: (0.957, 0.957, 0.961), dark: (0.11, 0.11, 0.118))
+    /// The page: white in light mode, the splash's near-black in dark.
+    static let canvas = hex(light: 0xFFFFFF, dark: 0x1A1412)
+    /// Cards, search pills and tiles sitting on the canvas: a warm grey that
+    /// sits with the illustrations and the brown ink.
+    static let surface = hex(light: 0xF4F1EE, dark: 0x261E1B)
     /// Raised a step above `surface` (rows inside a card, chips).
     static let surfaceRaised = Color(.tertiarySystemBackground)
     /// One shade darker than `surface`: inactive stepper dots, tracks.
-    static let surfaceStrong = adaptive(light: (0.925, 0.925, 0.933), dark: (0.17, 0.17, 0.18))
+    static let surfaceStrong = hex(light: 0xECE7E2, dark: 0x342A26)
     /// White in light mode: the "+" badges and tiles placed on a grey card.
-    static let raised = adaptive(light: (1, 1, 1), dark: (0.17, 0.17, 0.18))
+    static let raised = hex(light: 0xFFFFFF, dark: 0x2F2622)
     /// Hairlines and unselected outlines.
-    static let line = adaptive(light: (0.906, 0.906, 0.918), dark: (0.22, 0.22, 0.235))
-    /// The solid grey of the row glyphs (pin, clock, note).
-    static let glyph = adaptive(light: (0.333, 0.333, 0.361), dark: (0.68, 0.68, 0.70))
-    /// The one coloured surface: the promo card. White text on it is 12:1.
-    static let promo = Color(red: 0.04, green: 0.13, blue: 0.30)
-    /// "Best value" tags, used with white text (5.6:1).
-    static let tag = Color(red: 0.80, green: 0.10, blue: 0.12)
+    static let line = hex(light: 0xE8E2DC, dark: 0x3A302B)
+    /// The solid colour of the row glyphs (pin, clock, note).
+    static let glyph = hex(light: 0x6B4A3C, dark: 0xC9B2A6)
     /// Secondary text. The system's .secondary / .tertiary read "nearly
     /// passed" / "failed" in Apple's contrast audit on these backgrounds;
-    /// this is ~7:1 in both modes.
-    static let muted = adaptive(light: (0.33, 0.33, 0.36), dark: (0.70, 0.70, 0.74))
+    /// this is ~6.5:1 on cards in both modes.
+    static let muted = hex(light: 0x5E524C, dark: 0xBFB3AC)
     static let warn = adaptive(light: (0.50, 0.29, 0.0), dark: (0.95, 0.68, 0.25))
     static let warnSoft = Color(red: 0.95, green: 0.72, blue: 0.28).opacity(0.18)
     static let danger = adaptive(light: (0.62, 0.15, 0.12), dark: (1.0, 0.45, 0.40))
+
+    /// A light/dark pair from hex values.
+    static func hex(light: UInt32, dark: UInt32) -> Color {
+        func ui(_ h: UInt32) -> UIColor {
+            UIColor(red: CGFloat((h >> 16) & 0xff) / 255, green: CGFloat((h >> 8) & 0xff) / 255,
+                    blue: CGFloat(h & 0xff) / 255, alpha: 1)
+        }
+        return Color(UIColor { $0.userInterfaceStyle == .dark ? ui(dark) : ui(light) })
+    }
 
     private static func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
         Color(UIColor { t in

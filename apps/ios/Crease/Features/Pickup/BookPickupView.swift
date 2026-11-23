@@ -63,6 +63,16 @@ struct BookPickupView: View {
     /// ride app draws a trip in.
     @State private var route: [CLLocationCoordinate2D] = []
     @State private var drawnPoints = 0
+    /// The strip of map the customer can actually see: below the address bar
+    /// and above the options sheet, which covers more than half the screen.
+    /// The trip is framed into that strip, not into the middle of the whole
+    /// map, where the sheet would hide the shop.
+    ///
+    /// MapKit fits a camera rect to the whole map view, which runs full-bleed
+    /// under the status bar and the sheet, so that is measured too.
+    @State private var mapFrame: CGRect = .zero
+    @State private var openFrame: CGRect = .zero
+    @State private var headerBottom: CGFloat = 0
     /// The options sheet rises in once, after the map has started moving.
     @State private var sheetShown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -177,8 +187,13 @@ struct BookPickupView: View {
             VStack(spacing: 10) {
                 header
             }
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { headerBottom = $0 }
             .animation(.easeInOut(duration: 0.25), value: submitting)
         }
+        // This ZStack stops where the options sheet starts, so its frame is
+        // the part of the map left open.
+        .onGeometryChange(for: CGRect.self) { Self.vertical($0.frame(in: .global)) } action: { openFrame = $0 }
+        .onChange(of: openFrame) { _, _ in frameRoute(animated: false) }
         .safeAreaInset(edge: .bottom) {
             optionsSheet
                 .offset(y: sheetShown || reduceMotion ? 0 : 520)
@@ -372,11 +387,21 @@ struct BookPickupView: View {
                 }
                 if drawnPoints > 1 {
                     MapPolyline(coordinates: Array(route.prefix(drawnPoints)))
-                        .stroke(Theme.ink, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 }
             }
         }
         .mapStyle(.standard(emphasis: .muted, pointsOfInterest: .excludingAll))
+        // A reader that itself ignores the safe area reports the full-bleed
+        // frame; onGeometryChange on the map reports only its safe part.
+        .background {
+            GeometryReader { g in
+                Color.clear
+                    .onAppear { mapFrame = Self.vertical(g.frame(in: .global)) }
+                    .onChange(of: g.size) { _, _ in mapFrame = Self.vertical(g.frame(in: .global)) }
+            }
+            .ignoresSafeArea()
+        }
         .ignoresSafeArea()
     }
 
@@ -397,6 +422,9 @@ struct BookPickupView: View {
         let found = try? await MKDirections(request: request).calculate().routes.first?.polyline.coordinates
         guard !Task.isCancelled else { return }
         route = RoutePath.densified(found ?? [pickup.coordinate, shop])
+        // The road can bow well outside the two endpoints; frame what is
+        // about to be drawn.
+        frameRoute()
         if reduceMotion { drawnPoints = route.count; return }
         drawnPoints = 0
         let frames = 28
@@ -411,17 +439,42 @@ struct BookPickupView: View {
 
     private var cleanerCoordinate: CLLocationCoordinate2D? { cleaner?.coordinate }
 
-    private func frameRoute() {
+    /// Frames the whole trip, door to shop along the driving route, into the
+    /// open strip above the options sheet. Until the screen has been measured
+    /// it falls back to centring the two ends.
+    /// A frame with its x dropped: the back swipe slides the whole screen
+    /// sideways, and the map and the open strip always share an x anyway, so
+    /// a drag should not re-frame the map on every step.
+    private static func vertical(_ f: CGRect) -> CGRect {
+        CGRect(x: 0, y: f.minY, width: f.width, height: f.height)
+    }
+
+    private func frameRoute(animated: Bool = true) {
         guard let c = cleanerCoordinate else { return }
-        let midLat = (pickup.coordinate.latitude + c.latitude) / 2
-        let midLon = (pickup.coordinate.longitude + c.longitude) / 2
-        let spanLat = abs(pickup.coordinate.latitude - c.latitude) * 2.6 + 0.008
-        let spanLon = abs(pickup.coordinate.longitude - c.longitude) * 2.6 + 0.008
-        withAnimation(.easeInOut(duration: 0.9)) {
-            camera = .region(MKCoordinateRegion(
+        let points = route + [pickup.coordinate, c]
+        // In the map view's own coordinates.
+        let visible = CGRect(
+            x: 0,
+            y: headerBottom - mapFrame.minY,
+            width: openFrame.width,
+            height: openFrame.maxY - headerBottom
+        )
+        let target: MapCameraPosition
+        if let rect = RouteFraming.mapRect(points: points, mapSize: mapFrame.size, visible: visible) {
+            target = .rect(rect)
+        } else {
+            let midLat = (pickup.coordinate.latitude + c.latitude) / 2
+            let midLon = (pickup.coordinate.longitude + c.longitude) / 2
+            target = .region(MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
-                span: MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
+                span: MKCoordinateSpan(latitudeDelta: abs(pickup.coordinate.latitude - c.latitude) * 2.6 + 0.008,
+                                       longitudeDelta: abs(pickup.coordinate.longitude - c.longitude) * 2.6 + 0.008)
             ))
+        }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.9)) { camera = target }
+        } else {
+            camera = target
         }
     }
 
@@ -996,6 +1049,47 @@ struct RouteEndpoint: View {
 }
 
 /// Route geometry for the draw-in animation.
+/// Fits a trip into part of a map view (owner, 2026-11-23: "the map should
+/// have the full view of the trip"). The options sheet covers the bottom of
+/// the booking map, so centring the trip on the whole view hid the shop
+/// behind the sheet and left the door at its edge.
+enum RouteFraming {
+    /// Room around the trip inside the open strip: more on top for the
+    /// "Driver N min" bubble that sits above the door.
+    static let padding = EdgeInsets(top: 64, leading: 44, bottom: 36, trailing: 44)
+    /// Never closer than this, so two points a block apart still show streets.
+    static let minimumMeters: Double = 450
+
+    /// The map rect to show so every point lands inside `visible` (a rect in
+    /// the map view's own points), with `padding` to spare. Its aspect is the
+    /// map view's, so MapKit shows it exactly. Nil until the view is measured
+    /// or when the open strip is too small to frame into.
+    static func mapRect(points: [CLLocationCoordinate2D], mapSize: CGSize, visible: CGRect) -> MKMapRect? {
+        guard !points.isEmpty, mapSize.width > 0, mapSize.height > 0 else { return nil }
+        let box = CGRect(
+            x: visible.minX + padding.leading,
+            y: visible.minY + padding.top,
+            width: visible.width - padding.leading - padding.trailing,
+            height: visible.height - padding.top - padding.bottom
+        )
+        guard box.width > 60, box.height > 60 else { return nil }
+        let mapPoints = points.map(MKMapPoint.init)
+        let xs = mapPoints.map(\.x), ys = mapPoints.map(\.y)
+        let (minX, maxX, minY, maxY) = (xs.min()!, xs.max()!, ys.min()!, ys.max()!)
+        let floor = minimumMeters * MKMapPointsPerMeterAtLatitude(points[0].latitude)
+        let width = max(maxX - minX, floor), height = max(maxY - minY, floor)
+        // Map points per screen point: whichever side is tighter decides.
+        let k = max(width / box.width, height / box.height)
+        let midX = (minX + maxX) / 2, midY = (minY + maxY) / 2
+        return MKMapRect(
+            x: midX - box.midX * k,
+            y: midY - box.midY * k,
+            width: mapSize.width * k,
+            height: mapSize.height * k
+        )
+    }
+}
+
 enum RoutePath {
     /// Directions come back with long straight runs as two points, which
     /// would draw in jumps. Splits every leg so no step covers more than a

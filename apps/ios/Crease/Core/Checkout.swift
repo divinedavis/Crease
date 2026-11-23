@@ -125,7 +125,7 @@ final class Checkout: ObservableObject {
                 )
                 // Apple Pay first: it is one authentication instead of typing a
                 // card, and it is why most people finish a checkout on a phone.
-                config.primaryButtonColor = UIColor(Theme.accent)
+                config.primaryButtonColor = UIColor(Theme.accentFill)
                 config.allowsDelayedPaymentMethods = false
 
                 // Did they stay? A sheet raised over a screen somebody has walked
