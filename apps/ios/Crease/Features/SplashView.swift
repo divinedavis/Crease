@@ -98,6 +98,9 @@ struct SplashView: View {
         }
         .ignoresSafeArea()
         .opacity(overallOpacity)
+        // Once lifting, taps fall through to the screen rising underneath
+        // instead of landing on a fading cover.
+        .allowsHitTesting(!exiting)
         .task {
             playIntro()
             try? await Task.sleep(for: .seconds(reduceMotion ? Self.stillHold : Self.introLength))
@@ -175,6 +178,10 @@ struct SplashRevealModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // Not there to VoiceOver or UI tests until the splash lifts: the
+            // buttons exist from the first frame, and a tap aimed at one
+            // while the mark is still drawing lands on the splash instead.
+            .accessibilityHidden(!revealed)
             .opacity(revealed ? 1 : 0)
             .offset(y: revealed || reduceMotion ? 0 : 16)
             .animation(.easeOut(duration: 0.4), value: revealed)
