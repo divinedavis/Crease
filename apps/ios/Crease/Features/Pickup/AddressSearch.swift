@@ -28,11 +28,49 @@ final class AddressSearch: NSObject, ObservableObject {
         super.init()
         completer.delegate = self
         completer.resultTypes = .address
-        if let region { completer.region = region }
+        completer.region = region ?? Self.serviceRegion
+        // Crease only collects in Brooklyn, so ask MapKit for Brooklyn
+        // addresses rather than for nearby ones ranked against the whole
+        // country (owner, 2026-11-22: "prioritize Brooklyn addresses so they
+        // show faster"). iOS 18 can make the region a requirement; on 17 the
+        // ranking below does the same job after the fact.
+        if #available(iOS 18.0, *) { completer.regionPriority = .required }
     }
 
+    /// Brooklyn, centred on the partner shop on Fulton Street. Wide enough for
+    /// the whole borough, so an address at the edge of the three-mile area is
+    /// still found and then told honestly whether it is served.
+    static let serviceRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 40.6834, longitude: -73.9671),
+        span: MKCoordinateSpan(latitudeDelta: 0.16, longitudeDelta: 0.16)
+    )
+
+    /// Re-centre on where the customer is, but only while they are in or near
+    /// Brooklyn: someone booking from their office in Midtown still wants
+    /// their Brooklyn address, not the street they are standing on.
     func setRegion(_ region: MKCoordinateRegion) {
-        completer.region = region
+        let c = region.center, home = Self.serviceRegion.center
+        let near = abs(c.latitude - home.latitude) < 0.12 && abs(c.longitude - home.longitude) < 0.12
+        completer.region = near ? region : Self.serviceRegion
+    }
+
+    /// Brooklyn first, then the rest of New York, then anywhere else, keeping
+    /// MapKit's order inside each group. Once there is a Brooklyn match the
+    /// out-of-state ones are dropped: "251 Dekalb" in King of Prussia is never
+    /// the address a Crease customer meant.
+    nonisolated static func ranked<T>(_ items: [T], subtitle: (T) -> String) -> [T] {
+        func group(_ item: T) -> Int {
+            let s = subtitle(item).lowercased()
+            if s.contains("brooklyn") { return 0 }
+            if s.contains("new york") || s.contains(", ny") || s.hasPrefix("ny") { return 1 }
+            return 2
+        }
+        let grouped = items.enumerated().sorted { a, b in
+            let (ga, gb) = (group(a.element), group(b.element))
+            return ga != gb ? ga < gb : a.offset < b.offset
+        }.map(\.element)
+        guard grouped.contains(where: { group($0) == 0 }) else { return grouped }
+        return grouped.filter { group($0) < 2 }
     }
 
     /// Turn a suggestion into a real coordinate and postal address.
@@ -65,7 +103,7 @@ final class AddressSearch: NSObject, ObservableObject {
 
 extension AddressSearch: MKLocalSearchCompleterDelegate {
     nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        let updated = completer.results
+        let updated = AddressSearch.ranked(completer.results) { $0.subtitle }
         Task { @MainActor in self.results = updated }
     }
 

@@ -102,7 +102,14 @@ struct MainTabView: View {
                     flow = nil
                 }
             case let .book(resolved, notes, intent):
-                BookPickupView(pickup: resolved, accessNotes: notes, intent: intent)
+                // Back (button or edge swipe) returns to the address step,
+                // re-presented the same way the forward steps are.
+                BookPickupView(pickup: resolved, accessNotes: notes, intent: intent) {
+                    flow = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        flow = .address(intent)
+                    }
+                }
             case let .usual(usual):
                 BookPickupView(
                     pickup: usual.address.asResolved,

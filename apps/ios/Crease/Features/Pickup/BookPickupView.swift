@@ -32,7 +32,16 @@ struct BookPickupView: View {
     @State private var kindUnavailable = false
     @State private var appliedUsual = false
 
-    init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil, intent: BookingIntent = BookingIntent()) {
+    /// One step back: the address screen when the booking came from it
+    /// (owner, 2026-11-22: "I should be able to swipe back to previous
+    /// screen"). Nil means there is no earlier step, and Back leaves.
+    private let onBack: (() -> Void)?
+    /// How far the left-edge swipe has dragged the screen, so it follows the
+    /// thumb the way a navigation pop does.
+    @State private var backDrag: CGFloat = 0
+
+    init(pickup: ResolvedAddress, accessNotes: String, usual: UsualOrder? = nil, intent: BookingIntent = BookingIntent(), onBack: (() -> Void)? = nil) {
+        self.onBack = onBack
         _pickup = State(initialValue: pickup)
         _dropoffNotes = State(initialValue: accessNotes)
         self.usual = usual
@@ -175,6 +184,8 @@ struct BookPickupView: View {
                 .offset(y: sheetShown || reduceMotion ? 0 : 520)
                 .onAppear { withAnimation(Motion.settle.delay(0.15)) { sheetShown = true } }
         }
+        .offset(x: backDrag)
+        .overlay(alignment: .leading) { backSwipeEdge }
         .task(id: RouteKey(pickup: PinPoint(pickup.coordinate), shop: cleaner?.id)) { await drawRoute() }
         .sheet(isPresented: $choosingCleaner) {
             CleanerPickerView(
@@ -414,6 +425,42 @@ struct BookPickupView: View {
         }
     }
 
+    private func goBack() {
+        guard !submitting else { return }
+        if let onBack { onBack() } else { dismiss() }
+    }
+
+    /// The system's swipe-back only exists inside a NavigationStack, and this
+    /// screen is a full-screen cover over the map, so the gesture is drawn
+    /// here: a thin strip on the left edge (so the map keeps its own pans)
+    /// that drags the screen with the thumb and goes back past a third of the
+    /// way or on a quick flick. Off while a booking is being charged, same
+    /// as the Back button.
+    private var backSwipeEdge: some View {
+        Color.clear
+            .frame(width: 24)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 12, coordinateSpace: .global)
+                    .onChanged { value in
+                        guard !submitting else { return }
+                        backDrag = max(0, value.translation.width)
+                    }
+                    .onEnded { value in
+                        let width = UIScreen.main.bounds.width
+                        let flung = value.predictedEndTranslation.width > width * 0.5
+                        if !submitting && (value.translation.width > width * 0.33 || flung) {
+                            withAnimation(.easeOut(duration: 0.18)) { backDrag = width }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { goBack() }
+                        } else {
+                            withAnimation(Motion.settle) { backDrag = 0 }
+                        }
+                    }
+            )
+            .accessibilityHidden(true)
+    }
+
     private var header: some View {
         HStack(spacing: 10) {
             // Closed while a booking is in flight. The order row and the
@@ -421,7 +468,7 @@ struct BookPickupView: View {
             // this live means the customer can walk out mid-charge — there is
             // no cancel to offer them at that point, only a screen that has to
             // stay put until the sheet answers.
-            Button { dismiss() } label: {
+            Button { goBack() } label: {
                 Image(systemName: "chevron.left")
                     .font(.app(.body).weight(.semibold))
                     .foregroundStyle(Theme.ink)

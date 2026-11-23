@@ -278,6 +278,42 @@ final class CreaseUITests: XCTestCase {
         attach(app, "home-one-screen")
     }
 
+    /// From the Order step, a swipe in from the left edge goes back one step
+    /// to the address screen, and so does Back (owner, 2026-11-22). The
+    /// address list shows three rows at most, the pinned home address counted.
+    func testSwipingBackFromTheOrderStepReturnsToTheAddress() throws {
+        let app = launch(signedIn: true)
+        XCTAssertTrue(app.navigationBars["Crease"].waitForExistence(timeout: 20))
+        app.buttons["Book a pickup"].tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+
+        let home = app.buttons.containing(.staticText, identifier: "Home").firstMatch
+        guard home.waitForExistence(timeout: 8) else {
+            app.buttons["Cancel"].tap()
+            throw XCTSkip("no saved address seeded; run scripts/seed.mjs")
+        }
+        app.textFields["Street address"].typeText("251 Dek")
+        sleep(3)   // MapKit's suggestions arrive asynchronously
+        XCTAssertLessThanOrEqual(app.buttons.matching(identifier: "address-suggestion").count, 2,
+                                 "three rows in all, and the pinned home address is one of them")
+        attach(app, "address-three-rows")
+        home.tap()
+
+        let change = app.buttons.containing(.staticText, identifier: "Change").firstMatch
+        XCTAssertTrue(change.waitForExistence(timeout: 15), "the Order step should open")
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.45))
+        edge.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.45)))
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10),
+                      "swiping in from the left edge should return to the address step")
+
+        home.tap()
+        XCTAssertTrue(change.waitForExistence(timeout: 15))
+        app.buttons["Back"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10),
+                      "Back should also return to the address step, not to Home")
+        app.buttons["Cancel"].tap()
+    }
+
     /// The orders have to survive a re-render of the root view.
     ///
     /// `RootView.body` used to build `OrderStore(client:)` inline, so every

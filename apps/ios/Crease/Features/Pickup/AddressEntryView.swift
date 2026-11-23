@@ -24,10 +24,11 @@ struct AddressEntryView: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A short list beats a long one here: the right answer is nearly always
-    /// in the first few, and a wall of near-identical streets is harder to
-    /// scan than it is helpful.
-    private let suggestionLimit = 3
+    /// Three rows, counting the pinned home address (owner, 2026-11-22:
+    /// "Only have 3 suggestions"). The right answer is nearly always in the
+    /// first few, and a wall of near-identical streets is harder to scan.
+    static let rowLimit = 3
+    private var suggestionLimit: Int { max(0, Self.rowLimit - (home == nil ? 0 : 1)) }
 
     private var home: Address? {
         store.addresses.first { ($0.label ?? "").lowercased() == "home" }
@@ -68,6 +69,7 @@ struct AddressEntryView: View {
                             suggestionRow(result)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("address-suggestion")
                     }
 
                     if search.query.isEmpty && !otherSaved.isEmpty {
