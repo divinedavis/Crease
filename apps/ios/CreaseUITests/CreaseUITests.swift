@@ -279,6 +279,26 @@ final class CreaseUITests: XCTestCase {
         attach(app, "home-one-screen")
     }
 
+    /// The search bar and the service row sit at the bottom, directly above
+    /// the tab bar, with the promo card above them (owner, 2026-11-23).
+    func testSearchAndServicesSitAboveTheTabBar() {
+        let app = launch(signedIn: true)
+        let search = app.buttons["Book a pickup"]
+        XCTAssertTrue(search.waitForExistence(timeout: 20))
+        sleep(2)   // let the splash settle and the stagger finish
+
+        let promo = app.buttons["Learn more"]
+        let service = app.buttons["Book Wash & fold"]
+        let bar = app.tabBars.firstMatch
+        XCTAssertTrue(promo.exists && service.exists && bar.exists)
+
+        XCTAssertLessThan(promo.frame.maxY, search.frame.minY, "the promo card is above the search bar")
+        XCTAssertLessThan(search.frame.maxY, service.frame.minY, "the services are under the search bar")
+        XCTAssertLessThan(service.frame.maxY, bar.frame.minY, "the services sit above the tab bar")
+        XCTAssertLessThan(bar.frame.minY - service.frame.maxY, 80, "the services sit directly above the tab bar")
+        attach(app, "home-search-at-bottom")
+    }
+
     /// From the Order step, a swipe in from the left edge goes back one step
     /// to the address screen, and so does Back (owner, 2026-11-22). The
     /// address list shows three rows at most, the pinned home address counted.

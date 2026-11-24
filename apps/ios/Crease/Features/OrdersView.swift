@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Home.
 ///
-/// One screen, no scrolling (owner, 2026-11-22): the search bar, the three
-/// services, the customer's usual when they have one, and where Crease
-/// reaches. The driver-ETA card, the saved-place rows and the "For you" tier
+/// One screen, no scrolling (owner, 2026-11-22): the customer's usual when
+/// they have one and where Crease reaches at the top; the three services and
+/// the search bar at the bottom, above the tab bar (owner, 2026-11-23). The driver-ETA card, the saved-place rows and the "For you" tier
 /// row were removed that day; saved places are still one tap away on the
 /// address screen, and tiers are chosen in the booking sheet. Orders are not
 /// shown here (owner, 2026-10-10): they live on the Activity tab, which
@@ -59,11 +59,12 @@ struct OrdersView: View {
         }
     }
 
+    /// The search bar and the service row sit at the bottom, directly above
+    /// the tab bar, where the thumb already is (owner, 2026-11-23). The usual
+    /// order and the promo card take the top; the space between them grows.
     private var content: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            searchBar
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 22) {
-                serviceGrid
                 if let usual = UsualOrder.from(store.orders) {
                     UsualOrderCard(usual: usual) { startUsual(usual) }
                         .staggeredAppear(0)
@@ -71,9 +72,17 @@ struct OrdersView: View {
                 PromoCard { showingArea = true }
             }
             .padding(.horizontal, 20)
+
+            Spacer(minLength: 24)
+
+            VStack(alignment: .leading, spacing: 14) {
+                searchBar
+                serviceGrid
+                    .padding(.horizontal, 20)
+            }
         }
         .padding(.top, 8)
-        .padding(.bottom, 20)
+        .padding(.bottom, 12)
     }
 
     /// What Crease does, as three illustrated tiles. Each one opens the
