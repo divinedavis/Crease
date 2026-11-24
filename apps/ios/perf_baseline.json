@@ -1,61 +1,61 @@
 {
   "PerformanceTests/testLaunch() :: Duration (ApplicationFirstFramePresentationResponsive)": {
     "history": [
-      0.9821,
       0.9944,
       0.9923,
       1.0009,
-      1.0332
+      1.0332,
+      0.9993
     ],
     "unit": "s"
   },
   "PerformanceTests/testLaunchToOrderList() :: Clock Monotonic Time": {
     "history": [
-      4.1011,
       4.0504,
       4.1006,
       4.0666,
-      4.1208
+      4.1208,
+      4.111
     ],
     "unit": "s"
   },
   "PerformanceTests/testOpenBooking() :: Absolute Memory Physical (crease)": {
     "history": [
-      82430.256,
       82659.656,
       82577.736,
       82954.568,
-      82889.008
+      82889.008,
+      82823.496
     ],
     "unit": "kB"
   },
   "PerformanceTests/testOpenBooking() :: Clock Monotonic Time": {
     "history": [
-      1.4037,
       1.3813,
       1.3766,
       1.3668,
-      1.3977
+      1.3977,
+      1.3883
     ],
     "unit": "s"
   },
   "PerformanceTests/testOpenBooking() :: Memory Peak Physical (crease)": {
     "history": [
-      82594.096,
       82807.112,
       82774.344,
       83134.792,
-      83069.232
+      83069.232,
+      82954.568
     ],
     "unit": "kB"
   },
   "PerformanceTests/testOpenBooking() :: Memory Physical (crease)": {
     "history": [
-      802.816,
       786.432,
       819.2,
       786.432,
-      786.432
+      786.432,
+      802.816
     ],
     "unit": "kB"
   }
