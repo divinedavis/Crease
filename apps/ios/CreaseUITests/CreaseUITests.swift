@@ -299,6 +299,33 @@ final class CreaseUITests: XCTestCase {
         attach(app, "home-search-at-bottom")
     }
 
+    /// Tapping the search bar flies it up into the address field while Home
+    /// parts around it ("Part", owner, 2026-11-23). The field must take typing
+    /// once it lands, and Home must be whole again after Cancel.
+    func testTheSearchBarBecomesTheAddressFieldAndHomeComesBackWhole() {
+        let app = launch(signedIn: true)
+        let search = app.buttons["Book a pickup"]
+        XCTAssertTrue(search.waitForExistence(timeout: 20))
+        sleep(2)   // past the splash, so the tap lands on Home as a person's would
+        search.tap()
+
+        XCTAssertTrue(app.navigationBars["Pickup address"].waitForExistence(timeout: 10))
+        let field = app.textFields["Street address"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertTrue(field.isHittable, "the real field takes over once the bar lands")
+        XCTAssertLessThan(field.frame.minY, app.frame.height / 3, "the field sits at the top")
+        field.tap()   // focus can land a beat late on a cold simulator
+        field.typeText("Fulton")
+        XCTAssertEqual(field.value as? String, "Fulton")
+        attach(app, "search-landed")
+
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        for label in ["Book a pickup", "Book Wash & fold", "Learn more"] {
+            XCTAssertTrue(app.buttons[label].isHittable, "\(label) should be back in place on Home")
+        }
+    }
+
     /// From the Order step, a swipe in from the left edge goes back one step
     /// to the address screen, and so does Back (owner, 2026-11-22). The
     /// address list shows three rows at most, the pinned home address counted.

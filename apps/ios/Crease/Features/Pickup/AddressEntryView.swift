@@ -23,6 +23,10 @@ struct AddressEntryView: View {
     /// slide (see MainTabView), so this screen eases its own content in.
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Home's search bar has just risen into this field's place ("Part",
+    /// owner, 2026-11-23), so the page fades in around it without its usual
+    /// rise: the field must be exactly where the bar landed.
+    @State private var afterFlight = SearchFlight.shared.landedRecently
 
     /// Three rows, counting the pinned home address (owner, 2026-11-22:
     /// "Only have 3 suggestions"). The right answer is nearly always in the
@@ -145,8 +149,8 @@ struct AddressEntryView: View {
             }
         }
         .opacity(appeared || reduceMotion ? 1 : 0)
-        .offset(y: appeared || reduceMotion ? 0 : 24)
-        .onAppear { withAnimation(.easeOut(duration: 0.22)) { appeared = true } }
+        .offset(y: appeared || reduceMotion || afterFlight ? 0 : 24)
+        .onAppear { withAnimation(.easeOut(duration: afterFlight ? 0.14 : 0.22)) { appeared = true } }
     }
 
     private var field: some View {
@@ -171,13 +175,17 @@ struct AddressEntryView: View {
             }
         }
         .padding(.horizontal, 18)
-        .frame(minHeight: 60)
+        .frame(minHeight: SearchFlight.fieldHeight)
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(Theme.ink.opacity(focused ? 1 : 0), lineWidth: 2)
         )
+        // Where Home's bar lands next time. Read once settled, not mid-rise.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            if appeared || reduceMotion || afterFlight { SearchFlight.shared.rememberField(frame) }
+        }
         .font(.app(.body).weight(.semibold))
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
@@ -237,5 +245,49 @@ struct AddressEntryView: View {
         }
         onPicked(PinMemory.applied(to: resolved, saved: saved))
         dismiss()
+    }
+}
+
+/// Where Home's search bar should land: this screen's field, as last measured
+/// (kept across launches), or worked out from the screen's top inset the very
+/// first time. And when it last landed, so this screen knows to open around
+/// it rather than rise into place.
+@MainActor
+final class SearchFlight {
+    static let shared = SearchFlight()
+    static let fieldHeight: CGFloat = 60
+    private static let key = "searchFieldFrame"
+
+    var landedAt = Date.distantPast
+    var landedRecently: Bool { Date.now.timeIntervalSince(landedAt) < 1 }
+
+    private let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+
+    func rememberField(_ frame: CGRect) {
+        guard frame.height > 0 else { return }
+        defaults.set(NSCoder.string(for: frame), forKey: Self.key)
+    }
+
+    /// The field's frame on screen, lined up with the bar it starts from.
+    /// `contentTop` is where Home's content starts under its navigation bar;
+    /// this screen's starts at the same place, and its field sits the steps'
+    /// height (52 pt) below it.
+    func fieldFrame(below bar: CGRect, contentTop: CGFloat?) -> CGRect {
+        if let saved = defaults.string(forKey: Self.key) {
+            let frame = NSCoder.cgRect(for: saved)
+            if frame.height > 0 { return frame }
+        }
+        let top = (contentTop ?? Self.windowTopInset + 54) + Self.stepsHeight
+        return CGRect(x: bar.minX, y: top, width: bar.width, height: Self.fieldHeight)
+    }
+
+    /// The numbered steps above the field, padding included.
+    static let stepsHeight: CGFloat = 52
+
+    static var windowTopInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?.safeAreaInsets.top ?? 62
     }
 }

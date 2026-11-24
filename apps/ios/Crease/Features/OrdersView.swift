@@ -18,6 +18,22 @@ struct OrdersView: View {
     @State private var scheduling = false
     @State private var laterTime: Date?
     @State private var showingArea = false
+    /// Home parting around the search bar as the address screen opens (owner's
+    /// pick, "Part", 2026-11-23): the top slides up and away, the services drop,
+    /// and the bar itself rises to where the address field will be and takes
+    /// its look. The address screen opens only once the bar has landed, with
+    /// its field in exactly that spot. All of it happens here, on Home: a
+    /// screen being presented freezes the one behind it, and the keyboard's
+    /// safe area pulls a flying view apart.
+    @State private var parting = false
+    /// The bar handed to its drawn copy (instantly), then landed (animated).
+    @State private var flying = false
+    @State private var landed = false
+    /// How far the bar rises, fixed at the tap so its own movement never feeds back.
+    @State private var flightRise: CGFloat = 0
+    @State private var searchFrame: CGRect?
+    @State private var contentTop: CGFloat?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -29,6 +45,10 @@ struct OrdersView: View {
                 ScrollView { content }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Where content starts under the bar; the address screen's
+            // content starts at the same place, so its field can be found
+            // from here before it has ever been opened.
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { contentTop = $0 }
             .background(Theme.canvas)
             .navigationTitle("Crease")
             .navigationBarTitleDisplayMode(.inline)
@@ -38,6 +58,8 @@ struct OrdersView: View {
                 ToolbarItem(placement: .principal) {
                     WordmarkText(size: 28, relativeTo: .title2, isSplashTarget: true)
                         .foregroundStyle(Theme.ink)
+                        .opacity(parting ? 0 : 1)
+                        .animation(Self.partCurve, value: parting)
                         .accessibilityAddTraits(.isHeader)
                 }
             }
@@ -72,13 +94,20 @@ struct OrdersView: View {
                 PromoCard { showingArea = true }
             }
             .padding(.horizontal, 20)
+            .offset(y: parting ? -140 : 0)
+            .opacity(parting ? 0 : 1)
+            .animation(Self.partCurve, value: parting)
 
             Spacer(minLength: 24)
 
             VStack(alignment: .leading, spacing: 14) {
                 searchBar
+                    .zIndex(1)   // over the promo as it passes it
                 serviceGrid
                     .padding(.horizontal, 20)
+                    .offset(y: parting ? 280 : 0)
+                    .opacity(parting ? 0 : 1)
+                    .animation(Self.partCurve, value: parting)
             }
         }
         .padding(.top, 8)
@@ -120,11 +149,45 @@ struct OrdersView: View {
         }
     }
 
+    /// The bar rises into the address field's place while Home parts around
+    /// it, then the address screen opens over it. Reduce Motion, or a bar not
+    /// yet measured, opens the screen with its plain fade.
+    private func openSearch() {
+        guard !flying else { return }   // a second tap mid-rise
+        guard !reduceMotion, let searchFrame else { return start(BookingIntent()) }
+        flightRise = SearchFlight.shared.fieldFrame(below: searchFrame, contentTop: contentTop).midY - searchFrame.midY
+        // Each part carries its own animation (the .animation modifiers) so
+        // the parting and the rise keep their own curves.
+        flying = true
+        parting = true
+        Task {
+            // The copy is on screen at the bar's spot before it is told to rise.
+            await Task.yield()
+            landed = true
+            // Asked for only once the bar is home: presenting the address
+            // screen freezes Home where it is, so asking mid-rise stranded
+            // the bar short of the field. The rise ends crisply (no long
+            // tail) so the pause before the page is brief.
+            try? await Task.sleep(for: .milliseconds(400))
+            SearchFlight.shared.landedAt = .now
+            start(BookingIntent())
+            // Whole again under the address screen, for when the customer
+            // comes back. It has faded in over Home by then.
+            try? await Task.sleep(for: .milliseconds(600))
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) { parting = false; landed = false; flying = false }
+        }
+    }
+
+    static let partCurve = Animation.timingCurve(0.5, 0, 0.7, 1, duration: 0.4)
+    static let riseCurve = Animation.timingCurve(0.45, 0, 0.2, 1, duration: 0.42)
+
     /// Looks like a text field, behaves like a button. Tapping opens the
     /// address screen with the keyboard already up.
     private var searchBar: some View {
         HStack(spacing: 0) {
-            Button { start(BookingIntent()) } label: {
+            Button { openSearch() } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.app(.body).weight(.bold))
@@ -156,9 +219,71 @@ struct OrdersView: View {
         }
         .frame(height: 56)
         .background(Theme.surface, in: Capsule())
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { searchFrame = $0 }
+        // In flight the bar is a plain drawing of itself: a Button animates
+        // its label apart from the capsule around it, so the text outran it.
+        .opacity(flying ? 0 : 1)
+        .overlay {
+            if flying {
+                FlyingSearchBar(landed: landed)
+                    .frame(height: landed ? SearchFlight.fieldHeight : 56)
+                    .offset(y: landed ? flightRise : 0)
+                    .animation(Self.riseCurve, value: landed)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(Theme.canvas)
+    }
+}
+
+/// Home's search bar as it rises and turns into the address field: the
+/// capsule tightens to the field's corners and gains its outline, the
+/// magnifier becomes the trip-start dot, the text dims to a placeholder, and
+/// "Later" falls away. Shapes and text only, so it all moves as one.
+struct FlyingSearchBar: View {
+    let landed: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: landed ? 20 : 28, style: .continuous)
+        HStack(spacing: 12) {
+            ZStack {
+                Image(systemName: "magnifyingglass")
+                    .font(.app(.body).weight(.bold))
+                    .foregroundStyle(Theme.glyph)
+                    .opacity(landed ? 0 : 1)
+                Circle()
+                    .fill(Theme.ink)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().fill(Theme.canvas).frame(width: 4, height: 4))
+                    .opacity(landed ? 1 : 0)
+            }
+            .frame(width: landed ? 10 : 20)
+            // Two fixed colours crossfading: a Text whose colour changes
+            // animates its glyphs on their own and ran ahead of the capsule.
+            ZStack(alignment: .leading) {
+                Text("Where from?").foregroundStyle(Theme.ink).opacity(landed ? 0 : 1)
+                Text("Where from?").foregroundStyle(Color(.placeholderText)).opacity(landed ? 1 : 0)
+            }
+            .font(.app(.body).weight(.semibold))
+            .lineLimit(1)
+            Spacer(minLength: 0)
+            Label("Later", systemImage: "clock.fill")
+                .font(.app(.footnote).weight(.semibold))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Theme.raised, in: Capsule())
+                .scaleEffect(landed ? 0.8 : 1)
+                .opacity(landed ? 0 : 1)
+        }
+        .padding(.leading, 18)
+        .padding(.trailing, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.surface, in: shape)
+        .overlay(shape.strokeBorder(Theme.ink.opacity(landed ? 1 : 0), lineWidth: 2))
     }
 }
 
